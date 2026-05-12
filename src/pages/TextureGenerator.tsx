@@ -18,6 +18,7 @@ import {
   generateCartoonOre,
   generateHexagon,
   generateOctagon,
+  generateStoneWall,
   type BrickPattern,
   type BrickColorMode,
   type TileColorMode,
@@ -30,7 +31,7 @@ import {
   type VoxelRenderStyle,
 } from '../utils/textureGenerators';
 
-type TextureType = 'PerlinNoise' | 'Checker' | 'Brick' | 'Gradient' | 'Terrain' | 'Wood' | 'Bark' | 'Tiles' | 'Textiles' | 'Clouds' | 'Voxel' | 'CartoonOre' | 'Hexagon' | 'Octagon';
+type TextureType = 'PerlinNoise' | 'Checker' | 'Brick' | 'Gradient' | 'Terrain' | 'Wood' | 'Bark' | 'Tiles' | 'Textiles' | 'Clouds' | 'Voxel' | 'CartoonOre' | 'Hexagon' | 'Octagon' | 'StoneWall';
 
 const TEXTURE_TYPES: { id: TextureType; label: string }[] = [
   { id: 'PerlinNoise', label: 'Perlin Noise' },
@@ -39,6 +40,7 @@ const TEXTURE_TYPES: { id: TextureType; label: string }[] = [
   { id: 'Brick', label: 'Brick' },
   { id: 'Hexagon', label: 'Hexagon' },
   { id: 'Octagon', label: 'Octagon' },
+  { id: 'StoneWall', label: 'Stone Wall' },
   { id: 'Gradient', label: 'Gradient' },
   { id: 'Terrain', label: 'Terrain' },
   { id: 'Textiles', label: 'Textiles' },
@@ -225,6 +227,18 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
   const [ocSeed, setOcSeed] = useLocalState('tg_ocSd', 1);
   const [ocGradient, setOcGradient] = useLocalState('tg_ocGd', false);
 
+  // Stone Wall
+  const [swColor1, setSwColor1] = useLocalState('tg_swC1', '#b0a898');
+  const [swColor2, setSwColor2] = useLocalState('tg_swC2', '#908070');
+  const [swMortar, setSwMortar] = useLocalState('tg_swMC', '#484038');
+  const [swColumns, setSwColumns] = useLocalState('tg_swCo', 6);
+  const [swRows, setSwRows] = useLocalState('tg_swRo', 6);
+  const [swMortarWidth, setSwMortarWidth] = useLocalState('tg_swMW', 3);
+  const [swJitter, setSwJitter] = useLocalState('tg_swJi', 0.85);
+  const [swShading, setSwShading] = useLocalState('tg_swSh', 0.5);
+  const [swTextureNoise, setSwTextureNoise] = useLocalState('tg_swTN', 0.4);
+  const [swSeed, setSwSeed] = useLocalState('tg_swSd', 1);
+
   const [pixelate, setPixelate] = useLocalState('tg_pxOn', false);
   const [pixelRes, setPixelRes] = useLocalState('tg_pxRe', 16);
   const [pixelPalette, setPixelPalette] = useLocalState('tg_pxPa', 0);
@@ -300,6 +314,14 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
       case 'Octagon':
         generateOctagon(canvas, size, ocColor1, ocColor2, ocGrout, ocColumns, ocGroutSize, ocShade, ocSeed, ocGradient);
         break;
+      case 'StoneWall':
+        generateStoneWall(canvas, size, {
+          stoneColor1: swColor1, stoneColor2: swColor2, mortarColor: swMortar,
+          columns: swColumns, rows: swRows, mortarWidth: swMortarWidth,
+          jitter: swJitter, shading: swShading, textureNoise: swTextureNoise,
+          seed: swSeed,
+        });
+        break;
     }
     if (rotation !== 0) {
       const ctx = canvas.getContext('2d')!;
@@ -352,6 +374,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
     coBaseColor1, coBaseColor2, coBaseColor3, coBgNoise, coBgPatch, coBgGradient, coOutline, coShadow, coSeed, coOres,
     hxColor1, hxColor2, hxGrout, hxColumns, hxGroutSize, hxShade, hxSeed, hxGradient,
     ocColor1, ocColor2, ocGrout, ocColumns, ocGroutSize, ocShade, ocSeed, ocGradient,
+    swColor1, swColor2, swMortar, swColumns, swRows, swMortarWidth, swJitter, swShading, swTextureNoise, swSeed,
   ]);
 
   useEffect(() => { updateTexture(); }, [updateTexture]);
@@ -416,6 +439,20 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
       const p: Record<string, any> | undefined = { classic: { c1: '#ffffff', c2: '#333333', grout: '#888888', cols: 5, gs: 4, shade: 0.05, gradient: false }, terracotta: { c1: '#c47850', c2: '#f0e0c0', grout: '#aa9080', cols: 4, gs: 5, shade: 0.12, gradient: true }, marble: { c1: '#e8e0d8', c2: '#aa9988', grout: '#cccccc', cols: 4, gs: 3, shade: 0.08, gradient: true }, retro: { c1: '#44aa88', c2: '#ff8844', grout: '#ffffff', cols: 5, gs: 4, shade: 0.1, gradient: false } }[key];
       if (!p) return;
       setOcColor1(p.c1); setOcColor2(p.c2); setOcGrout(p.grout); setOcColumns(p.cols); setOcGroutSize(p.gs); setOcShade(p.shade); setOcGradient(p.gradient);
+    };
+    const applySwPreset = (key: string) => {
+      const p: Record<string, any> | undefined = {
+        fieldstone: { c1: '#b0a898', c2: '#908070', mortar: '#484038', cols: 6, rows: 6, mw: 3, jitter: 0.85, shading: 0.5, tn: 0.4 },
+        rough: { c1: '#9a9088', c2: '#706860', mortar: '#3a3228', cols: 5, rows: 5, mw: 4, jitter: 0.95, shading: 0.7, tn: 0.6 },
+        mossy: { c1: '#8a9880', c2: '#607858', mortar: '#304830', cols: 6, rows: 6, mw: 3, jitter: 0.85, shading: 0.5, tn: 0.5 },
+        cobble: { c1: '#a0a0a0', c2: '#787878', mortar: '#505050', cols: 7, rows: 7, mw: 2.5, jitter: 0.8, shading: 0.6, tn: 0.35 },
+        slate_stone: { c1: '#6a7080', c2: '#4a5060', mortar: '#2a3038', cols: 6, rows: 8, mw: 2, jitter: 0.5, shading: 0.4, tn: 0.3 },
+        sandstone_wall: { c1: '#d4b896', c2: '#b89878', mortar: '#806848', cols: 6, rows: 6, mw: 2.5, jitter: 0.7, shading: 0.4, tn: 0.45 },
+      }[key];
+      if (!p) return;
+      setSwColor1(p.c1); setSwColor2(p.c2); setSwMortar(p.mortar);
+      setSwColumns(p.cols); setSwRows(p.rows); setSwMortarWidth(p.mw);
+      setSwJitter(p.jitter); setSwShading(p.shading); setSwTextureNoise(p.tn);
     };
     const applyCoPreset = (key: string) => {
       const presets: Record<string, any> = { coal_stone: { c1: '#7a8a8a', c2: '#6a7a7a', c3: '#5a6a6a', bgNoise: 0.6, bgPatch: 30, bgGradient: false, outline: 1.5, shadow: 0.6, ores: [{ color: '#3a3a44', highlightColor: '#5a5a66', shape: 'diamond', count: 8, minSize: 12, maxSize: 30, name: 'Coal', useGradient: true }] }, diamond_cave: { c1: '#4a5566', c2: '#3a4555', c3: '#2a3545', bgNoise: 0.7, bgPatch: 25, bgGradient: false, outline: 1.5, shadow: 0.6, ores: [{ color: '#66bbee', highlightColor: '#aaddff', shape: 'pentagon', count: 5, minSize: 14, maxSize: 35, name: 'Diamond', useGradient: true }] }, gold_vein: { c1: '#8a7a6a', c2: '#7a6a5a', c3: '#6a5a4a', bgNoise: 0.5, bgPatch: 35, bgGradient: false, outline: 2, shadow: 0.7, ores: [{ color: '#d4af37', highlightColor: '#ffe066', shape: 'hexagon', count: 6, minSize: 12, maxSize: 28, name: 'Gold', useGradient: true }] }, mixed_ore: { c1: '#7a8a8a', c2: '#6a7a7a', c3: '#5a6a6a', bgNoise: 0.6, bgPatch: 30, bgGradient: false, outline: 1.5, shadow: 0.6, ores: [{ color: '#3a3a44', highlightColor: '#5a5a66', shape: 'diamond', count: 4, minSize: 10, maxSize: 22, name: 'Coal', useGradient: true }, { color: '#cc8844', highlightColor: '#eebb66', shape: 'square', count: 3, minSize: 12, maxSize: 28, name: 'Iron', useGradient: true }, { color: '#66bbee', highlightColor: '#aaddff', shape: 'pentagon', count: 2, minSize: 14, maxSize: 30, name: 'Diamond', useGradient: true }] } };
@@ -661,6 +698,19 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label="Shade Variation" value={ocShade} min={0} max={0.4} step={0.01} onChange={setOcShade} />
           <div className="settings-row"><label><input type="checkbox" checked={ocGradient} onChange={e => setOcGradient(e.target.checked)} /> Gradient Fill</label></div>
           <SliderControl label="Seed" value={ocSeed} min={1} max={1000} step={1} onChange={setOcSeed} extra={<DiceBtn onClick={() => setOcSeed(Math.floor(Math.random() * 999) + 1)} />} />
+        </div>);
+      case 'StoneWall': return (
+        <div className="settings-panel"><h3>Stone Wall</h3>
+          <div className="settings-row"><label>Preset</label><select defaultValue="" onChange={e => { if (e.target.value) applySwPreset(e.target.value); e.target.value = ''; }}><option value="">— Select —</option><option value="fieldstone">Fieldstone</option><option value="rough">Rough Stone</option><option value="mossy">Mossy Stone</option><option value="cobble">Cobblestone</option><option value="slate_stone">Slate Stone</option><option value="sandstone_wall">Sandstone Wall</option></select></div>
+          <div className="settings-row"><label>Stone Colors</label><CS color={swColor1} onChange={setSwColor1} /><CS color={swColor2} onChange={setSwColor2} /></div>
+          <div className="settings-row"><label>Mortar</label><CS color={swMortar} onChange={setSwMortar} /></div>
+          <SliderControl label="Columns" value={swColumns} min={2} max={16} step={1} onChange={setSwColumns} />
+          <SliderControl label="Rows" value={swRows} min={2} max={16} step={1} onChange={setSwRows} />
+          <SliderControl label="Mortar Width" value={swMortarWidth} min={0.5} max={10} step={0.5} onChange={setSwMortarWidth} />
+          <SliderControl label="Stone Irregularity" value={swJitter} min={0} max={1} step={0.05} onChange={setSwJitter} />
+          <SliderControl label="Shading / Bevel" value={swShading} min={0} max={1.5} step={0.05} onChange={setSwShading} />
+          <SliderControl label="Surface Roughness" value={swTextureNoise} min={0} max={1} step={0.05} onChange={setSwTextureNoise} />
+          <SliderControl label="Seed" value={swSeed} min={1} max={1000} step={1} onChange={setSwSeed} extra={<DiceBtn onClick={() => setSwSeed(Math.floor(Math.random() * 999) + 1)} />} />
         </div>);
     }
   };

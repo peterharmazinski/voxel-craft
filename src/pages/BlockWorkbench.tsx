@@ -230,6 +230,18 @@ function applyConfigToGenerator(config: FaceTextureConfig) {
       s('tg_ocSd', seed);
       s('tg_ocGd', p.gradient ?? false);
       break;
+    case 'StoneWall':
+      s('tg_swC1', p.color1 || '#b0a898');
+      s('tg_swC2', p.color2 || '#908070');
+      s('tg_swMC', p.mortarColor || '#484038');
+      s('tg_swCo', p.columns ?? 6);
+      s('tg_swRo', p.rows ?? 6);
+      s('tg_swMW', p.mortarWidth ?? 3);
+      s('tg_swJi', p.jitter ?? 0.85);
+      s('tg_swSh', p.shading ?? 0.5);
+      s('tg_swTN', p.textureNoise ?? 0.4);
+      s('tg_swSd', seed);
+      break;
     case 'Gradient':
       if (p.colors) s('tg_grCo', p.colors);
       break;
