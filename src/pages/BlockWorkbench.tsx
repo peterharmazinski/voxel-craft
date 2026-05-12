@@ -598,6 +598,134 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
     side: { type: 'PerlinNoise', size: 256, seed: 146, params: { color1: '#ee99bb', color2: '#cc5588', noiseType: 'FractalNoise', scale: 15, octaves: 5, persistence: 0.5, cutout: 0.12 } },
     bottom: { type: 'PerlinNoise', size: 256, seed: 147, params: { color1: '#dd88aa', color2: '#bb4477', noiseType: 'FractalNoise', scale: 15, octaves: 5, persistence: 0.5, cutout: 0.18 } },
   },
+
+  // ── Brick presets ──────────────────────────────────────
+  red_brick: {
+    label: 'Red Brick',
+    top: { type: 'Brick', size: 256, seed: 200, params: { color1: '#b84430', color2: '#983828', groutColor: '#c8c0b0', gradientColor: '#c8c0b0', pattern: 'straight', x: 8, y: 6, grout: 6, gradient: 3, colorMode: 'random', shadeRange: 0.18, texture: 0.5, textureScale: 35 } },
+    side: { type: 'Brick', size: 256, seed: 201, params: { color1: '#b84430', color2: '#983828', groutColor: '#c8c0b0', gradientColor: '#c8c0b0', pattern: 'straight', x: 8, y: 6, grout: 6, gradient: 3, colorMode: 'random', shadeRange: 0.18, texture: 0.5, textureScale: 35 } },
+    bottom: { type: 'Brick', size: 256, seed: 202, params: { color1: '#a03c28', color2: '#883020', groutColor: '#b8b0a0', gradientColor: '#b8b0a0', pattern: 'straight', x: 8, y: 6, grout: 6, gradient: 3, colorMode: 'random', shadeRange: 0.15, texture: 0.6, textureScale: 35 } },
+  },
+  old_brick: {
+    label: 'Old Brick',
+    top: { type: 'Brick', size: 256, seed: 205, params: { color1: '#8a6050', color2: '#6a4838', groutColor: '#555044', gradientColor: '#555044', pattern: 'straight', x: 8, y: 6, grout: 7, gradient: 4, colorMode: 'random', shadeRange: 0.25, texture: 0.7, textureScale: 25 } },
+    side: { type: 'Brick', size: 256, seed: 206, params: { color1: '#8a6050', color2: '#6a4838', groutColor: '#555044', gradientColor: '#555044', pattern: 'straight', x: 8, y: 6, grout: 7, gradient: 4, colorMode: 'random', shadeRange: 0.25, texture: 0.7, textureScale: 25 } },
+    bottom: { type: 'Brick', size: 256, seed: 207, params: { color1: '#7a5040', color2: '#5a3828', groutColor: '#4a4434', gradientColor: '#4a4434', pattern: 'straight', x: 8, y: 6, grout: 7, gradient: 4, colorMode: 'random', shadeRange: 0.2, texture: 0.8, textureScale: 25 } },
+  },
+  white_brick: {
+    label: 'White Brick',
+    top: { type: 'Brick', size: 256, seed: 210, params: { color1: '#e8e4dc', color2: '#d8d0c8', groutColor: '#b0a898', gradientColor: '#b0a898', pattern: 'straight', x: 8, y: 6, grout: 5, gradient: 2, colorMode: 'random', shadeRange: 0.08, texture: 0.2, textureScale: 40 } },
+    side: { type: 'Brick', size: 256, seed: 211, params: { color1: '#e8e4dc', color2: '#d8d0c8', groutColor: '#b0a898', gradientColor: '#b0a898', pattern: 'straight', x: 8, y: 6, grout: 5, gradient: 2, colorMode: 'random', shadeRange: 0.08, texture: 0.2, textureScale: 40 } },
+    bottom: { type: 'Brick', size: 256, seed: 212, params: { color1: '#d8d0c8', color2: '#c8c0b8', groutColor: '#a09888', gradientColor: '#a09888', pattern: 'straight', x: 8, y: 6, grout: 5, gradient: 2, colorMode: 'random', shadeRange: 0.08, texture: 0.3, textureScale: 40 } },
+  },
+  sandstone_brick: {
+    label: 'Sandstone Brick',
+    top: { type: 'Brick', size: 256, seed: 215, params: { color1: '#d8c090', color2: '#c8a870', groutColor: '#8a7860', gradientColor: '#8a7860', pattern: 'block', x: 4, y: 4, grout: 5, gradient: 3, colorMode: 'random', shadeRange: 0.12, texture: 0.4, textureScale: 30 } },
+    side: { type: 'Brick', size: 256, seed: 216, params: { color1: '#d8c090', color2: '#c8a870', groutColor: '#8a7860', gradientColor: '#8a7860', pattern: 'block', x: 6, y: 6, grout: 5, gradient: 3, colorMode: 'random', shadeRange: 0.12, texture: 0.4, textureScale: 30 } },
+    bottom: { type: 'Brick', size: 256, seed: 217, params: { color1: '#c8b080', color2: '#b89860', groutColor: '#7a6850', gradientColor: '#7a6850', pattern: 'block', x: 4, y: 4, grout: 5, gradient: 3, colorMode: 'random', shadeRange: 0.12, texture: 0.5, textureScale: 30 } },
+  },
+  dark_brick: {
+    label: 'Dark Brick',
+    top: { type: 'Brick', size: 256, seed: 220, params: { color1: '#3a3030', color2: '#2a2020', groutColor: '#1a1515', gradientColor: '#1a1515', pattern: 'straight', x: 8, y: 6, grout: 5, gradient: 2, colorMode: 'random', shadeRange: 0.15, texture: 0.4, textureScale: 30 } },
+    side: { type: 'Brick', size: 256, seed: 221, params: { color1: '#3a3030', color2: '#2a2020', groutColor: '#1a1515', gradientColor: '#1a1515', pattern: 'straight', x: 8, y: 6, grout: 5, gradient: 2, colorMode: 'random', shadeRange: 0.15, texture: 0.4, textureScale: 30 } },
+    bottom: { type: 'Brick', size: 256, seed: 222, params: { color1: '#302828', color2: '#201818', groutColor: '#151010', gradientColor: '#151010', pattern: 'straight', x: 8, y: 6, grout: 5, gradient: 2, colorMode: 'random', shadeRange: 0.1, texture: 0.5, textureScale: 30 } },
+  },
+
+  // ── Tile presets ────────────────────────────────────────
+  subway_tile: {
+    label: 'Subway Tile',
+    top: { type: 'Tiles', size: 256, seed: 230, params: { x: 2, y: 4, color1: '#f0ece4', groutColor: '#c0b8a8', gradientColor: '#e8e0d8', groutGradientColor: '#a8a090', xGrout: 8, yGrout: 8, xGradient: 15, yGradient: 15, gradientEnabled: true, groutGradientEnabled: true, color2: '#e8e4dc', colorMode: 'single', shadeRange: 0.03, texture: 0 } },
+    side: { type: 'Tiles', size: 256, seed: 231, params: { x: 2, y: 4, color1: '#f0ece4', groutColor: '#c0b8a8', gradientColor: '#e8e0d8', groutGradientColor: '#a8a090', xGrout: 8, yGrout: 8, xGradient: 15, yGradient: 15, gradientEnabled: true, groutGradientEnabled: true, color2: '#e8e4dc', colorMode: 'single', shadeRange: 0.03, texture: 0 } },
+    bottom: { type: 'Tiles', size: 256, seed: 232, params: { x: 2, y: 4, color1: '#e0dcd4', groutColor: '#b0a898', gradientColor: '#d8d0c8', groutGradientColor: '#989080', xGrout: 8, yGrout: 8, xGradient: 15, yGradient: 15, gradientEnabled: true, groutGradientEnabled: true, color2: '#d8d4cc', colorMode: 'single', shadeRange: 0.03, texture: 0 } },
+  },
+  marble_tile: {
+    label: 'Marble Tile',
+    top: { type: 'Tiles', size: 256, seed: 235, params: { x: 2, y: 2, color1: '#f0ece8', groutColor: '#888888', gradientColor: '#d8d0c8', groutGradientColor: '#666666', xGrout: 6, yGrout: 6, xGradient: 30, yGradient: 30, gradientEnabled: true, groutGradientEnabled: true, color2: '#e0d8d0', colorMode: 'alternating', shadeRange: 0.06, texture: 0 } },
+    side: { type: 'Tiles', size: 256, seed: 236, params: { x: 2, y: 2, color1: '#f0ece8', groutColor: '#888888', gradientColor: '#d8d0c8', groutGradientColor: '#666666', xGrout: 6, yGrout: 6, xGradient: 30, yGradient: 30, gradientEnabled: true, groutGradientEnabled: true, color2: '#e0d8d0', colorMode: 'alternating', shadeRange: 0.06, texture: 0 } },
+    bottom: { type: 'Tiles', size: 256, seed: 237, params: { x: 2, y: 2, color1: '#e0dcd8', groutColor: '#777777', gradientColor: '#c8c0b8', groutGradientColor: '#555555', xGrout: 6, yGrout: 6, xGradient: 30, yGradient: 30, gradientEnabled: true, groutGradientEnabled: true, color2: '#d0c8c0', colorMode: 'alternating', shadeRange: 0.06, texture: 0 } },
+  },
+  mosaic_tile: {
+    label: 'Mosaic Tile',
+    top: { type: 'Tiles', size: 256, seed: 240, params: { x: 6, y: 6, color1: '#4488aa', groutColor: '#d0c8c0', gradientColor: '#338899', groutGradientColor: '#b8b0a8', xGrout: 10, yGrout: 10, xGradient: 12, yGradient: 12, gradientEnabled: true, groutGradientEnabled: true, color2: '#55aa88', colorMode: 'random', shadeRange: 0.15, texture: 0 } },
+    side: { type: 'Tiles', size: 256, seed: 241, params: { x: 6, y: 6, color1: '#4488aa', groutColor: '#d0c8c0', gradientColor: '#338899', groutGradientColor: '#b8b0a8', xGrout: 10, yGrout: 10, xGradient: 12, yGradient: 12, gradientEnabled: true, groutGradientEnabled: true, color2: '#55aa88', colorMode: 'random', shadeRange: 0.15, texture: 0 } },
+    bottom: { type: 'Tiles', size: 256, seed: 242, params: { x: 6, y: 6, color1: '#3878aa', groutColor: '#c0b8b0', gradientColor: '#287889', groutGradientColor: '#a8a098', xGrout: 10, yGrout: 10, xGradient: 12, yGradient: 12, gradientEnabled: true, groutGradientEnabled: true, color2: '#459a78', colorMode: 'random', shadeRange: 0.15, texture: 0 } },
+  },
+  terracotta_tile: {
+    label: 'Terracotta Tile',
+    top: { type: 'Tiles', size: 256, seed: 245, params: { x: 3, y: 3, color1: '#c87848', groutColor: '#8a7060', gradientColor: '#b86838', groutGradientColor: '#7a6050', xGrout: 10, yGrout: 10, xGradient: 18, yGradient: 18, gradientEnabled: true, groutGradientEnabled: true, color2: '#b86838', colorMode: 'random', shadeRange: 0.12, texture: 0.2 } },
+    side: { type: 'Tiles', size: 256, seed: 246, params: { x: 3, y: 3, color1: '#c87848', groutColor: '#8a7060', gradientColor: '#b86838', groutGradientColor: '#7a6050', xGrout: 10, yGrout: 10, xGradient: 18, yGradient: 18, gradientEnabled: true, groutGradientEnabled: true, color2: '#b86838', colorMode: 'random', shadeRange: 0.12, texture: 0.2 } },
+    bottom: { type: 'Tiles', size: 256, seed: 247, params: { x: 3, y: 3, color1: '#b86838', color2: '#a85828', groutColor: '#7a6050', gradientColor: '#a85828', groutGradientColor: '#6a5040', xGrout: 10, yGrout: 10, xGradient: 18, yGradient: 18, gradientEnabled: true, groutGradientEnabled: true, colorMode: 'random', shadeRange: 0.12, texture: 0.3 } },
+  },
+  octagon_tile: {
+    label: 'Octagon Tile',
+    top: { type: 'Octagon', size: 256, seed: 250, params: { color1: '#e0d8d0', color2: '#3a3530', groutColor: '#888880', columns: 4, groutSize: 5, shade: 0.1 } },
+    side: { type: 'Octagon', size: 256, seed: 251, params: { color1: '#e0d8d0', color2: '#3a3530', groutColor: '#888880', columns: 4, groutSize: 5, shade: 0.1 } },
+    bottom: { type: 'Octagon', size: 256, seed: 252, params: { color1: '#d0c8c0', color2: '#2a2520', groutColor: '#787870', columns: 4, groutSize: 5, shade: 0.1 } },
+  },
+
+  // ── Glass presets ──────────────────────────────────────
+  stained_blue: {
+    label: 'Stained Glass (Blue)',
+    top: { type: 'PerlinNoise', size: 256, seed: 260, params: { color1: '#4488ff', color2: '#2244aa', noiseType: 'PerlinNoise', scale: 70, octaves: 2, persistence: 0.3, alpha: 0.35 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 261, params: { color1: '#3377ee', color2: '#1133aa', noiseType: 'PerlinNoise', scale: 70, octaves: 2, persistence: 0.3, alpha: 0.35 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 262, params: { color1: '#2266dd', color2: '#002299', noiseType: 'PerlinNoise', scale: 70, octaves: 2, persistence: 0.3, alpha: 0.35 } },
+  },
+  stained_green: {
+    label: 'Stained Glass (Green)',
+    top: { type: 'PerlinNoise', size: 256, seed: 265, params: { color1: '#44cc44', color2: '#228822', noiseType: 'PerlinNoise', scale: 70, octaves: 2, persistence: 0.3, alpha: 0.35 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 266, params: { color1: '#33bb33', color2: '#117711', noiseType: 'PerlinNoise', scale: 70, octaves: 2, persistence: 0.3, alpha: 0.35 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 267, params: { color1: '#22aa22', color2: '#006600', noiseType: 'PerlinNoise', scale: 70, octaves: 2, persistence: 0.3, alpha: 0.35 } },
+  },
+  stained_purple: {
+    label: 'Stained Glass (Purple)',
+    top: { type: 'PerlinNoise', size: 256, seed: 270, params: { color1: '#aa44ff', color2: '#6622aa', noiseType: 'PerlinNoise', scale: 70, octaves: 2, persistence: 0.3, alpha: 0.35 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 271, params: { color1: '#9933ee', color2: '#551199', noiseType: 'PerlinNoise', scale: 70, octaves: 2, persistence: 0.3, alpha: 0.35 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 272, params: { color1: '#8822dd', color2: '#440088', noiseType: 'PerlinNoise', scale: 70, octaves: 2, persistence: 0.3, alpha: 0.35 } },
+  },
+  stained_yellow: {
+    label: 'Stained Glass (Yellow)',
+    top: { type: 'PerlinNoise', size: 256, seed: 275, params: { color1: '#ffdd44', color2: '#ccaa22', noiseType: 'PerlinNoise', scale: 70, octaves: 2, persistence: 0.3, alpha: 0.35 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 276, params: { color1: '#eecc33', color2: '#bb9911', noiseType: 'PerlinNoise', scale: 70, octaves: 2, persistence: 0.3, alpha: 0.35 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 277, params: { color1: '#ddbb22', color2: '#aa8800', noiseType: 'PerlinNoise', scale: 70, octaves: 2, persistence: 0.3, alpha: 0.35 } },
+  },
+  frosted_glass: {
+    label: 'Frosted Glass',
+    top: { type: 'PerlinNoise', size: 256, seed: 280, params: { color1: '#e8f0f8', color2: '#c0d8e8', noiseType: 'FractalNoise', scale: 40, octaves: 4, persistence: 0.4, alpha: 0.4 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 281, params: { color1: '#d8e8f0', color2: '#b0c8d8', noiseType: 'FractalNoise', scale: 40, octaves: 4, persistence: 0.4, alpha: 0.4 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 282, params: { color1: '#c8d8e8', color2: '#a0b8c8', noiseType: 'FractalNoise', scale: 40, octaves: 4, persistence: 0.4, alpha: 0.4 } },
+  },
+
+  // ── Stone wall presets ─────────────────────────────────
+  stone_wall: {
+    label: 'Stone Wall',
+    top: { type: 'CartoonOre', size: 256, seed: 300, params: { color1: '#908880', color2: '#787068', color3: '#605850', bgNoise: 0.4, bgPatch: 35, outline: 1.0, shadow: 0.4, ores: [{ color: '#a8a098', highlightColor: '#c0b8b0', shape: 'round', count: 12, minSize: 30, maxSize: 60, name: 'Stone', useGradient: false }] } },
+    side: { type: 'CartoonOre', size: 256, seed: 301, params: { color1: '#908880', color2: '#787068', color3: '#605850', bgNoise: 0.4, bgPatch: 35, outline: 1.0, shadow: 0.4, ores: [{ color: '#a8a098', highlightColor: '#c0b8b0', shape: 'round', count: 12, minSize: 30, maxSize: 60, name: 'Stone', useGradient: false }] } },
+    bottom: { type: 'CartoonOre', size: 256, seed: 302, params: { color1: '#807870', color2: '#686058', color3: '#504840', bgNoise: 0.4, bgPatch: 35, outline: 1.0, shadow: 0.4, ores: [{ color: '#989088', highlightColor: '#b0a8a0', shape: 'round', count: 10, minSize: 30, maxSize: 60, name: 'Stone', useGradient: false }] } },
+  },
+  rough_stone_wall: {
+    label: 'Rough Stone Wall',
+    top: { type: 'CartoonOre', size: 256, seed: 305, params: { color1: '#7a7268', color2: '#625a50', color3: '#4a4238', bgNoise: 0.6, bgPatch: 25, outline: 1.4, shadow: 0.6, ores: [{ color: '#8a8278', highlightColor: '#a09888', shape: 'mixed', count: 15, minSize: 20, maxSize: 55, name: 'Rock', useGradient: false }, { color: '#686058', highlightColor: '#807868', shape: 'round', count: 8, minSize: 15, maxSize: 35, name: 'Pebble', useGradient: false }] } },
+    side: { type: 'CartoonOre', size: 256, seed: 306, params: { color1: '#7a7268', color2: '#625a50', color3: '#4a4238', bgNoise: 0.6, bgPatch: 25, outline: 1.4, shadow: 0.6, ores: [{ color: '#8a8278', highlightColor: '#a09888', shape: 'mixed', count: 15, minSize: 20, maxSize: 55, name: 'Rock', useGradient: false }, { color: '#686058', highlightColor: '#807868', shape: 'round', count: 8, minSize: 15, maxSize: 35, name: 'Pebble', useGradient: false }] } },
+    bottom: { type: 'CartoonOre', size: 256, seed: 307, params: { color1: '#6a6258', color2: '#524a40', color3: '#3a3228', bgNoise: 0.6, bgPatch: 25, outline: 1.4, shadow: 0.6, ores: [{ color: '#7a7268', highlightColor: '#908878', shape: 'mixed', count: 12, minSize: 20, maxSize: 55, name: 'Rock', useGradient: false }] } },
+  },
+  mossy_stone_wall: {
+    label: 'Mossy Stone Wall',
+    top: { type: 'CartoonOre', size: 256, seed: 310, params: { color1: '#687860', color2: '#506850', color3: '#405840', bgNoise: 0.5, bgPatch: 30, outline: 1.0, shadow: 0.4, ores: [{ color: '#889880', highlightColor: '#a8b8a0', shape: 'round', count: 12, minSize: 28, maxSize: 58, name: 'Mossy Stone', useGradient: false }, { color: '#3a6830', highlightColor: '#4a8840', shape: 'round', count: 6, minSize: 8, maxSize: 20, name: 'Moss', useGradient: false }] } },
+    side: { type: 'CartoonOre', size: 256, seed: 311, params: { color1: '#687860', color2: '#506850', color3: '#405840', bgNoise: 0.5, bgPatch: 30, outline: 1.0, shadow: 0.4, ores: [{ color: '#889880', highlightColor: '#a8b8a0', shape: 'round', count: 12, minSize: 28, maxSize: 58, name: 'Mossy Stone', useGradient: false }, { color: '#3a6830', highlightColor: '#4a8840', shape: 'round', count: 6, minSize: 8, maxSize: 20, name: 'Moss', useGradient: false }] } },
+    bottom: { type: 'CartoonOre', size: 256, seed: 312, params: { color1: '#586850', color2: '#405840', color3: '#304830', bgNoise: 0.5, bgPatch: 30, outline: 1.0, shadow: 0.4, ores: [{ color: '#788870', highlightColor: '#98a890', shape: 'round', count: 10, minSize: 28, maxSize: 58, name: 'Mossy Stone', useGradient: false }] } },
+  },
+  castle_wall: {
+    label: 'Castle Stone Wall',
+    top: { type: 'Brick', size: 256, seed: 315, params: { color1: '#a09888', color2: '#888078', groutColor: '#484040', gradientColor: '#484040', pattern: 'block_wide', x: 4, y: 3, grout: 6, gradient: 4, colorMode: 'random', shadeRange: 0.15, texture: 0.5, textureScale: 25 } },
+    side: { type: 'Brick', size: 256, seed: 316, params: { color1: '#a09888', color2: '#888078', groutColor: '#484040', gradientColor: '#484040', pattern: 'block_wide', x: 4, y: 5, grout: 6, gradient: 4, colorMode: 'random', shadeRange: 0.15, texture: 0.5, textureScale: 25 } },
+    bottom: { type: 'Brick', size: 256, seed: 317, params: { color1: '#908878', color2: '#787068', groutColor: '#383030', gradientColor: '#383030', pattern: 'block_wide', x: 4, y: 3, grout: 6, gradient: 4, colorMode: 'random', shadeRange: 0.15, texture: 0.6, textureScale: 25 } },
+  },
+  slate_wall: {
+    label: 'Slate Wall',
+    top: { type: 'Brick', size: 256, seed: 320, params: { color1: '#555565', color2: '#454555', groutColor: '#2a2a35', gradientColor: '#2a2a35', pattern: 'straight', x: 10, y: 4, grout: 3, gradient: 2, colorMode: 'random', shadeRange: 0.1, texture: 0.3, textureScale: 35 } },
+    side: { type: 'Brick', size: 256, seed: 321, params: { color1: '#555565', color2: '#454555', groutColor: '#2a2a35', gradientColor: '#2a2a35', pattern: 'straight', x: 10, y: 4, grout: 3, gradient: 2, colorMode: 'random', shadeRange: 0.1, texture: 0.3, textureScale: 35 } },
+    bottom: { type: 'Brick', size: 256, seed: 322, params: { color1: '#454555', color2: '#353545', groutColor: '#1a1a25', gradientColor: '#1a1a25', pattern: 'straight', x: 10, y: 4, grout: 3, gradient: 2, colorMode: 'random', shadeRange: 0.1, texture: 0.4, textureScale: 35 } },
+  },
 };
 
 export default function BlockWorkbench() {
