@@ -53,6 +53,10 @@ function CS({ color, onChange }: { color: string; onChange: (c: string) => void 
   return <input type="color" value={color} onChange={e => onChange(e.target.value)} className="color-input" />;
 }
 
+const DiceBtn = ({ onClick }: { onClick: () => void }) => (
+  <button type="button" onClick={onClick} title="Randomize seed" style={{ padding: '2px 6px', fontSize: '0.85rem', cursor: 'pointer', lineHeight: 1 }}>&#x1F3B2;</button>
+);
+
 export default function TextureGenerator({ hideMapPanel = false }: { hideMapPanel?: boolean } = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [canvasReady, setCanvasReady] = useState(0);
@@ -441,7 +445,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label="Octaves" value={pnOctaves} min={1} max={10} step={1} onChange={setPnOctaves} />
           <SliderControl label="Scale" value={pnScale} min={1} max={100} step={1} onChange={setPnScale} />
           <SliderControl label="Persistence" value={pnPersistence} min={0} max={1} step={0.01} onChange={setPnPersistence} />
-          <SliderControl label="Seed" value={pnSeed} min={1} max={1000} step={1} onChange={setPnSeed} />
+          <SliderControl label="Seed" value={pnSeed} min={1} max={1000} step={1} onChange={setPnSeed} extra={<DiceBtn onClick={() => setPnSeed(Math.floor(Math.random() * 999) + 1)} />} />
         </div>);
       case 'Clouds': return (
         <div className="settings-panel"><h3>Clouds</h3>
@@ -450,7 +454,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label="Scale" value={clScale} min={1} max={20} step={1} onChange={setClScale} />
           <SliderControl label="Detail" value={clDetail} min={0} max={1} step={0.01} onChange={setClDetail} />
           <SliderControl label="Percentage" value={clPercentage} min={0} max={1} step={0.01} onChange={setClPercentage} />
-          <SliderControl label="Seed" value={clSeed} min={1} max={1000} step={1} onChange={setClSeed} />
+          <SliderControl label="Seed" value={clSeed} min={1} max={1000} step={1} onChange={setClSeed} extra={<DiceBtn onClick={() => setClSeed(Math.floor(Math.random() * 999) + 1)} />} />
         </div>);
       case 'Checker': return (
         <div className="settings-panel"><h3>Checker</h3>
@@ -459,7 +463,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label="Count X" value={ckX} min={1} max={50} step={1} onChange={setCkX} />
           <SliderControl label="Count Y" value={ckY} min={1} max={50} step={1} onChange={setCkY} />
           <SliderControl label="Percentage" value={ckPercentage} min={0} max={100} step={1} onChange={setCkPercentage} />
-          {ckPercentage < 100 && <SliderControl label="Seed" value={ckSeed} min={1} max={1000} step={1} onChange={setCkSeed} />}
+          {ckPercentage < 100 && <SliderControl label="Seed" value={ckSeed} min={1} max={1000} step={1} onChange={setCkSeed} extra={<DiceBtn onClick={() => setCkSeed(Math.floor(Math.random() * 999) + 1)} />} />}
           <SliderControl label="Shade Variation" value={ckShade} min={0} max={0.5} step={0.01} onChange={setCkShade} />
           <SliderControl label="Surface Texture" value={ckTexture} min={0} max={1} step={0.01} onChange={setCkTexture} />
         </div>);
@@ -481,7 +485,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label="Surface Texture" value={brTexture} min={0} max={1} step={0.01} onChange={setBrTexture} />
           {brTexture > 0 && <>
             <SliderControl label="Texture Scale" value={brTextureScale} min={5} max={80} step={1} onChange={setBrTextureScale} />
-            <SliderControl label="Texture Seed" value={brTextureSeed} min={1} max={1000} step={1} onChange={setBrTextureSeed} />
+            <SliderControl label="Texture Seed" value={brTextureSeed} min={1} max={1000} step={1} onChange={setBrTextureSeed} extra={<DiceBtn onClick={() => setBrTextureSeed(Math.floor(Math.random() * 999) + 1)} />} />
           </>}
         </div>);
       case 'Gradient': return (
@@ -503,7 +507,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label="Scale" value={trScale} min={2} max={15} step={1} onChange={setTrScale} />
           <SliderControl label="Detail" value={trDetail} min={0.25} max={0.6} step={0.01} onChange={setTrDetail} />
           <SliderControl label="Mountains" value={trHeight} min={0} max={1} step={0.01} onChange={setTrHeight} />
-          <SliderControl label="Seed" value={trSeed} min={1} max={1000} step={1} onChange={setTrSeed} />
+          <SliderControl label="Seed" value={trSeed} min={1} max={1000} step={1} onChange={setTrSeed} extra={<DiceBtn onClick={() => setTrSeed(Math.floor(Math.random() * 999) + 1)} />} />
           <div className="settings-row"><label><input type="checkbox" checked={trShadow} onChange={e => setTrShadow(e.target.checked)} /> Shadow</label></div>
           {trShadow && <><SliderControl label="Shadow Strength" value={trShadowStrength} min={0} max={1} step={0.01} onChange={setTrShadowStrength} /><SliderControl label="Sun Height" value={trSunHeight} min={0} max={100} step={1} onChange={setTrSunHeight} /></>}
           <div className="settings-row"><label><input type="checkbox" checked={trColored} onChange={e => setTrColored(e.target.checked)} /> Colored</label></div>
@@ -519,7 +523,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label={wdRings ? 'Ring Count' : 'X Scale'} value={wdXScale} min={1} max={10} step={0.1} onChange={setWdXScale} />
           <SliderControl label="Scale" value={wdScale} min={0.2} max={5} step={0.01} onChange={setWdScale} />
           <SliderControl label="Persistence" value={wdPersistence} min={0} max={1} step={0.01} onChange={setWdPersistence} />
-          <SliderControl label="Seed" value={wdSeed} min={1} max={1000} step={1} onChange={setWdSeed} />
+          <SliderControl label="Seed" value={wdSeed} min={1} max={1000} step={1} onChange={setWdSeed} extra={<DiceBtn onClick={() => setWdSeed(Math.floor(Math.random() * 999) + 1)} />} />
         </div>);
       case 'Bark': return (
         <div className="settings-panel"><h3>Tree Bark</h3>
@@ -529,7 +533,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label="Roughness" value={bkRoughness} min={0} max={1} step={0.05} onChange={setBkRoughness} />
           <SliderControl label="Depth" value={bkDepth} min={0} max={1} step={0.05} onChange={setBkDepth} />
           <SliderControl label="Scale" value={bkScale} min={0.2} max={5} step={0.1} onChange={setBkScale} />
-          <SliderControl label="Seed" value={bkSeed} min={1} max={1000} step={1} onChange={setBkSeed} />
+          <SliderControl label="Seed" value={bkSeed} min={1} max={1000} step={1} onChange={setBkSeed} extra={<DiceBtn onClick={() => setBkSeed(Math.floor(Math.random() * 999) + 1)} />} />
         </div>);
       case 'Tiles': return (
         <div className="settings-panel"><h3>Tiles</h3>
@@ -547,7 +551,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label="Grout Y" value={tlYGrout} min={1} max={100} step={1} onChange={setTlYGrout} />
           <div className="settings-row"><label><input type="checkbox" checked={tlGroutGradientEnabled} onChange={e => setTlGroutGradientEnabled(e.target.checked)} /> Grout Gradient</label><CS color={tlGroutGradientColor} onChange={setTlGroutGradientColor} /></div>
           <SliderControl label="Surface Texture" value={tlTexture} min={0} max={1} step={0.01} onChange={setTlTexture} />
-          {(tlTexture > 0 || tlColorMode === 'random') && <SliderControl label="Seed" value={tlSeed} min={1} max={1000} step={1} onChange={setTlSeed} />}
+          {(tlTexture > 0 || tlColorMode === 'random') && <SliderControl label="Seed" value={tlSeed} min={1} max={1000} step={1} onChange={setTlSeed} extra={<DiceBtn onClick={() => setTlSeed(Math.floor(Math.random() * 999) + 1)} />} />}
         </div>);
       case 'Textiles': return (
         <div className="settings-panel"><h3>Textiles</h3>
@@ -571,7 +575,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label="Edge Shading" value={vxDepthShading} min={0} max={1} step={0.01} onChange={setVxDepthShading} />
           <SliderControl label="Outline" value={vxOutline} min={0} max={1} step={0.01} onChange={setVxOutline} />
           <SliderControl label="Palette Colors" value={vxPalette} min={3} max={32} step={1} onChange={setVxPalette} />
-          <SliderControl label="Seed" value={vxSeed} min={1} max={1000} step={1} onChange={setVxSeed} />
+          <SliderControl label="Seed" value={vxSeed} min={1} max={1000} step={1} onChange={setVxSeed} extra={<DiceBtn onClick={() => setVxSeed(Math.floor(Math.random() * 999) + 1)} />} />
 
           <h4 style={{margin: '12px 0 6px'}}>Ore / Crystal Layers</h4>
           {vxOres.map((ore, i) => (
@@ -608,7 +612,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label="Patch Size" value={coBgPatch} min={5} max={100} step={1} onChange={setCoBgPatch} />
           <SliderControl label="Outline" value={coOutline} min={0} max={5} step={0.5} onChange={setCoOutline} />
           <SliderControl label="Shadow" value={coShadow} min={0} max={1} step={0.05} onChange={setCoShadow} />
-          <SliderControl label="Seed" value={coSeed} min={1} max={1000} step={1} onChange={setCoSeed} />
+          <SliderControl label="Seed" value={coSeed} min={1} max={1000} step={1} onChange={setCoSeed} extra={<DiceBtn onClick={() => setCoSeed(Math.floor(Math.random() * 999) + 1)} />} />
 
           <h4 style={{margin: '12px 0 6px'}}>Ore Layers</h4>
           {coOres.map((ore, i) => (
@@ -644,7 +648,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label="Grout Size" value={hxGroutSize} min={0} max={20} step={1} onChange={setHxGroutSize} />
           <SliderControl label="Shade Variation" value={hxShade} min={0} max={0.4} step={0.01} onChange={setHxShade} />
           <div className="settings-row"><label><input type="checkbox" checked={hxGradient} onChange={e => setHxGradient(e.target.checked)} /> Gradient Fill</label></div>
-          <SliderControl label="Seed" value={hxSeed} min={1} max={1000} step={1} onChange={setHxSeed} />
+          <SliderControl label="Seed" value={hxSeed} min={1} max={1000} step={1} onChange={setHxSeed} extra={<DiceBtn onClick={() => setHxSeed(Math.floor(Math.random() * 999) + 1)} />} />
         </div>);
       case 'Octagon': return (
         <div className="settings-panel"><h3>Octagon + Square</h3>
@@ -656,7 +660,7 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
           <SliderControl label="Grout Size" value={ocGroutSize} min={0} max={20} step={1} onChange={setOcGroutSize} />
           <SliderControl label="Shade Variation" value={ocShade} min={0} max={0.4} step={0.01} onChange={setOcShade} />
           <div className="settings-row"><label><input type="checkbox" checked={ocGradient} onChange={e => setOcGradient(e.target.checked)} /> Gradient Fill</label></div>
-          <SliderControl label="Seed" value={ocSeed} min={1} max={1000} step={1} onChange={setOcSeed} />
+          <SliderControl label="Seed" value={ocSeed} min={1} max={1000} step={1} onChange={setOcSeed} extra={<DiceBtn onClick={() => setOcSeed(Math.floor(Math.random() * 999) + 1)} />} />
         </div>);
     }
   };

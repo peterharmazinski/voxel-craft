@@ -19,6 +19,19 @@ import {
 import { renderFaceTexture, applySnowOverlay, type FaceTextureConfig, type SnowOverlayOptions } from '../utils/renderTexture';
 import { generateNormalMap, DEFAULT_NORMAL, type NormalMapSettings } from '../utils/normalMapProcessor';
 import TextureGenerator from './TextureGenerator';
+import { createZip, canvasToPngBytes } from '../utils/zipExport';
+import {
+  type VoxelCraftProject,
+  type ProjectListEntry,
+  supportsFileSystemAccess,
+  openProjectFolder,
+  listProjects,
+  saveProjectToFolder,
+  loadProjectFromFolder,
+  deleteProjectFromFolder,
+  downloadProject,
+  uploadProject,
+} from '../utils/fileSystem';
 
 function CS({ color, onChange }: { color: string; onChange: (c: string) => void }) {
   return <input type="color" value={color} onChange={e => onChange(e.target.value)} className="color-input" />;
@@ -967,6 +980,15 @@ export default function BlockWorkbench() {
   const [snowSeed, setSnowSeed] = useLocalState('bw_snowSeed', 42);
 
   const [exportSize, setExportSize] = useLocalState<number>('bw_exportSize', 256);
+  const [tilingPreview, setTilingPreview] = useLocalState('bw_tiling', false);
+  const [activePresetKey, setActivePresetKey] = useLocalState<string>('bw_activePreset', '');
+  const [activeVxPresetKey, setActiveVxPresetKey] = useLocalState<string>('bw_activeVxPreset', '');
+  const tilingRef = useRef<HTMLCanvasElement>(null);
+
+  const folderHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
+  const [projectList, setProjectList] = useState<ProjectListEntry[]>([]);
+  const [showProjectBrowser, setShowProjectBrowser] = useState(false);
+  const [projectName, setProjectName] = useLocalState<string>('bw_projName', '');
 
   const downloadAtSize = useCallback((source: HTMLCanvasElement, filename: string) => {
     if (exportSize === source.width) {
@@ -1112,8 +1134,24 @@ export default function BlockWorkbench() {
         renderIsometricPreview(isoRef.current, topRef.current, sideRef.current, sideRef.current, 300, false, true);
       }
     }
+    if (tilingRef.current && tilingPreview) {
+      const activeRef = activeFace === 'top' ? topRef.current : activeFace === 'side' ? sideRef.current : bottomRef.current;
+      if (activeRef) {
+        const tc = tilingRef.current;
+        tc.width = 300; tc.height = 300;
+        const tCtx = tc.getContext('2d')!;
+        tCtx.imageSmoothingEnabled = false;
+        const cellW = 100;
+        for (let row = 0; row < 3; row++) {
+          for (let col = 0; col < 3; col++) {
+            tCtx.drawImage(activeRef, col * cellW, row * cellW, cellW, cellW);
+          }
+        }
+      }
+    }
+
     setRenderCount(c => c + 1);
-  }, [topImg, sideImg, bottomImg, drawImg, applyLighting, litPreview, normalSettings, bgMode, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed]);
+  }, [topImg, sideImg, bottomImg, drawImg, applyLighting, litPreview, normalSettings, bgMode, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed, tilingPreview, activeFace]);
 
   useEffect(() => { updatePreview(); }, [updatePreview]);
 
@@ -1121,6 +1159,7 @@ export default function BlockWorkbench() {
     const generatorCanvas = document.querySelector('.workbench-generator .texture-canvas') as HTMLCanvasElement | null;
     if (generatorCanvas) {
       setImgs[activeFace](generatorCanvas.toDataURL('image/png'));
+      setActivePresetKey('');
     }
   };
 
@@ -1163,6 +1202,7 @@ export default function BlockWorkbench() {
     setVxSideMode(p.sideMode);
     setVxSideSplitPos(p.sideSplitPos);
     setVxSideTopFace(p.sideTopFace);
+    setActiveVxPresetKey(name);
   };
 
   const applyPreset = (presetKey: string) => {
@@ -1182,14 +1222,190 @@ export default function BlockWorkbench() {
 
     applyConfigToGenerator(configs[activeFace]);
     setGeneratorKey(k => k + 1);
+    setActivePresetKey(presetKey);
   };
 
+  const copyFaceTo = (target: FaceName) => {
+    if (target === activeFace) return;
+    setImgs[target](imgs[activeFace]);
+    setFaceConfigs[target](faceConfigs[activeFace]);
+    if (editorMode === 'voxel') {
+      const srcFace = activeFace === 'top' ? vxTopFace : activeFace === 'side' ? vxSideFace : vxBottomFace;
+      const setTarget = target === 'top' ? setVxTopFace : target === 'side' ? setVxSideFace : setVxBottomFace;
+      setTarget(srcFace);
+    }
+  };
+
+  const copyFaceToAll = () => {
+    for (const f of ['top', 'side', 'bottom'] as FaceName[]) copyFaceTo(f);
+  };
+
+  const buildProject = useCallback((name: string): VoxelCraftProject => {
+    let thumbnail: string | undefined;
+    if (isoRef.current) {
+      const tmp = document.createElement('canvas');
+      tmp.width = 100; tmp.height = 100;
+      tmp.getContext('2d')!.drawImage(isoRef.current, 0, 0, 100, 100);
+      thumbnail = tmp.toDataURL('image/png');
+    }
+    const proj: VoxelCraftProject = {
+      version: 1,
+      name,
+      createdAt: new Date().toISOString(),
+      thumbnail,
+      editorMode,
+      faces: { top: topImg, side: sideImg, bottom: bottomImg },
+    };
+    if (editorMode === 'texture') {
+      proj.textureConfigs = { top: topConfig, side: sideConfig, bottom: bottomConfig };
+    } else {
+      proj.voxelConfigs = {
+        resolution: vxResolution, seed: vxSeed, renderStyle: vxRenderStyle,
+        sideMode: vxSideMode, sideSplitPos: vxSideSplitPos,
+        transitionPattern: vxTransitionPattern, transitionNoise: vxTransitionNoise,
+        top: vxTopFace, side: vxSideFace, bottom: vxBottomFace, sideTopFace: vxSideTopFace,
+      };
+    }
+    if (snowEnabled) {
+      proj.snow = { enabled: snowEnabled, depth: snowDepth, color1: snowColor1, color2: snowColor2, seed: snowSeed };
+    }
+    return proj;
+  }, [editorMode, topImg, sideImg, bottomImg, topConfig, sideConfig, bottomConfig,
+      vxResolution, vxSeed, vxRenderStyle, vxSideMode, vxSideSplitPos,
+      vxTransitionPattern, vxTransitionNoise, vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
+      snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed]);
+
+  const loadProject = useCallback((proj: VoxelCraftProject) => {
+    setEditorMode(proj.editorMode);
+    setTopImg(proj.faces.top);
+    setSideImg(proj.faces.side);
+    setBottomImg(proj.faces.bottom);
+    if (proj.textureConfigs) {
+      setTopConfig(proj.textureConfigs.top);
+      setSideConfig(proj.textureConfigs.side);
+      setBottomConfig(proj.textureConfigs.bottom);
+    }
+    if (proj.voxelConfigs) {
+      setVxResolution(proj.voxelConfigs.resolution);
+      setVxSeed(proj.voxelConfigs.seed);
+      setVxRenderStyle(proj.voxelConfigs.renderStyle);
+      setVxSideMode(proj.voxelConfigs.sideMode);
+      setVxSideSplitPos(proj.voxelConfigs.sideSplitPos);
+      setVxTransitionPattern(proj.voxelConfigs.transitionPattern);
+      setVxTransitionNoise(proj.voxelConfigs.transitionNoise);
+      setVxTopFace(proj.voxelConfigs.top);
+      setVxSideFace(proj.voxelConfigs.side);
+      setVxBottomFace(proj.voxelConfigs.bottom);
+      setVxSideTopFace(proj.voxelConfigs.sideTopFace);
+    }
+    if (proj.snow) {
+      setSnowEnabled(proj.snow.enabled);
+      setSnowDepth(proj.snow.depth);
+      setSnowColor1(proj.snow.color1);
+      setSnowColor2(proj.snow.color2);
+      setSnowSeed(proj.snow.seed);
+    } else {
+      setSnowEnabled(false);
+    }
+    setProjectName(proj.name);
+    setActivePresetKey('');
+    setActiveVxPresetKey('');
+  }, [setEditorMode, setTopImg, setSideImg, setBottomImg, setTopConfig, setSideConfig, setBottomConfig,
+      setVxResolution, setVxSeed, setVxRenderStyle, setVxSideMode, setVxSideSplitPos,
+      setVxTransitionPattern, setVxTransitionNoise, setVxTopFace, setVxSideFace, setVxBottomFace, setVxSideTopFace,
+      setSnowEnabled, setSnowDepth, setSnowColor1, setSnowColor2, setSnowSeed,
+      setProjectName, setActivePresetKey, setActiveVxPresetKey]);
+
+  const handleSaveProject = useCallback(async () => {
+    const name = projectName.trim() || 'Untitled Block';
+    const proj = buildProject(name);
+    if (folderHandleRef.current) {
+      await saveProjectToFolder(folderHandleRef.current, proj);
+      setProjectList(await listProjects(folderHandleRef.current));
+    } else {
+      downloadProject(proj);
+    }
+  }, [projectName, buildProject]);
+
+  const handleOpenFolder = useCallback(async () => {
+    const handle = await openProjectFolder();
+    if (handle) {
+      folderHandleRef.current = handle;
+      setProjectList(await listProjects(handle));
+      setShowProjectBrowser(true);
+    }
+  }, []);
+
+  const handleLoadFromFolder = useCallback(async (filename: string) => {
+    if (!folderHandleRef.current) return;
+    const proj = await loadProjectFromFolder(folderHandleRef.current, filename);
+    loadProject(proj);
+    setShowProjectBrowser(false);
+  }, [loadProject]);
+
+  const handleDeleteFromFolder = useCallback(async (filename: string) => {
+    if (!folderHandleRef.current) return;
+    await deleteProjectFromFolder(folderHandleRef.current, filename);
+    setProjectList(await listProjects(folderHandleRef.current));
+  }, []);
+
+  const handleLoadFile = useCallback(async () => {
+    const proj = await uploadProject();
+    if (proj) loadProject(proj);
+  }, [loadProject]);
+
+  const handleZipExport = useCallback(async () => {
+    const refs = [topRef.current, sideRef.current, bottomRef.current] as const;
+    const names = ['block_top', 'block_side', 'block_bottom'] as const;
+    const entries: { name: string; data: Uint8Array }[] = [];
+
+    for (let i = 0; i < 3; i++) {
+      const src = refs[i];
+      if (!src) continue;
+      const tmp = document.createElement('canvas');
+      tmp.width = exportSize; tmp.height = exportSize;
+      const ctx = tmp.getContext('2d')!;
+      ctx.imageSmoothingEnabled = exportSize > src.width;
+      ctx.drawImage(src, 0, 0, exportSize, exportSize);
+      entries.push({ name: `${names[i]}.png`, data: await canvasToPngBytes(tmp) });
+
+      const normCanvas = document.createElement('canvas');
+      generateNormalMap(tmp, normCanvas, normalSettingsRef.current);
+      entries.push({ name: `${names[i]}_normal.png`, data: await canvasToPngBytes(normCanvas) });
+    }
+
+    const blob = createZip(entries);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'block_textures.zip';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [exportSize]);
+
   const activeCanvasRef = activeFace === 'top' ? topRef : activeFace === 'side' ? sideRef : bottomRef;
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+      if (e.key === '1') { e.preventDefault(); setActiveFace('top'); }
+      else if (e.key === '2') { e.preventDefault(); setActiveFace('side'); }
+      else if (e.key === '3') { e.preventDefault(); setActiveFace('bottom'); }
+      else if (e.key === 'r' || e.key === 'R') { e.preventDefault(); setVxSeed(Math.floor(Math.random() * 999) + 1); }
+      else if (e.key === 't' || e.key === 'T') { e.preventDefault(); setTilingPreview(p => !p); }
+      else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); setSnowEnabled(p => !p); }
+      else if (e.key === 's' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleSaveProject(); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [setActiveFace, setVxSeed, setTilingPreview, setSnowEnabled, handleSaveProject]);
 
   return (
     <div className="workbench-layout">
       <div className="workbench-preview-panel">
         <canvas ref={isoRef} className="texture-canvas iso-canvas" width={300} height={300} />
+        {tilingPreview && <canvas ref={tilingRef} width={300} height={300} style={{ width: '100%', maxWidth: 300, imageRendering: 'pixelated', border: '1px solid #444', marginTop: 6 }} />}
         <div className="settings-row" style={{ justifyContent: 'center', gap: '12px', margin: '6px 0', flexWrap: 'wrap' }}>
           <label style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
             <input type="checkbox" checked={litPreview} onChange={e => setLitPreview(e.target.checked)} />
@@ -1210,6 +1426,10 @@ export default function BlockWorkbench() {
           <label style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
             <input type="checkbox" checked={snowEnabled} onChange={e => setSnowEnabled(e.target.checked)} />
             {' '}Snow Layer
+          </label>
+          <label style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={tilingPreview} onChange={e => setTilingPreview(e.target.checked)} />
+            {' '}Tiling (3x3)
           </label>
         </div>
         {snowEnabled && (
@@ -1239,9 +1459,52 @@ export default function BlockWorkbench() {
           ))}
         </div>
 
+        {imgs[activeFace] && (
+          <div className="settings-row" style={{ justifyContent: 'center', gap: '6px', margin: '4px 0', fontSize: '0.75rem' }}>
+            <span style={{ opacity: 0.7 }}>Copy {activeFace} to:</span>
+            {(['top', 'side', 'bottom'] as FaceName[]).filter(f => f !== activeFace).map(f => (
+              <button key={f} className="btn-small" onClick={() => copyFaceTo(f)}>{f.charAt(0).toUpperCase() + f.slice(1)}</button>
+            ))}
+            <button className="btn-small" onClick={copyFaceToAll}>All</button>
+          </div>
+        )}
+
+        <div className="settings-row" style={{ gap: '6px', margin: '6px 0', flexWrap: 'wrap', alignItems: 'center', fontSize: '0.78rem' }}>
+          <input
+            type="text" placeholder="Project name…" value={projectName}
+            onChange={e => setProjectName(e.target.value)}
+            style={{ flex: 1, minWidth: '100px', fontSize: '0.78rem', padding: '3px 6px' }}
+          />
+          <button className="btn-small" onClick={handleSaveProject} title="Save project (Ctrl+S)">Save</button>
+          <button className="btn-small" onClick={handleLoadFile} title="Load a .voxelcraft file">Load</button>
+          {supportsFileSystemAccess() && (
+            <button className="btn-small" onClick={handleOpenFolder} title="Open project folder">Folder</button>
+          )}
+          {showProjectBrowser && projectList.length > 0 && (
+            <button className="btn-small" onClick={() => setShowProjectBrowser(false)}>Close</button>
+          )}
+        </div>
+
+        {showProjectBrowser && (
+          <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #444', borderRadius: '6px', padding: '6px', marginBottom: '6px', fontSize: '0.75rem' }}>
+            {projectList.length === 0 && <div style={{ opacity: 0.6, textAlign: 'center', padding: '12px 0' }}>No projects in this folder</div>}
+            {projectList.map(p => (
+              <div key={p.filename} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 2px', borderBottom: '1px solid #333', cursor: 'pointer' }}
+                onClick={() => handleLoadFromFolder(p.filename)}>
+                {p.thumbnail && <img src={p.thumbnail} alt="" style={{ width: 36, height: 36, imageRendering: 'pixelated', borderRadius: 3 }} />}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                  <div style={{ opacity: 0.5, fontSize: '0.7rem' }}>{new Date(p.createdAt).toLocaleDateString()}</div>
+                </div>
+                <button className="btn-small" style={{ fontSize: '0.65rem' }} onClick={e => { e.stopPropagation(); handleDeleteFromFolder(p.filename); }}>Del</button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="workbench-presets">
           <label>Block Presets:</label>
-          <select defaultValue="" onChange={e => { if (e.target.value) applyPreset(e.target.value); e.target.value = ''; }}>
+          <select value={activePresetKey} onChange={e => { if (e.target.value) applyPreset(e.target.value); }}>
             <option value="" disabled>Choose a preset…</option>
             {renderGroupedOptions(WORKBENCH_PRESETS, WORKBENCH_CATEGORIES)}
           </select>
@@ -1268,6 +1531,7 @@ export default function BlockWorkbench() {
             if (sideRef.current) downloadAtSize(sideRef.current, 'block_side');
             if (bottomRef.current) downloadAtSize(bottomRef.current, 'block_bottom');
           }}>All</button>
+          <button className="btn-primary" onClick={handleZipExport} title="Download all faces + normal maps as ZIP">ZIP</button>
         </div>
         {renderCount > 0 && imgs[activeFace] && <MapPanel
           sourceCanvas={activeCanvasRef.current}
@@ -1315,14 +1579,14 @@ export default function BlockWorkbench() {
               <h3>Block Settings</h3>
               <div className="settings-row">
                 <label>Preset</label>
-                <select defaultValue="" onChange={e => { if (e.target.value) applyVoxelPreset(e.target.value); e.target.value = ''; }}>
+                <select value={activeVxPresetKey} onChange={e => { if (e.target.value) applyVoxelPreset(e.target.value); }}>
                   <option value="" disabled>Choose…</option>
                   {renderGroupedOptions(VOXEL_PRESETS, VOXEL_CATEGORIES)}
                 </select>
               </div>
               <div className="settings-row"><label>Style</label><select value={vxRenderStyle} onChange={e => setVxRenderStyle(e.target.value as VoxelRenderStyle)}><option value="pixelated">Pixelated</option><option value="cartoon">Cartoon</option><option value="realistic">Realistic</option><option value="painterly">Painterly</option><option value="flat">Flat / Minimal</option></select></div>
               <div className="settings-row"><label>Resolution</label><select value={vxResolution} onChange={e => setVxResolution(parseInt(e.target.value))}><option value="8">8×8</option><option value="16">16×16</option><option value="32">32×32</option><option value="64">64×64</option><option value="128">128×128</option><option value="256">256×256</option><option value="512">512×512</option><option value="1024">1024×1024</option></select></div>
-              <SliderControl label="Seed" value={vxSeed} min={1} max={1000} step={1} onChange={setVxSeed} />
+              <SliderControl label="Seed" value={vxSeed} min={1} max={1000} step={1} onChange={setVxSeed} extra={<button type="button" onClick={() => setVxSeed(Math.floor(Math.random() * 999) + 1)} title="Randomize seed" style={{ padding: '2px 6px', fontSize: '0.85rem', cursor: 'pointer', lineHeight: 1 }}>&#x1F3B2;</button>} />
               <div className="settings-row"><label>Side Blend</label><select value={vxSideMode} onChange={e => setVxSideMode(e.target.value as VoxelBlockSideMode)}><option value="uniform">Uniform (side only)</option><option value="split">Split (top/bottom)</option><option value="gradient_top">Gradient from top</option><option value="gradient_bottom">Gradient from bottom</option></select></div>
               {vxSideMode !== 'uniform' && <>
                 <SliderControl label="Split Position" value={vxSideSplitPos} min={0.05} max={0.95} step={0.01} onChange={setVxSideSplitPos} />

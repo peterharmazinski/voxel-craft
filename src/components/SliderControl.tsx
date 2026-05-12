@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 interface SliderControlProps {
   label: string;
   value: number;
@@ -5,9 +7,10 @@ interface SliderControlProps {
   max: number;
   step: number;
   onChange: (value: number) => void;
+  extra?: ReactNode;
 }
 
-export default function SliderControl({ label, value, min, max, step, onChange }: SliderControlProps) {
+export default function SliderControl({ label, value, min, max, step, onChange, extra }: SliderControlProps) {
   return (
     <div className="slider-control">
       <label className="slider-label">{label}</label>
@@ -29,6 +32,7 @@ export default function SliderControl({ label, value, min, max, step, onChange }
           onChange={(e) => onChange(parseFloat(e.target.value))}
           className="slider-number"
         />
+        {extra}
       </div>
     </div>
   );
