@@ -966,6 +966,22 @@ export default function BlockWorkbench() {
   const [snowColor2, setSnowColor2] = useLocalState('bw_snowC2', '#d8e4f0');
   const [snowSeed, setSnowSeed] = useLocalState('bw_snowSeed', 42);
 
+  const [exportSize, setExportSize] = useLocalState<number>('bw_exportSize', 256);
+
+  const downloadAtSize = useCallback((source: HTMLCanvasElement, filename: string) => {
+    if (exportSize === source.width) {
+      downloadCanvas(source, filename, 'png');
+      return;
+    }
+    const tmp = document.createElement('canvas');
+    tmp.width = exportSize;
+    tmp.height = exportSize;
+    const ctx = tmp.getContext('2d')!;
+    ctx.imageSmoothingEnabled = exportSize > source.width;
+    ctx.drawImage(source, 0, 0, exportSize, exportSize);
+    downloadCanvas(tmp, filename, 'png');
+  }, [exportSize]);
+
   const currentVxFace = vxActiveFace === 'top' ? vxTopFace : vxActiveFace === 'side' ? vxSideFace : vxBottomFace;
   const setCurrentVxFace = vxActiveFace === 'top' ? setVxTopFace : vxActiveFace === 'side' ? setVxSideFace : setVxBottomFace;
 
@@ -1232,16 +1248,25 @@ export default function BlockWorkbench() {
         </div>
 
         <div className="download-bar">
+          <select value={exportSize} onChange={e => setExportSize(+e.target.value)} style={{ fontSize: '0.75rem', padding: '4px 6px' }}>
+            <option value={16}>16 px</option>
+            <option value={32}>32 px</option>
+            <option value={64}>64 px</option>
+            <option value={128}>128 px</option>
+            <option value={256}>256 px</option>
+            <option value={512}>512 px</option>
+            <option value={1024}>1024 px</option>
+          </select>
           {(['top', 'side', 'bottom'] as const).map(f => (
             <button key={f} className="btn-primary" onClick={() => {
               const ref = f === 'top' ? topRef : f === 'side' ? sideRef : bottomRef;
-              if (ref.current) downloadCanvas(ref.current, `block_${f}`, 'png');
+              if (ref.current) downloadAtSize(ref.current, `block_${f}`);
             }}>{f.charAt(0).toUpperCase() + f.slice(1)}</button>
           ))}
           <button className="btn-primary" onClick={() => {
-            if (topRef.current) downloadCanvas(topRef.current, 'block_top', 'png');
-            if (sideRef.current) downloadCanvas(sideRef.current, 'block_side', 'png');
-            if (bottomRef.current) downloadCanvas(bottomRef.current, 'block_bottom', 'png');
+            if (topRef.current) downloadAtSize(topRef.current, 'block_top');
+            if (sideRef.current) downloadAtSize(sideRef.current, 'block_side');
+            if (bottomRef.current) downloadAtSize(bottomRef.current, 'block_bottom');
           }}>All</button>
         </div>
         {renderCount > 0 && imgs[activeFace] && <MapPanel
