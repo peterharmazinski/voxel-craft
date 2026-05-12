@@ -248,3 +248,63 @@ export function renderFaceTexture(canvas: HTMLCanvasElement, config: FaceTexture
     ctx.putImageData(imgData, 0, 0);
   }
 }
+
+export interface SnowOverlayOptions {
+  color1: string;
+  color2: string;
+  depth: number;   // 0–1, how far down the snow extends
+  seed: number;
+}
+
+export function applySnowOverlay(canvas: HTMLCanvasElement, opts: SnowOverlayOptions, face: 'top' | 'side' | 'bottom') {
+  const { color1, color2, depth, seed } = opts;
+  const w = canvas.width;
+  const h = canvas.height;
+  const ctx = canvas.getContext('2d')!;
+
+  if (face === 'top') {
+    const snowCanvas = document.createElement('canvas');
+    snowCanvas.width = w;
+    snowCanvas.height = h;
+    generatePerlinNoise(snowCanvas, w, color1, color2, 'FractalNoise', 4, 0.4, 30, seed, 1);
+    const baseData = ctx.getImageData(0, 0, w, h);
+    const snowData = snowCanvas.getContext('2d')!.getImageData(0, 0, w, h);
+    const bd = baseData.data;
+    const sd = snowData.data;
+    const coverage = 0.5 + depth * 0.5;
+    for (let i = 0; i < bd.length; i += 4) {
+      bd[i]     = Math.round(bd[i] * (1 - coverage) + sd[i] * coverage);
+      bd[i + 1] = Math.round(bd[i + 1] * (1 - coverage) + sd[i + 1] * coverage);
+      bd[i + 2] = Math.round(bd[i + 2] * (1 - coverage) + sd[i + 2] * coverage);
+    }
+    ctx.putImageData(baseData, 0, 0);
+    return;
+  }
+
+  if (face === 'side') {
+    const snowCanvas = document.createElement('canvas');
+    snowCanvas.width = w;
+    snowCanvas.height = h;
+    generatePerlinNoise(snowCanvas, w, color1, color2, 'FractalNoise', 5, 0.5, 40, seed + 10, 1);
+    const baseData = ctx.getImageData(0, 0, w, h);
+    const snowData = snowCanvas.getContext('2d')!.getImageData(0, 0, w, h);
+    const bd = baseData.data;
+    const sd = snowData.data;
+    const edgeNoise = new SimplexNoise(seed + 77);
+    const stripH = depth * h;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const wobble = edgeNoise.simplexNoise(NoiseType.FRACTAL, w, 3, 0.5, 1, 8, x, y * 0.3) * stripH * 0.5;
+        const edge = stripH + wobble;
+        const blend = y < edge - 3 ? 1 : y > edge + 3 ? 0 : (edge + 3 - y) / 6;
+        if (blend > 0) {
+          const i = (y * w + x) * 4;
+          bd[i]     = Math.round(bd[i] * (1 - blend) + sd[i] * blend);
+          bd[i + 1] = Math.round(bd[i + 1] * (1 - blend) + sd[i + 1] * blend);
+          bd[i + 2] = Math.round(bd[i + 2] * (1 - blend) + sd[i + 2] * blend);
+        }
+      }
+    }
+    ctx.putImageData(baseData, 0, 0);
+  }
+}

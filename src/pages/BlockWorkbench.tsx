@@ -16,7 +16,7 @@ import {
   type SideTransitionPattern,
   type VoxelRenderStyle,
 } from '../utils/textureGenerators';
-import { renderFaceTexture, type FaceTextureConfig } from '../utils/renderTexture';
+import { renderFaceTexture, applySnowOverlay, type FaceTextureConfig, type SnowOverlayOptions } from '../utils/renderTexture';
 import { generateNormalMap, DEFAULT_NORMAL, type NormalMapSettings } from '../utils/normalMapProcessor';
 import TextureGenerator from './TextureGenerator';
 
@@ -860,6 +860,12 @@ export default function BlockWorkbench() {
   const [vxSideTopFace, setVxSideTopFace] = useLocalState<VoxelBlockFace>('bw_vxSTop', DEFAULT_VOXEL_FACE('custom'));
   const [vxActiveFace, setVxActiveFace] = useLocalState<'top' | 'side' | 'bottom'>('bw_vxFace', 'top');
 
+  const [snowEnabled, setSnowEnabled] = useLocalState('bw_snow', false);
+  const [snowDepth, setSnowDepth] = useLocalState('bw_snowDepth', 0.35);
+  const [snowColor1, setSnowColor1] = useLocalState('bw_snowC1', '#f0f4fa');
+  const [snowColor2, setSnowColor2] = useLocalState('bw_snowC2', '#d8e4f0');
+  const [snowSeed, setSnowSeed] = useLocalState('bw_snowSeed', 42);
+
   const currentVxFace = vxActiveFace === 'top' ? vxTopFace : vxActiveFace === 'side' ? vxSideFace : vxBottomFace;
   const setCurrentVxFace = vxActiveFace === 'top' ? setVxTopFace : vxActiveFace === 'side' ? setVxSideFace : setVxBottomFace;
 
@@ -945,6 +951,12 @@ export default function BlockWorkbench() {
       }
     }
 
+    if (snowEnabled) {
+      const snowOpts: SnowOverlayOptions = { color1: snowColor1, color2: snowColor2, depth: snowDepth, seed: snowSeed };
+      if (topRef.current && topImg) applySnowOverlay(topRef.current, snowOpts, 'top');
+      if (sideRef.current && sideImg) applySnowOverlay(sideRef.current, snowOpts, 'side');
+    }
+
     if (isoRef.current && topRef.current && sideRef.current && bottomRef.current) {
       // Draw background
       const isoCtx = isoRef.current.getContext('2d')!;
@@ -985,7 +997,7 @@ export default function BlockWorkbench() {
       }
     }
     setRenderCount(c => c + 1);
-  }, [topImg, sideImg, bottomImg, drawImg, applyLighting, litPreview, normalSettings, bgMode]);
+  }, [topImg, sideImg, bottomImg, drawImg, applyLighting, litPreview, normalSettings, bgMode, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed]);
 
   useEffect(() => { updatePreview(); }, [updatePreview]);
 
@@ -1079,7 +1091,29 @@ export default function BlockWorkbench() {
               <option value="checker">Transparency</option>
             </select>
           </span>
+          <label style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
+            <input type="checkbox" checked={snowEnabled} onChange={e => setSnowEnabled(e.target.checked)} />
+            {' '}Snow Layer
+          </label>
         </div>
+        {snowEnabled && (
+          <div className="settings-row" style={{ justifyContent: 'center', gap: '10px', margin: '0 0 6px', flexWrap: 'wrap', fontSize: '0.78rem' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              Depth:
+              <input type="range" min={0.05} max={0.8} step={0.01} value={snowDepth} onChange={e => setSnowDepth(+e.target.value)} style={{ width: '80px' }} />
+              <span style={{ minWidth: '28px' }}>{Math.round(snowDepth * 100)}%</span>
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              Color:
+              <input type="color" value={snowColor1} onChange={e => setSnowColor1(e.target.value)} style={{ width: '24px', height: '20px', padding: 0, border: 'none' }} />
+              <input type="color" value={snowColor2} onChange={e => setSnowColor2(e.target.value)} style={{ width: '24px', height: '20px', padding: 0, border: 'none' }} />
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              Seed:
+              <input type="number" value={snowSeed} onChange={e => setSnowSeed(+e.target.value)} style={{ width: '48px', fontSize: '0.75rem', padding: '2px 4px' }} />
+            </span>
+          </div>
+        )}
         <div className="face-previews">
           {(['top', 'side', 'bottom'] as const).map(face => (
             <div key={face} className={`face-preview ${activeFace === face ? 'active' : ''}`} onClick={() => setActiveFace(face)}>
