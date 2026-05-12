@@ -12,6 +12,7 @@ import {
   generateCartoonOre,
   generateHexagon,
   generateOctagon,
+  generateStoneWall,
   type BrickPattern,
   type BrickColorMode,
   type TileColorMode,
@@ -19,7 +20,7 @@ import {
 } from './textureGenerators';
 import { SimplexNoise, NoiseType } from './noise';
 
-export type TextureType = 'PerlinNoise' | 'Checker' | 'Brick' | 'Gradient' | 'Terrain' | 'Wood' | 'Bark' | 'Tiles' | 'Textiles' | 'Clouds' | 'Voxel' | 'CartoonOre' | 'Hexagon' | 'Octagon';
+export type TextureType = 'PerlinNoise' | 'Checker' | 'Brick' | 'Gradient' | 'Terrain' | 'Wood' | 'Bark' | 'Tiles' | 'Textiles' | 'Clouds' | 'Voxel' | 'CartoonOre' | 'Hexagon' | 'Octagon' | 'StoneWall';
 
 export const TEXTURE_TYPES: { id: TextureType; label: string }[] = [
   { id: 'PerlinNoise', label: 'Perlin Noise' },
@@ -35,6 +36,7 @@ export const TEXTURE_TYPES: { id: TextureType; label: string }[] = [
   { id: 'Wood', label: 'Wood' },
   { id: 'Bark', label: 'Bark' },
   { id: 'CartoonOre', label: 'Cartoon Ore' },
+  { id: 'StoneWall', label: 'Stone Wall' },
   { id: 'Voxel', label: 'Voxel / Pixel' },
 ];
 
@@ -188,6 +190,20 @@ export function renderFaceTexture(canvas: HTMLCanvasElement, config: FaceTexture
         p.groutColor as string || '#666666', p.columns as number || 5,
         p.groutSize as number || 4, p.shade as number || 0.1, seed,
         p.gradient as boolean || false);
+      break;
+    case 'StoneWall':
+      generateStoneWall(canvas, size, {
+        stoneColor1: p.color1 as string || '#a09888',
+        stoneColor2: p.color2 as string || '#887868',
+        mortarColor: p.mortarColor as string || '#484038',
+        columns: p.columns as number || 6,
+        rows: p.rows as number || 6,
+        mortarWidth: p.mortarWidth as number || 3,
+        jitter: p.jitter as number || 0.8,
+        shading: p.shading as number || 0.5,
+        textureNoise: p.textureNoise as number || 0.4,
+        seed,
+      });
       break;
   }
 

@@ -807,57 +807,21 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   // ── Stone wall presets ─────────────────────────────────
   stone_wall: {
     label: 'Stone Wall',
-    top: { type: 'CartoonOre', size: 256, seed: 300, params: { color1: '#8a8278', color2: '#706860', color3: '#585048', bgNoise: 0.5, bgPatch: 20, outline: 2.5, shadow: 0.2, ores: [
-      { color: '#b0a898', highlightColor: '#c0b8a8', shape: 'round', count: 6, minSize: 40, maxSize: 70, name: 'Large Stone', useGradient: false },
-      { color: '#a09080', highlightColor: '#b0a090', shape: 'round', count: 10, minSize: 22, maxSize: 45, name: 'Medium Stone', useGradient: false },
-      { color: '#908070', highlightColor: '#a09080', shape: 'round', count: 12, minSize: 12, maxSize: 28, name: 'Small Stone', useGradient: false },
-    ] } },
-    side: { type: 'CartoonOre', size: 256, seed: 301, params: { color1: '#8a8278', color2: '#706860', color3: '#585048', bgNoise: 0.5, bgPatch: 20, outline: 2.5, shadow: 0.2, ores: [
-      { color: '#b0a898', highlightColor: '#c0b8a8', shape: 'round', count: 6, minSize: 40, maxSize: 70, name: 'Large Stone', useGradient: false },
-      { color: '#a09080', highlightColor: '#b0a090', shape: 'round', count: 10, minSize: 22, maxSize: 45, name: 'Medium Stone', useGradient: false },
-      { color: '#908070', highlightColor: '#a09080', shape: 'round', count: 12, minSize: 12, maxSize: 28, name: 'Small Stone', useGradient: false },
-    ] } },
-    bottom: { type: 'CartoonOre', size: 256, seed: 302, params: { color1: '#7a7268', color2: '#605850', color3: '#484038', bgNoise: 0.5, bgPatch: 20, outline: 2.5, shadow: 0.2, ores: [
-      { color: '#a09888', highlightColor: '#b0a898', shape: 'round', count: 5, minSize: 40, maxSize: 70, name: 'Large Stone', useGradient: false },
-      { color: '#908070', highlightColor: '#a09080', shape: 'round', count: 8, minSize: 22, maxSize: 45, name: 'Medium Stone', useGradient: false },
-      { color: '#807060', highlightColor: '#908070', shape: 'round', count: 10, minSize: 12, maxSize: 28, name: 'Small Stone', useGradient: false },
-    ] } },
+    top: { type: 'StoneWall', size: 256, seed: 300, params: { color1: '#b0a898', color2: '#908070', mortarColor: '#484038', columns: 6, rows: 6, mortarWidth: 3, jitter: 0.85, shading: 0.5, textureNoise: 0.4 } },
+    side: { type: 'StoneWall', size: 256, seed: 301, params: { color1: '#b0a898', color2: '#908070', mortarColor: '#484038', columns: 6, rows: 6, mortarWidth: 3, jitter: 0.85, shading: 0.5, textureNoise: 0.4 } },
+    bottom: { type: 'StoneWall', size: 256, seed: 302, params: { color1: '#a09888', color2: '#807060', mortarColor: '#3a3228', columns: 6, rows: 6, mortarWidth: 3, jitter: 0.85, shading: 0.5, textureNoise: 0.4 } },
   },
   rough_stone_wall: {
     label: 'Rough Stone Wall',
-    top: { type: 'CartoonOre', size: 256, seed: 305, params: { color1: '#6a6258', color2: '#524a40', color3: '#3a3228', bgNoise: 0.65, bgPatch: 18, outline: 3.0, shadow: 0.25, ores: [
-      { color: '#9a9088', highlightColor: '#a8a098', shape: 'mixed', count: 5, minSize: 38, maxSize: 65, name: 'Large Rock', useGradient: false },
-      { color: '#8a8070', highlightColor: '#989080', shape: 'mixed', count: 10, minSize: 20, maxSize: 42, name: 'Medium Rock', useGradient: false },
-      { color: '#7a7060', highlightColor: '#888068', shape: 'round', count: 14, minSize: 10, maxSize: 24, name: 'Pebble', useGradient: false },
-    ] } },
-    side: { type: 'CartoonOre', size: 256, seed: 306, params: { color1: '#6a6258', color2: '#524a40', color3: '#3a3228', bgNoise: 0.65, bgPatch: 18, outline: 3.0, shadow: 0.25, ores: [
-      { color: '#9a9088', highlightColor: '#a8a098', shape: 'mixed', count: 5, minSize: 38, maxSize: 65, name: 'Large Rock', useGradient: false },
-      { color: '#8a8070', highlightColor: '#989080', shape: 'mixed', count: 10, minSize: 20, maxSize: 42, name: 'Medium Rock', useGradient: false },
-      { color: '#7a7060', highlightColor: '#888068', shape: 'round', count: 14, minSize: 10, maxSize: 24, name: 'Pebble', useGradient: false },
-    ] } },
-    bottom: { type: 'CartoonOre', size: 256, seed: 307, params: { color1: '#5a5248', color2: '#423a30', color3: '#2a2218', bgNoise: 0.65, bgPatch: 18, outline: 3.0, shadow: 0.25, ores: [
-      { color: '#8a8078', highlightColor: '#989088', shape: 'mixed', count: 4, minSize: 38, maxSize: 65, name: 'Large Rock', useGradient: false },
-      { color: '#7a7060', highlightColor: '#888070', shape: 'mixed', count: 8, minSize: 20, maxSize: 42, name: 'Medium Rock', useGradient: false },
-      { color: '#6a6050', highlightColor: '#787058', shape: 'round', count: 12, minSize: 10, maxSize: 24, name: 'Pebble', useGradient: false },
-    ] } },
+    top: { type: 'StoneWall', size: 256, seed: 305, params: { color1: '#9a9088', color2: '#706860', mortarColor: '#3a3228', columns: 5, rows: 5, mortarWidth: 4, jitter: 0.95, shading: 0.7, textureNoise: 0.6 } },
+    side: { type: 'StoneWall', size: 256, seed: 306, params: { color1: '#9a9088', color2: '#706860', mortarColor: '#3a3228', columns: 5, rows: 5, mortarWidth: 4, jitter: 0.95, shading: 0.7, textureNoise: 0.6 } },
+    bottom: { type: 'StoneWall', size: 256, seed: 307, params: { color1: '#8a8078', color2: '#605850', mortarColor: '#2a2218', columns: 5, rows: 5, mortarWidth: 4, jitter: 0.95, shading: 0.7, textureNoise: 0.6 } },
   },
   mossy_stone_wall: {
     label: 'Mossy Stone Wall',
-    top: { type: 'CartoonOre', size: 256, seed: 310, params: { color1: '#586850', color2: '#405840', color3: '#304830', bgNoise: 0.5, bgPatch: 22, outline: 2.5, shadow: 0.2, ores: [
-      { color: '#8a9880', highlightColor: '#98a890', shape: 'round', count: 6, minSize: 38, maxSize: 65, name: 'Large Mossy Stone', useGradient: false },
-      { color: '#788870', highlightColor: '#889880', shape: 'round', count: 10, minSize: 20, maxSize: 42, name: 'Medium Mossy Stone', useGradient: false },
-      { color: '#506840', highlightColor: '#608050', shape: 'round', count: 8, minSize: 10, maxSize: 22, name: 'Moss Patch', useGradient: false },
-    ] } },
-    side: { type: 'CartoonOre', size: 256, seed: 311, params: { color1: '#586850', color2: '#405840', color3: '#304830', bgNoise: 0.5, bgPatch: 22, outline: 2.5, shadow: 0.2, ores: [
-      { color: '#8a9880', highlightColor: '#98a890', shape: 'round', count: 6, minSize: 38, maxSize: 65, name: 'Large Mossy Stone', useGradient: false },
-      { color: '#788870', highlightColor: '#889880', shape: 'round', count: 10, minSize: 20, maxSize: 42, name: 'Medium Mossy Stone', useGradient: false },
-      { color: '#506840', highlightColor: '#608050', shape: 'round', count: 8, minSize: 10, maxSize: 22, name: 'Moss Patch', useGradient: false },
-    ] } },
-    bottom: { type: 'CartoonOre', size: 256, seed: 312, params: { color1: '#485840', color2: '#304830', color3: '#203820', bgNoise: 0.5, bgPatch: 22, outline: 2.5, shadow: 0.2, ores: [
-      { color: '#7a8870', highlightColor: '#889880', shape: 'round', count: 5, minSize: 38, maxSize: 65, name: 'Large Mossy Stone', useGradient: false },
-      { color: '#687860', highlightColor: '#788870', shape: 'round', count: 8, minSize: 20, maxSize: 42, name: 'Medium Mossy Stone', useGradient: false },
-      { color: '#405830', highlightColor: '#507040', shape: 'round', count: 6, minSize: 10, maxSize: 22, name: 'Moss Patch', useGradient: false },
-    ] } },
+    top: { type: 'StoneWall', size: 256, seed: 310, params: { color1: '#8a9880', color2: '#607858', mortarColor: '#304830', columns: 6, rows: 6, mortarWidth: 3, jitter: 0.85, shading: 0.5, textureNoise: 0.5 } },
+    side: { type: 'StoneWall', size: 256, seed: 311, params: { color1: '#8a9880', color2: '#607858', mortarColor: '#304830', columns: 6, rows: 6, mortarWidth: 3, jitter: 0.85, shading: 0.5, textureNoise: 0.5 } },
+    bottom: { type: 'StoneWall', size: 256, seed: 312, params: { color1: '#7a8870', color2: '#506848', mortarColor: '#203820', columns: 6, rows: 6, mortarWidth: 3, jitter: 0.85, shading: 0.5, textureNoise: 0.5 } },
   },
   castle_wall: {
     label: 'Castle Stone Wall',

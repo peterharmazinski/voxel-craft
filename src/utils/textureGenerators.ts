@@ -2078,3 +2078,122 @@ export function generateOctagon(
     }
   }
 }
+
+// ─── Stone Wall (Voronoi) ────────────────────────────────────────────────────
+
+export interface StoneWallOptions {
+  stoneColor1: string;
+  stoneColor2: string;
+  mortarColor: string;
+  columns: number;
+  rows: number;
+  mortarWidth: number;
+  jitter: number;
+  shading: number;
+  textureNoise: number;
+  seed: number;
+}
+
+export function generateStoneWall(
+  canvas: HTMLCanvasElement,
+  size: number,
+  opts: StoneWallOptions,
+) {
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  let s = opts.seed | 0;
+  function rng() {
+    s = (s * 1664525 + 1013904223) & 0x7fffffff;
+    return s / 0x7fffffff;
+  }
+
+  const cols = opts.columns;
+  const rows = opts.rows;
+  const cellW = size / cols;
+  const cellH = size / rows;
+  const jitter = opts.jitter;
+
+  interface SeedPt {
+    x: number; y: number; id: number;
+    shade: number; blend: number;
+  }
+  const seeds: SeedPt[] = [];
+
+  for (let gy = -1; gy <= rows; gy++) {
+    for (let gx = -1; gx <= cols; gx++) {
+      const cx = (gx + 0.5) * cellW + (rng() - 0.5) * cellW * jitter;
+      const cy = (gy + 0.5) * cellH + (rng() - 0.5) * cellH * jitter;
+      seeds.push({
+        x: cx, y: cy, id: seeds.length,
+        shade: 0.75 + rng() * 0.5,
+        blend: rng(),
+      });
+    }
+  }
+
+  const col1 = hexToRgb(opts.stoneColor1);
+  const col2 = hexToRgb(opts.stoneColor2);
+  const mortar = hexToRgb(opts.mortarColor);
+  const imgData = ctx.createImageData(size, size);
+  const data = imgData.data;
+
+  const noiseGen = new SimplexNoise(opts.seed);
+
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      let minD = Infinity;
+      let minD2 = Infinity;
+      let nearest = seeds[0];
+
+      for (const pt of seeds) {
+        const dx = px - pt.x;
+        const dy = py - pt.y;
+        const d = dx * dx + dy * dy;
+        if (d < minD) {
+          minD2 = minD;
+          minD = d;
+          nearest = pt;
+        } else if (d < minD2) {
+          minD2 = d;
+        }
+      }
+
+      const d1 = Math.sqrt(minD);
+      const d2 = Math.sqrt(minD2);
+      const edgeDist = (d2 - d1) * 0.5;
+
+      const idx = (py * size + px) * 4;
+
+      if (edgeDist < opts.mortarWidth) {
+        const t = edgeDist / opts.mortarWidth;
+        const dark = 0.65 + t * 0.35;
+        data[idx] = mortar.r * dark;
+        data[idx + 1] = mortar.g * dark;
+        data[idx + 2] = mortar.b * dark;
+        data[idx + 3] = 255;
+      } else {
+        const r0 = col1.r + (col2.r - col1.r) * nearest.blend;
+        const g0 = col1.g + (col2.g - col1.g) * nearest.blend;
+        const b0 = col1.b + (col2.b - col1.b) * nearest.blend;
+
+        const maxCellDim = Math.max(cellW, cellH) * 0.7;
+        const edgeFade = Math.min(1.0, (edgeDist - opts.mortarWidth) / (maxCellDim * 0.5));
+        const edgeShade = 1.0 - (1.0 - edgeFade) * opts.shading * 0.4;
+
+        const n1 = noiseGen.noise2D(px / 18, py / 18, 'perlin' as NoiseType);
+        const n2 = noiseGen.noise2D(px / 8, py / 8, 'perlin' as NoiseType) * 0.3;
+        const nVal = (n1 + n2) * opts.textureNoise * 25;
+
+        const shade = nearest.shade * edgeShade;
+        data[idx] = Math.max(0, Math.min(255, r0 * shade + nVal));
+        data[idx + 1] = Math.max(0, Math.min(255, g0 * shade + nVal));
+        data[idx + 2] = Math.max(0, Math.min(255, b0 * shade + nVal));
+        data[idx + 3] = 255;
+      }
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+}
