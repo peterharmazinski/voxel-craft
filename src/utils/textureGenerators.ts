@@ -2118,6 +2118,7 @@ export function generateStoneWall(
   interface SeedPt {
     x: number; y: number; id: number;
     shade: number; blend: number;
+    radius: number;
   }
   const seeds: SeedPt[] = [];
 
@@ -2127,19 +2128,37 @@ export function generateStoneWall(
       const cy = (gy + 0.5) * cellH + (rng() - 0.5) * cellH * jitter;
       seeds.push({
         x: cx, y: cy, id: seeds.length,
-        shade: 0.75 + rng() * 0.5,
+        shade: 0.78 + rng() * 0.44,
         blend: rng(),
+        radius: cellW * (0.35 + rng() * 0.3),
       });
     }
   }
 
   const col1 = hexToRgb(opts.stoneColor1);
   const col2 = hexToRgb(opts.stoneColor2);
-  const mortar = hexToRgb(opts.mortarColor);
+  const mortarRgb = hexToRgb(opts.mortarColor);
   const imgData = ctx.createImageData(size, size);
   const data = imgData.data;
 
   const noiseGen = new SimplexNoise(opts.seed);
+  const mw = opts.mortarWidth;
+
+  // Pre-build a spatial grid for fast nearest-neighbor lookup
+  const gridCols = Math.max(1, Math.floor(size / cellW));
+  const gridRows = Math.max(1, Math.floor(size / cellH));
+  const grid: SeedPt[][][] = [];
+  for (let r = 0; r < gridRows + 2; r++) {
+    grid[r] = [];
+    for (let c = 0; c < gridCols + 2; c++) grid[r][c] = [];
+  }
+  for (const pt of seeds) {
+    const gc = Math.floor(pt.x / cellW) + 1;
+    const gr = Math.floor(pt.y / cellH) + 1;
+    if (gr >= 0 && gr < grid.length && gc >= 0 && gc < (grid[0]?.length ?? 0)) {
+      grid[gr][gc].push(pt);
+    }
+  }
 
   for (let py = 0; py < size; py++) {
     for (let px = 0; px < size; px++) {
@@ -2147,16 +2166,21 @@ export function generateStoneWall(
       let minD2 = Infinity;
       let nearest = seeds[0];
 
-      for (const pt of seeds) {
-        const dx = px - pt.x;
-        const dy = py - pt.y;
-        const d = dx * dx + dy * dy;
-        if (d < minD) {
-          minD2 = minD;
-          minD = d;
-          nearest = pt;
-        } else if (d < minD2) {
-          minD2 = d;
+      const gc = Math.floor(px / cellW) + 1;
+      const gr = Math.floor(py / cellH) + 1;
+      for (let dr = -2; dr <= 2; dr++) {
+        const rr = gr + dr;
+        if (rr < 0 || rr >= grid.length) continue;
+        for (let dc = -2; dc <= 2; dc++) {
+          const cc = gc + dc;
+          if (cc < 0 || cc >= grid[rr].length) continue;
+          for (const pt of grid[rr][cc]) {
+            const dx = px - pt.x;
+            const dy = py - pt.y;
+            const d = dx * dx + dy * dy;
+            if (d < minD) { minD2 = minD; minD = d; nearest = pt; }
+            else if (d < minD2) { minD2 = d; }
+          }
         }
       }
 
@@ -2166,30 +2190,37 @@ export function generateStoneWall(
 
       const idx = (py * size + px) * 4;
 
-      if (edgeDist < opts.mortarWidth) {
-        const t = edgeDist / opts.mortarWidth;
-        const dark = 0.65 + t * 0.35;
-        data[idx] = mortar.r * dark;
-        data[idx + 1] = mortar.g * dark;
-        data[idx + 2] = mortar.b * dark;
+      if (edgeDist < mw) {
+        const t = edgeDist / mw;
+        const dark = 0.55 + t * 0.45;
+        data[idx] = mortarRgb.r * dark;
+        data[idx + 1] = mortarRgb.g * dark;
+        data[idx + 2] = mortarRgb.b * dark;
         data[idx + 3] = 255;
       } else {
-        const r0 = col1.r + (col2.r - col1.r) * nearest.blend;
-        const g0 = col1.g + (col2.g - col1.g) * nearest.blend;
-        const b0 = col1.b + (col2.b - col1.b) * nearest.blend;
+        const stoneR = col1.r + (col2.r - col1.r) * nearest.blend;
+        const stoneG = col1.g + (col2.g - col1.g) * nearest.blend;
+        const stoneB = col1.b + (col2.b - col1.b) * nearest.blend;
 
-        const maxCellDim = Math.max(cellW, cellH) * 0.7;
-        const edgeFade = Math.min(1.0, (edgeDist - opts.mortarWidth) / (maxCellDim * 0.5));
-        const edgeShade = 1.0 - (1.0 - edgeFade) * opts.shading * 0.4;
+        // Edge darkening: darken near mortar for a rounded/beveled look
+        const bevelZone = nearest.radius * 0.6;
+        const bevelT = Math.min(1, (edgeDist - mw) / bevelZone);
+        const bevelShade = 0.7 + bevelT * 0.3;
 
-        const n1 = noiseGen.noise2D(px / 18, py / 18, 'perlin' as NoiseType);
-        const n2 = noiseGen.noise2D(px / 8, py / 8, 'perlin' as NoiseType) * 0.3;
-        const nVal = (n1 + n2) * opts.textureNoise * 25;
+        // Light direction: top-left highlight, bottom-right shadow
+        const relX = (px - nearest.x) / (nearest.radius || 1);
+        const relY = (py - nearest.y) / (nearest.radius || 1);
+        const light = 1.0 + (-relX - relY) * opts.shading * 0.12;
 
-        const shade = nearest.shade * edgeShade;
-        data[idx] = Math.max(0, Math.min(255, r0 * shade + nVal));
-        data[idx + 1] = Math.max(0, Math.min(255, g0 * shade + nVal));
-        data[idx + 2] = Math.max(0, Math.min(255, b0 * shade + nVal));
+        // Surface texture from noise
+        const n1 = noiseGen.noise2D(px / 16, py / 16, 'perlin' as NoiseType);
+        const n2 = noiseGen.noise2D(px / 6, py / 6, 'perlin' as NoiseType) * 0.35;
+        const nVal = (n1 + n2) * opts.textureNoise * 22;
+
+        const shade = nearest.shade * bevelShade * light;
+        data[idx]     = Math.max(0, Math.min(255, stoneR * shade + nVal));
+        data[idx + 1] = Math.max(0, Math.min(255, stoneG * shade + nVal));
+        data[idx + 2] = Math.max(0, Math.min(255, stoneB * shade + nVal));
         data[idx + 3] = 255;
       }
     }
