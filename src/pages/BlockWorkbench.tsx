@@ -822,6 +822,58 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
     side: { type: 'Brick', size: 256, seed: 321, params: { color1: '#555565', color2: '#454555', groutColor: '#2a2a35', gradientColor: '#2a2a35', pattern: 'straight', x: 10, y: 4, grout: 3, gradient: 2, colorMode: 'random', shadeRange: 0.1, texture: 0.3, textureScale: 35 } },
     bottom: { type: 'Brick', size: 256, seed: 322, params: { color1: '#454555', color2: '#353545', groutColor: '#1a1a25', gradientColor: '#1a1a25', pattern: 'straight', x: 10, y: 4, grout: 3, gradient: 2, colorMode: 'random', shadeRange: 0.1, texture: 0.4, textureScale: 35 } },
   },
+
+  // ── Snow & Ice presets ─────────────────────────────────
+  snow_block: {
+    label: 'Snow Block',
+    top: { type: 'PerlinNoise', size: 256, seed: 330, params: { color1: '#f0f4fa', color2: '#dce6f0', noiseType: 'FractalNoise', scale: 35, octaves: 4, persistence: 0.35 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 331, params: { color1: '#e4ecf4', color2: '#d0dce8', noiseType: 'FractalNoise', scale: 35, octaves: 4, persistence: 0.35 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 332, params: { color1: '#d8e2ec', color2: '#c4d0dc', noiseType: 'FractalNoise', scale: 35, octaves: 4, persistence: 0.35 } },
+  },
+  packed_ice: {
+    label: 'Packed Ice',
+    top: { type: 'PerlinNoise', size: 256, seed: 335, params: { color1: '#a0d0f0', color2: '#70b0e0', noiseType: 'FractalNoise', scale: 25, octaves: 5, persistence: 0.45 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 336, params: { color1: '#88c0e0', color2: '#60a0d0', noiseType: 'FractalNoise', scale: 25, octaves: 5, persistence: 0.45 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 337, params: { color1: '#70b0d0', color2: '#5090c0', noiseType: 'FractalNoise', scale: 25, octaves: 5, persistence: 0.45 } },
+  },
+  blue_ice: {
+    label: 'Blue Ice',
+    top: { type: 'PerlinNoise', size: 256, seed: 340, params: { color1: '#5088cc', color2: '#2858a0', noiseType: 'PerlinNoise', scale: 45, octaves: 3, persistence: 0.3 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 341, params: { color1: '#3870b8', color2: '#184088', noiseType: 'PerlinNoise', scale: 45, octaves: 3, persistence: 0.3 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 342, params: { color1: '#2858a0', color2: '#103070', noiseType: 'PerlinNoise', scale: 45, octaves: 3, persistence: 0.3 } },
+  },
+
+  // ── Taiga & Tundra presets ─────────────────────────────
+  taiga_podzol: {
+    label: 'Taiga Podzol',
+    top: { type: 'CartoonOre', size: 256, seed: 350, params: { color1: '#6a5838', color2: '#584828', color3: '#463818', bgNoise: 0.45, bgPatch: 30, outline: 0.3, shadow: 0.2, ores: [{ color: '#4a6830', highlightColor: '#5a7840', shape: 'round', count: 10, minSize: 6, maxSize: 18, name: 'Pine Needle', useGradient: false }, { color: '#7a6840', highlightColor: '#8a7850', shape: 'round', count: 6, minSize: 5, maxSize: 14, name: 'Twig', useGradient: false }] } },
+    side: { type: 'PerlinNoise', size: 256, seed: 351, params: { color1: '#7a5c3a', color2: '#4c3018', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.4 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 352, params: { color1: '#6a4c2a', color2: '#3e2a18', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.4 } },
+  },
+  tundra: {
+    label: 'Tundra',
+    top: { type: 'CartoonOre', size: 256, seed: 355, params: { color1: '#8a9878', color2: '#788868', color3: '#687858', bgNoise: 0.4, bgPatch: 30, outline: 0.3, shadow: 0.15, ores: [{ color: '#a0a890', highlightColor: '#b0b8a0', shape: 'round', count: 8, minSize: 10, maxSize: 25, name: 'Lichen', useGradient: false }, { color: '#606850', highlightColor: '#708060', shape: 'round', count: 5, minSize: 8, maxSize: 18, name: 'Moss', useGradient: false }] } },
+    side: { type: 'PerlinNoise', size: 256, seed: 356, params: { color1: '#6a5c48', color2: '#383020', noiseType: 'FractalNoise', scale: 28, octaves: 4, persistence: 0.4 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 357, params: { color1: '#5a4c38', color2: '#282010', noiseType: 'FractalNoise', scale: 28, octaves: 4, persistence: 0.4 } },
+  },
+  frozen_tundra: {
+    label: 'Frozen Tundra',
+    top: { type: 'CartoonOre', size: 256, seed: 360, params: { color1: '#c0ccd8', color2: '#a8b8c8', color3: '#90a4b8', bgNoise: 0.3, bgPatch: 35, outline: 0.2, shadow: 0.15, ores: [{ color: '#e0ecf4', highlightColor: '#f0f8ff', shape: 'round', count: 10, minSize: 12, maxSize: 30, name: 'Frost', useGradient: false }, { color: '#7a8878', highlightColor: '#8a9888', shape: 'round', count: 4, minSize: 6, maxSize: 14, name: 'Dead Grass', useGradient: false }] } },
+    side: { type: 'PerlinNoise', size: 256, seed: 361, params: { color1: '#90989c', color2: '#60707c', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.4 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 362, params: { color1: '#78848c', color2: '#485c6c', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.4 } },
+  },
+  permafrost: {
+    label: 'Permafrost',
+    top: { type: 'PerlinNoise', size: 256, seed: 365, params: { color1: '#788898', color2: '#485868', noiseType: 'FractalNoise', scale: 22, octaves: 5, persistence: 0.45 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 366, params: { color1: '#607080', color2: '#384858', noiseType: 'FractalNoise', scale: 22, octaves: 5, persistence: 0.45 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 367, params: { color1: '#485868', color2: '#283848', noiseType: 'FractalNoise', scale: 22, octaves: 5, persistence: 0.45 } },
+  },
+  pine_needles: {
+    label: 'Pine Needles',
+    top: { type: 'PerlinNoise', size: 256, seed: 370, params: { color1: '#1a5c20', color2: '#083010', noiseType: 'FractalNoise', scale: 14, octaves: 5, persistence: 0.5, cutout: 0.1 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 371, params: { color1: '#145218', color2: '#06280c', noiseType: 'FractalNoise', scale: 14, octaves: 5, persistence: 0.5, cutout: 0.1 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 372, params: { color1: '#0e4418', color2: '#042008', noiseType: 'FractalNoise', scale: 14, octaves: 5, persistence: 0.5, cutout: 0.15 } },
+  },
 };
 
 export default function BlockWorkbench() {
