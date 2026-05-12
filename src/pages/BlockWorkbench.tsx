@@ -192,7 +192,7 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   grass_block: {
     label: 'Grass Block',
     top: { type: 'PerlinNoise', size: 256, seed: 1, params: { color1: '#4a8c2a', color2: '#2d5a18', noiseType: 'FractalNoise', scale: 40, octaves: 5, persistence: 0.5 } },
-    side: { type: 'PerlinNoise', size: 256, seed: 2, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.6 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 2, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.6, grassOverlay: { color1: '#4a8c2a', color2: '#2d5a18', height: 0.15, seed: 1 } } },
     bottom: { type: 'PerlinNoise', size: 256, seed: 3, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.6 } },
   },
   stone_brick: {
@@ -312,19 +312,19 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   flowery_grass: {
     label: 'Flowery Grass',
     top: { type: 'CartoonOre', size: 256, seed: 80, params: { color1: '#4a8c2a', color2: '#3d7522', color3: '#2d5a18', bgNoise: 0.6, bgPatch: 25, outline: 0, shadow: 0, ores: [{ color: '#ff6688', highlightColor: '#ffaacc', shape: 'flower', count: 8, minSize: 10, maxSize: 22, name: 'Flowers', useGradient: true }, { color: '#ffdd44', highlightColor: '#ffee88', shape: 'flower', count: 5, minSize: 8, maxSize: 18, name: 'Daisies', useGradient: false }] } },
-    side: { type: 'PerlinNoise', size: 256, seed: 81, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.6 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 81, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.6, grassOverlay: { color1: '#4a8c2a', color2: '#2d5a18', height: 0.15, seed: 80 } } },
     bottom: { type: 'PerlinNoise', size: 256, seed: 82, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.6 } },
   },
   mossy_grass: {
     label: 'Mossy Grass',
     top: { type: 'PerlinNoise', size: 256, seed: 85, params: { color1: '#2d6b1a', color2: '#1a4010', noiseType: 'FractalNoise', scale: 20, octaves: 6, persistence: 0.55 } },
-    side: { type: 'PerlinNoise', size: 256, seed: 86, params: { color1: '#6a7a53', color2: '#4a5838', noiseType: 'FractalNoise', scale: 25, octaves: 5, persistence: 0.5 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 86, params: { color1: '#6a7a53', color2: '#4a5838', noiseType: 'FractalNoise', scale: 25, octaves: 5, persistence: 0.5, grassOverlay: { color1: '#2d6b1a', color2: '#1a4010', height: 0.2, seed: 85 } } },
     bottom: { type: 'PerlinNoise', size: 256, seed: 87, params: { color1: '#8a7653', color2: '#5c4828', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.5 } },
   },
   dry_grass: {
     label: 'Dry Grass',
     top: { type: 'PerlinNoise', size: 256, seed: 90, params: { color1: '#b8a848', color2: '#8a7830', noiseType: 'FractalNoise', scale: 35, octaves: 5, persistence: 0.5 } },
-    side: { type: 'PerlinNoise', size: 256, seed: 91, params: { color1: '#a09060', color2: '#6a5838', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.5 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 91, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.5, grassOverlay: { color1: '#b8a848', color2: '#8a7830', height: 0.12, seed: 90 } } },
     bottom: { type: 'PerlinNoise', size: 256, seed: 92, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.6 } },
   },
   red_sand: {

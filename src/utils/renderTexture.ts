@@ -191,6 +191,40 @@ export function renderFaceTexture(canvas: HTMLCanvasElement, config: FaceTexture
       break;
   }
 
+  // Post-processing: grass-side overlay (green strip at top fading into base)
+  const grassOverlay = p.grassOverlay as { color1: string; color2: string; height: number; seed: number } | undefined;
+  if (grassOverlay) {
+    const tmpCanvas = document.createElement('canvas');
+    tmpCanvas.width = canvas.width;
+    tmpCanvas.height = canvas.height;
+    generatePerlinNoise(tmpCanvas, size,
+      grassOverlay.color1, grassOverlay.color2,
+      'FractalNoise', 5, 0.5, 40, grassOverlay.seed, 1);
+    const ctx = canvas.getContext('2d')!;
+    const baseData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const grassCtx = tmpCanvas.getContext('2d')!;
+    const grassData = grassCtx.getImageData(0, 0, canvas.width, canvas.height);
+    const bd = baseData.data;
+    const gd = grassData.data;
+    const h = canvas.height;
+    const edgeNoise = new SimplexNoise(grassOverlay.seed + 50);
+    const stripH = grassOverlay.height * h;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < canvas.width; x++) {
+        const wobble = edgeNoise.simplexNoise(NoiseType.FRACTAL, canvas.width, 3, 0.5, 1, 8, x, y * 0.3) * stripH * 0.5;
+        const edge = stripH + wobble;
+        const blend = y < edge - 2 ? 1 : y > edge + 2 ? 0 : (edge + 2 - y) / 4;
+        if (blend > 0) {
+          const i = (y * canvas.width + x) * 4;
+          bd[i]     = Math.round(bd[i] * (1 - blend) + gd[i] * blend);
+          bd[i + 1] = Math.round(bd[i + 1] * (1 - blend) + gd[i + 1] * blend);
+          bd[i + 2] = Math.round(bd[i + 2] * (1 - blend) + gd[i + 2] * blend);
+        }
+      }
+    }
+    ctx.putImageData(baseData, 0, 0);
+  }
+
   // Post-processing: alpha and cutout
   const alpha = p.alpha as number | undefined;
   const cutout = p.cutout as number | undefined;
