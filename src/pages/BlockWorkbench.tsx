@@ -1,11 +1,74 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import SliderControl from '../components/SliderControl';
 import MapPanel from '../components/MapPanel';
 import { downloadCanvas } from '../utils/helpers';
 import { useLocalState } from '../hooks/useLocalState';
-import { renderIsometricPreview } from '../utils/textureGenerators';
+import {
+  renderIsometricPreview,
+  generateVoxelBlockFace,
+  generateVoxelBlockSide,
+  type VoxelBaseType,
+  type VoxelOreLayer,
+  type OreStyle,
+  type VoxelBlockFace,
+  type VoxelBlockSideMode,
+  type VoxelBlockOptions,
+  type SideTransitionPattern,
+  type VoxelRenderStyle,
+} from '../utils/textureGenerators';
 import { renderFaceTexture, type FaceTextureConfig } from '../utils/renderTexture';
 import { generateNormalMap, DEFAULT_NORMAL, type NormalMapSettings } from '../utils/normalMapProcessor';
 import TextureGenerator from './TextureGenerator';
+
+function CS({ color, onChange }: { color: string; onChange: (c: string) => void }) {
+  return <input type="color" value={color} onChange={e => onChange(e.target.value)} className="color-input" />;
+}
+
+type EditorMode = 'texture' | 'voxel';
+
+const DEFAULT_VOXEL_FACE = (base: VoxelBaseType, ores: VoxelOreLayer[] = []): VoxelBlockFace => ({
+  baseType: base,
+  baseColor1: '#8b8b8b', baseColor2: '#6b6b6b', baseColor3: '#555555',
+  grainStrength: 0.3, grainDirection: 'both',
+  oreLayers: ores,
+  depthShading: 0.4, outlineStrength: 0.2, paletteSize: 12,
+});
+
+function VoxelFaceSettings({ face, setFace }: { face: VoxelBlockFace; setFace: (f: VoxelBlockFace) => void }) {
+  return (
+    <div className="settings-panel">
+      <div className="settings-row"><label>Base</label><select value={face.baseType} onChange={e => setFace({ ...face, baseType: e.target.value as VoxelBaseType })}><option value="stone">Stone</option><option value="deepslate">Deepslate</option><option value="dirt">Dirt</option><option value="sandstone">Sandstone</option><option value="netherrack">Netherrack</option><option value="rings">Tree Rings</option><option value="bark">Bark</option><option value="custom">Custom</option></select></div>
+      {(face.baseType === 'custom' || face.baseType === 'rings' || face.baseType === 'bark') && <div className="settings-row"><label>Colors</label><CS color={face.baseColor1} onChange={c => setFace({ ...face, baseColor1: c })} /><CS color={face.baseColor2} onChange={c => setFace({ ...face, baseColor2: c })} /><CS color={face.baseColor3} onChange={c => setFace({ ...face, baseColor3: c })} /></div>}
+      <SliderControl label="Grain" value={face.grainStrength} min={0} max={1} step={0.01} onChange={v => setFace({ ...face, grainStrength: v })} />
+      <div className="settings-row"><label>Grain Dir</label><select value={face.grainDirection} onChange={e => setFace({ ...face, grainDirection: e.target.value as VoxelBlockFace['grainDirection'] })}><option value="none">None</option><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option><option value="both">Both</option></select></div>
+      <SliderControl label="Edge Shade" value={face.depthShading} min={0} max={1} step={0.01} onChange={v => setFace({ ...face, depthShading: v })} />
+      <SliderControl label="Outline" value={face.outlineStrength} min={0} max={1} step={0.01} onChange={v => setFace({ ...face, outlineStrength: v })} />
+      <SliderControl label="Palette" value={face.paletteSize} min={3} max={32} step={1} onChange={v => setFace({ ...face, paletteSize: v })} />
+
+      <h4 style={{ margin: '10px 0 4px' }}>Ore Layers</h4>
+      {face.oreLayers.map((ore, i) => (
+        <div key={i} className="ore-layer">
+          <div className="settings-row">
+            <input type="text" value={ore.name} className="ore-name" onChange={e => { const n = [...face.oreLayers]; n[i] = { ...n[i], name: e.target.value }; setFace({ ...face, oreLayers: n }); }} />
+            <CS color={ore.color} onChange={c => { const n = [...face.oreLayers]; n[i] = { ...n[i], color: c }; setFace({ ...face, oreLayers: n }); }} />
+            <CS color={ore.highlightColor} onChange={c => { const n = [...face.oreLayers]; n[i] = { ...n[i], highlightColor: c }; setFace({ ...face, oreLayers: n }); }} />
+            <button className="btn-small" onClick={() => setFace({ ...face, oreLayers: face.oreLayers.filter((_, j) => j !== i) })}>×</button>
+          </div>
+          <div className="settings-row"><label>Style</label><select value={ore.style} onChange={e => { const n = [...face.oreLayers]; n[i] = { ...n[i], style: e.target.value as OreStyle }; setFace({ ...face, oreLayers: n }); }}><option value="flat">Flat</option><option value="crystal">Crystal</option><option value="metal">Metal</option><option value="jewel">Jewel</option></select></div>
+          <SliderControl label="Density" value={ore.density} min={0} max={15} step={0.5} onChange={v => { const n = [...face.oreLayers]; n[i] = { ...n[i], density: v }; setFace({ ...face, oreLayers: n }); }} />
+          <SliderControl label="Cluster" value={ore.clusterSize} min={1} max={5} step={1} onChange={v => { const n = [...face.oreLayers]; n[i] = { ...n[i], clusterSize: v }; setFace({ ...face, oreLayers: n }); }} />
+          <SliderControl label="Ore Size" value={ore.oreScale || 1} min={0.5} max={5} step={0.1} onChange={v => { const n = [...face.oreLayers]; n[i] = { ...n[i], oreScale: v }; setFace({ ...face, oreLayers: n }); }} />
+        </div>
+      ))}
+      <div className="settings-row ore-presets">
+        <button className="btn-small" onClick={() => setFace({ ...face, oreLayers: [...face.oreLayers, { color: '#4488dd', highlightColor: '#cceeff', density: 3, clusterSize: 2, name: 'Diamond', style: 'jewel', oreScale: 1 }] })}>+ Diamond</button>
+        <button className="btn-small" onClick={() => setFace({ ...face, oreLayers: [...face.oreLayers, { color: '#d4af37', highlightColor: '#ffe066', density: 4, clusterSize: 2, name: 'Gold', style: 'metal', oreScale: 1.5 }] })}>+ Gold</button>
+        <button className="btn-small" onClick={() => setFace({ ...face, oreLayers: [...face.oreLayers, { color: '#888899', highlightColor: '#ccccdd', density: 6, clusterSize: 2, name: 'Iron', style: 'metal', oreScale: 1.5 }] })}>+ Iron</button>
+        <button className="btn-small" onClick={() => setFace({ ...face, oreLayers: [...face.oreLayers, { color: '#55cc55', highlightColor: '#aaffaa', density: 2, clusterSize: 2, name: 'Emerald', style: 'jewel', oreScale: 1 }] })}>+ Emerald</button>
+      </div>
+    </div>
+  );
+}
 
 function applyConfigToGenerator(config: FaceTextureConfig) {
   const { type, size, seed, params: p } = config;
@@ -311,7 +374,7 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   },
   flowery_grass: {
     label: 'Flowery Grass',
-    top: { type: 'CartoonOre', size: 256, seed: 80, params: { color1: '#4a8c2a', color2: '#3d7522', color3: '#2d5a18', bgNoise: 0.6, bgPatch: 25, outline: 0, shadow: 0, ores: [{ color: '#ff6688', highlightColor: '#ffaacc', shape: 'flower', count: 8, minSize: 10, maxSize: 22, name: 'Flowers', useGradient: true }, { color: '#ffdd44', highlightColor: '#ffee88', shape: 'flower', count: 5, minSize: 8, maxSize: 18, name: 'Daisies', useGradient: false }] } },
+    top: { type: 'CartoonOre', size: 256, seed: 80, params: { color1: '#4a8c2a', color2: '#3d7522', color3: '#2d5a18', bgNoise: 0.6, bgPatch: 25, outline: 0.8, shadow: 0.3, ores: [{ color: '#ff4466', highlightColor: '#ffaacc', shape: 'flower', count: 10, minSize: 16, maxSize: 32, name: 'Flowers', useGradient: true }, { color: '#ffdd44', highlightColor: '#ffee88', shape: 'flower', count: 7, minSize: 14, maxSize: 28, name: 'Daisies', useGradient: false }, { color: '#ffffff', highlightColor: '#ffffdd', shape: 'flower', count: 4, minSize: 12, maxSize: 24, name: 'White Flowers', useGradient: false }] } },
     side: { type: 'PerlinNoise', size: 256, seed: 81, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.6, grassOverlay: { color1: '#4a8c2a', color2: '#2d5a18', height: 0.15, seed: 80 } } },
     bottom: { type: 'PerlinNoise', size: 256, seed: 82, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.6 } },
   },
@@ -403,6 +466,24 @@ export default function BlockWorkbench() {
   const [normalSettings, setNormalSettings] = useState<NormalMapSettings>({ ...DEFAULT_NORMAL });
   const normalSettingsRef = useRef(normalSettings);
   normalSettingsRef.current = normalSettings;
+
+  const [editorMode, setEditorMode] = useLocalState<EditorMode>('bw_editorMode', 'texture');
+
+  const [vxResolution, setVxResolution] = useLocalState('bw_vxRes', 16);
+  const [vxSeed, setVxSeed] = useLocalState('bw_vxSeed', 1);
+  const [vxSideMode, setVxSideMode] = useLocalState<VoxelBlockSideMode>('bw_vxSMode', 'split');
+  const [vxSideSplitPos, setVxSideSplitPos] = useLocalState('bw_vxSPos', 0.2);
+  const [vxTransitionPattern, setVxTransitionPattern] = useLocalState<SideTransitionPattern>('bw_vxTrPat', 'jagged');
+  const [vxTransitionNoise, setVxTransitionNoise] = useLocalState('bw_vxTrNoi', 0.5);
+  const [vxRenderStyle, setVxRenderStyle] = useLocalState<VoxelRenderStyle>('bw_vxStyle', 'pixelated');
+  const [vxTopFace, setVxTopFace] = useLocalState<VoxelBlockFace>('bw_vxTop', DEFAULT_VOXEL_FACE('custom', []));
+  const [vxSideFace, setVxSideFace] = useLocalState<VoxelBlockFace>('bw_vxSide', DEFAULT_VOXEL_FACE('dirt'));
+  const [vxBottomFace, setVxBottomFace] = useLocalState<VoxelBlockFace>('bw_vxBtm', DEFAULT_VOXEL_FACE('dirt'));
+  const [vxSideTopFace, setVxSideTopFace] = useLocalState<VoxelBlockFace>('bw_vxSTop', DEFAULT_VOXEL_FACE('custom'));
+  const [vxActiveFace, setVxActiveFace] = useLocalState<'top' | 'side' | 'bottom'>('bw_vxFace', 'top');
+
+  const currentVxFace = vxActiveFace === 'top' ? vxTopFace : vxActiveFace === 'side' ? vxSideFace : vxBottomFace;
+  const setCurrentVxFace = vxActiveFace === 'top' ? setVxTopFace : vxActiveFace === 'side' ? setVxSideFace : setVxBottomFace;
 
   const faceConfigs: Record<FaceName, FaceTextureConfig | null> = { top: topConfig, side: sideConfig, bottom: bottomConfig };
   const setFaceConfigs: Record<FaceName, (v: FaceTextureConfig | null) => void> = { top: setTopConfig, side: setSideConfig, bottom: setBottomConfig };
@@ -537,6 +618,36 @@ export default function BlockWorkbench() {
     }
   };
 
+  const renderVoxelToAllFaces = useCallback(() => {
+    const outputSize = 256;
+    const styledTop = { ...vxTopFace, renderStyle: vxRenderStyle };
+    const styledSide = { ...vxSideFace, renderStyle: vxRenderStyle };
+    const styledBottom = { ...vxBottomFace, renderStyle: vxRenderStyle };
+    const styledSideTop = { ...vxSideTopFace, renderStyle: vxRenderStyle };
+
+    const tmpTop = document.createElement('canvas');
+    const tmpSide = document.createElement('canvas');
+    const tmpBottom = document.createElement('canvas');
+
+    generateVoxelBlockFace(tmpTop, outputSize, styledTop, vxResolution, vxSeed);
+    generateVoxelBlockFace(tmpBottom, outputSize, styledBottom, vxResolution, vxSeed + 30);
+
+    const blockOpts: VoxelBlockOptions = {
+      resolution: vxResolution, seed: vxSeed, top: styledTop, side: styledSide, bottom: styledBottom,
+      sideMode: vxSideMode, sideSplitPos: vxSideSplitPos, sideTopFace: styledSideTop,
+      transitionPattern: vxTransitionPattern, transitionNoise: vxTransitionNoise,
+    };
+    generateVoxelBlockSide(tmpSide, outputSize, blockOpts);
+
+    setTopImg(tmpTop.toDataURL('image/png'));
+    setSideImg(tmpSide.toDataURL('image/png'));
+    setBottomImg(tmpBottom.toDataURL('image/png'));
+  }, [vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace, vxResolution, vxSeed, vxSideMode, vxSideSplitPos, vxTransitionPattern, vxTransitionNoise, vxRenderStyle, setTopImg, setSideImg, setBottomImg]);
+
+  useEffect(() => {
+    if (editorMode === 'voxel') renderVoxelToAllFaces();
+  }, [editorMode, renderVoxelToAllFaces]);
+
   const applyPreset = (presetKey: string) => {
     const preset = WORKBENCH_PRESETS[presetKey];
     if (!preset) return;
@@ -622,19 +733,72 @@ export default function BlockWorkbench() {
 
       <div className="workbench-editor-panel">
         <div className="workbench-capture-bar">
-          <span className="workbench-editing-label">
-            Editing: <strong>{activeFace.charAt(0).toUpperCase() + activeFace.slice(1)} Face</strong>
-          </span>
-          <button className="btn-primary" onClick={captureFromGenerator}>
-            Capture to {activeFace.charAt(0).toUpperCase() + activeFace.slice(1)} Face
-          </button>
-          {imgs[activeFace] && (
-            <button className="btn-small" onClick={() => setImgs[activeFace](null)}>Clear</button>
+          <div className="workbench-mode-toggle">
+            <button className={`type-btn ${editorMode === 'texture' ? 'active' : ''}`} onClick={() => setEditorMode('texture')}>Texture Generator</button>
+            <button className={`type-btn ${editorMode === 'voxel' ? 'active' : ''}`} onClick={() => setEditorMode('voxel')}>Voxel Block</button>
+          </div>
+          {editorMode === 'texture' && (
+            <>
+              <span className="workbench-editing-label">
+                Editing: <strong>{activeFace.charAt(0).toUpperCase() + activeFace.slice(1)} Face</strong>
+              </span>
+              <button className="btn-primary" onClick={captureFromGenerator}>
+                Capture to {activeFace.charAt(0).toUpperCase() + activeFace.slice(1)} Face
+              </button>
+              {imgs[activeFace] && (
+                <button className="btn-small" onClick={() => setImgs[activeFace](null)}>Clear</button>
+              )}
+            </>
+          )}
+          {editorMode === 'voxel' && (
+            <button className="btn-primary" onClick={renderVoxelToAllFaces}>
+              Generate All Faces
+            </button>
           )}
         </div>
-        <div className="workbench-generator">
-          <TextureGenerator key={generatorKey} hideMapPanel />
-        </div>
+
+        {editorMode === 'texture' && (
+          <div className="workbench-generator">
+            <TextureGenerator key={generatorKey} hideMapPanel />
+          </div>
+        )}
+
+        {editorMode === 'voxel' && (
+          <div className="voxel-editor">
+            <div className="settings-panel">
+              <h3>Block Settings</h3>
+              <div className="settings-row"><label>Style</label><select value={vxRenderStyle} onChange={e => setVxRenderStyle(e.target.value as VoxelRenderStyle)}><option value="pixelated">Pixelated</option><option value="cartoon">Cartoon</option><option value="realistic">Realistic</option><option value="painterly">Painterly</option><option value="flat">Flat / Minimal</option></select></div>
+              <div className="settings-row"><label>Resolution</label><select value={vxResolution} onChange={e => setVxResolution(parseInt(e.target.value))}><option value="8">8×8</option><option value="16">16×16</option><option value="32">32×32</option><option value="64">64×64</option><option value="128">128×128</option><option value="256">256×256</option></select></div>
+              <SliderControl label="Seed" value={vxSeed} min={1} max={1000} step={1} onChange={setVxSeed} />
+              <div className="settings-row"><label>Side Blend</label><select value={vxSideMode} onChange={e => setVxSideMode(e.target.value as VoxelBlockSideMode)}><option value="uniform">Uniform (side only)</option><option value="split">Split (top/bottom)</option><option value="gradient_top">Gradient from top</option><option value="gradient_bottom">Gradient from bottom</option></select></div>
+              {vxSideMode !== 'uniform' && <>
+                <SliderControl label="Split Position" value={vxSideSplitPos} min={0.05} max={0.95} step={0.01} onChange={setVxSideSplitPos} />
+                <div className="settings-row"><label>Transition</label><select value={vxTransitionPattern} onChange={e => setVxTransitionPattern(e.target.value as SideTransitionPattern)}><option value="straight">Straight</option><option value="jagged">Jagged</option><option value="mossy">Mossy</option><option value="layered">Layered</option><option value="drip">Drip</option><option value="rounded">Rounded</option></select></div>
+                {vxTransitionPattern !== 'straight' && <SliderControl label="Transition Strength" value={vxTransitionNoise} min={0} max={1} step={0.01} onChange={setVxTransitionNoise} />}
+              </>}
+            </div>
+
+            <div className="face-tabs">
+              <button className={`type-btn ${vxActiveFace === 'top' ? 'active' : ''}`} onClick={() => setVxActiveFace('top')}>Top Face</button>
+              <button className={`type-btn ${vxActiveFace === 'side' ? 'active' : ''}`} onClick={() => setVxActiveFace('side')}>Side Face</button>
+              <button className={`type-btn ${vxActiveFace === 'bottom' ? 'active' : ''}`} onClick={() => setVxActiveFace('bottom')}>Bottom Face</button>
+            </div>
+
+            {vxActiveFace === 'top' && <VoxelFaceSettings face={vxTopFace} setFace={setVxTopFace} />}
+            {vxActiveFace === 'side' && (
+              <>
+                <VoxelFaceSettings face={vxSideFace} setFace={setVxSideFace} />
+                {vxSideMode !== 'uniform' && (
+                  <div style={{ marginTop: 8 }}>
+                    <h4 style={{ margin: '0 0 8px', fontSize: '14px', color: 'var(--text-primary)' }}>Side — Top Layer (blended)</h4>
+                    <VoxelFaceSettings face={vxSideTopFace} setFace={setVxSideTopFace} />
+                  </div>
+                )}
+              </>
+            )}
+            {vxActiveFace === 'bottom' && <VoxelFaceSettings face={vxBottomFace} setFace={setVxBottomFace} />}
+          </div>
+        )}
       </div>
     </div>
   );
