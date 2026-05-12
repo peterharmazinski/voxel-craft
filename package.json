@@ -2,7 +2,7 @@
   "name": "voxelcraft",
   "private": true,
   "version": "1.0.0",
-  "homepage": "https://pharm.github.io/voxel-craft/",
+  "homepage": "https://peterharmazinski.github.io/voxel-craft/",
   "type": "module",
   "scripts": {
     "dev": "vite",
