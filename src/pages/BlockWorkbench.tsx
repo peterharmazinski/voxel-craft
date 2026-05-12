@@ -807,21 +807,57 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   // ── Stone wall presets ─────────────────────────────────
   stone_wall: {
     label: 'Stone Wall',
-    top: { type: 'Brick', size: 256, seed: 300, params: { color1: '#a09888', color2: '#888078', groutColor: '#555048', gradientColor: '#555048', pattern: 'circle', x: 5, y: 5, grout: 6, gradient: 8, colorMode: 'random', shadeRange: 0.18, texture: 0.5, textureScale: 30 } },
-    side: { type: 'Brick', size: 256, seed: 301, params: { color1: '#a09888', color2: '#888078', groutColor: '#555048', gradientColor: '#555048', pattern: 'circle', x: 5, y: 5, grout: 6, gradient: 8, colorMode: 'random', shadeRange: 0.18, texture: 0.5, textureScale: 30 } },
-    bottom: { type: 'Brick', size: 256, seed: 302, params: { color1: '#908878', color2: '#787068', groutColor: '#454038', gradientColor: '#454038', pattern: 'circle', x: 5, y: 5, grout: 6, gradient: 8, colorMode: 'random', shadeRange: 0.15, texture: 0.6, textureScale: 30 } },
+    top: { type: 'CartoonOre', size: 256, seed: 300, params: { color1: '#8a8278', color2: '#706860', color3: '#585048', bgNoise: 0.5, bgPatch: 20, outline: 2.5, shadow: 0.2, ores: [
+      { color: '#b0a898', highlightColor: '#c0b8a8', shape: 'round', count: 6, minSize: 40, maxSize: 70, name: 'Large Stone', useGradient: false },
+      { color: '#a09080', highlightColor: '#b0a090', shape: 'round', count: 10, minSize: 22, maxSize: 45, name: 'Medium Stone', useGradient: false },
+      { color: '#908070', highlightColor: '#a09080', shape: 'round', count: 12, minSize: 12, maxSize: 28, name: 'Small Stone', useGradient: false },
+    ] } },
+    side: { type: 'CartoonOre', size: 256, seed: 301, params: { color1: '#8a8278', color2: '#706860', color3: '#585048', bgNoise: 0.5, bgPatch: 20, outline: 2.5, shadow: 0.2, ores: [
+      { color: '#b0a898', highlightColor: '#c0b8a8', shape: 'round', count: 6, minSize: 40, maxSize: 70, name: 'Large Stone', useGradient: false },
+      { color: '#a09080', highlightColor: '#b0a090', shape: 'round', count: 10, minSize: 22, maxSize: 45, name: 'Medium Stone', useGradient: false },
+      { color: '#908070', highlightColor: '#a09080', shape: 'round', count: 12, minSize: 12, maxSize: 28, name: 'Small Stone', useGradient: false },
+    ] } },
+    bottom: { type: 'CartoonOre', size: 256, seed: 302, params: { color1: '#7a7268', color2: '#605850', color3: '#484038', bgNoise: 0.5, bgPatch: 20, outline: 2.5, shadow: 0.2, ores: [
+      { color: '#a09888', highlightColor: '#b0a898', shape: 'round', count: 5, minSize: 40, maxSize: 70, name: 'Large Stone', useGradient: false },
+      { color: '#908070', highlightColor: '#a09080', shape: 'round', count: 8, minSize: 22, maxSize: 45, name: 'Medium Stone', useGradient: false },
+      { color: '#807060', highlightColor: '#908070', shape: 'round', count: 10, minSize: 12, maxSize: 28, name: 'Small Stone', useGradient: false },
+    ] } },
   },
   rough_stone_wall: {
     label: 'Rough Stone Wall',
-    top: { type: 'Brick', size: 256, seed: 305, params: { color1: '#8a8278', color2: '#6a6258', groutColor: '#3a3430', gradientColor: '#3a3430', pattern: 'edges', x: 4, y: 4, grout: 7, gradient: 10, colorMode: 'random', shadeRange: 0.25, texture: 0.7, textureScale: 22 } },
-    side: { type: 'Brick', size: 256, seed: 306, params: { color1: '#8a8278', color2: '#6a6258', groutColor: '#3a3430', gradientColor: '#3a3430', pattern: 'edges', x: 4, y: 4, grout: 7, gradient: 10, colorMode: 'random', shadeRange: 0.25, texture: 0.7, textureScale: 22 } },
-    bottom: { type: 'Brick', size: 256, seed: 307, params: { color1: '#7a7268', color2: '#5a5248', groutColor: '#2a2420', gradientColor: '#2a2420', pattern: 'edges', x: 4, y: 4, grout: 7, gradient: 10, colorMode: 'random', shadeRange: 0.2, texture: 0.8, textureScale: 22 } },
+    top: { type: 'CartoonOre', size: 256, seed: 305, params: { color1: '#6a6258', color2: '#524a40', color3: '#3a3228', bgNoise: 0.65, bgPatch: 18, outline: 3.0, shadow: 0.25, ores: [
+      { color: '#9a9088', highlightColor: '#a8a098', shape: 'mixed', count: 5, minSize: 38, maxSize: 65, name: 'Large Rock', useGradient: false },
+      { color: '#8a8070', highlightColor: '#989080', shape: 'mixed', count: 10, minSize: 20, maxSize: 42, name: 'Medium Rock', useGradient: false },
+      { color: '#7a7060', highlightColor: '#888068', shape: 'round', count: 14, minSize: 10, maxSize: 24, name: 'Pebble', useGradient: false },
+    ] } },
+    side: { type: 'CartoonOre', size: 256, seed: 306, params: { color1: '#6a6258', color2: '#524a40', color3: '#3a3228', bgNoise: 0.65, bgPatch: 18, outline: 3.0, shadow: 0.25, ores: [
+      { color: '#9a9088', highlightColor: '#a8a098', shape: 'mixed', count: 5, minSize: 38, maxSize: 65, name: 'Large Rock', useGradient: false },
+      { color: '#8a8070', highlightColor: '#989080', shape: 'mixed', count: 10, minSize: 20, maxSize: 42, name: 'Medium Rock', useGradient: false },
+      { color: '#7a7060', highlightColor: '#888068', shape: 'round', count: 14, minSize: 10, maxSize: 24, name: 'Pebble', useGradient: false },
+    ] } },
+    bottom: { type: 'CartoonOre', size: 256, seed: 307, params: { color1: '#5a5248', color2: '#423a30', color3: '#2a2218', bgNoise: 0.65, bgPatch: 18, outline: 3.0, shadow: 0.25, ores: [
+      { color: '#8a8078', highlightColor: '#989088', shape: 'mixed', count: 4, minSize: 38, maxSize: 65, name: 'Large Rock', useGradient: false },
+      { color: '#7a7060', highlightColor: '#888070', shape: 'mixed', count: 8, minSize: 20, maxSize: 42, name: 'Medium Rock', useGradient: false },
+      { color: '#6a6050', highlightColor: '#787058', shape: 'round', count: 12, minSize: 10, maxSize: 24, name: 'Pebble', useGradient: false },
+    ] } },
   },
   mossy_stone_wall: {
     label: 'Mossy Stone Wall',
-    top: { type: 'Brick', size: 256, seed: 310, params: { color1: '#889880', color2: '#708068', groutColor: '#3a4830', gradientColor: '#3a4830', pattern: 'circle', x: 5, y: 5, grout: 6, gradient: 8, colorMode: 'random', shadeRange: 0.18, texture: 0.5, textureScale: 28 } },
-    side: { type: 'Brick', size: 256, seed: 311, params: { color1: '#889880', color2: '#708068', groutColor: '#3a4830', gradientColor: '#3a4830', pattern: 'circle', x: 5, y: 5, grout: 6, gradient: 8, colorMode: 'random', shadeRange: 0.18, texture: 0.5, textureScale: 28 } },
-    bottom: { type: 'Brick', size: 256, seed: 312, params: { color1: '#788870', color2: '#607058', groutColor: '#2a3820', gradientColor: '#2a3820', pattern: 'circle', x: 5, y: 5, grout: 6, gradient: 8, colorMode: 'random', shadeRange: 0.15, texture: 0.6, textureScale: 28 } },
+    top: { type: 'CartoonOre', size: 256, seed: 310, params: { color1: '#586850', color2: '#405840', color3: '#304830', bgNoise: 0.5, bgPatch: 22, outline: 2.5, shadow: 0.2, ores: [
+      { color: '#8a9880', highlightColor: '#98a890', shape: 'round', count: 6, minSize: 38, maxSize: 65, name: 'Large Mossy Stone', useGradient: false },
+      { color: '#788870', highlightColor: '#889880', shape: 'round', count: 10, minSize: 20, maxSize: 42, name: 'Medium Mossy Stone', useGradient: false },
+      { color: '#506840', highlightColor: '#608050', shape: 'round', count: 8, minSize: 10, maxSize: 22, name: 'Moss Patch', useGradient: false },
+    ] } },
+    side: { type: 'CartoonOre', size: 256, seed: 311, params: { color1: '#586850', color2: '#405840', color3: '#304830', bgNoise: 0.5, bgPatch: 22, outline: 2.5, shadow: 0.2, ores: [
+      { color: '#8a9880', highlightColor: '#98a890', shape: 'round', count: 6, minSize: 38, maxSize: 65, name: 'Large Mossy Stone', useGradient: false },
+      { color: '#788870', highlightColor: '#889880', shape: 'round', count: 10, minSize: 20, maxSize: 42, name: 'Medium Mossy Stone', useGradient: false },
+      { color: '#506840', highlightColor: '#608050', shape: 'round', count: 8, minSize: 10, maxSize: 22, name: 'Moss Patch', useGradient: false },
+    ] } },
+    bottom: { type: 'CartoonOre', size: 256, seed: 312, params: { color1: '#485840', color2: '#304830', color3: '#203820', bgNoise: 0.5, bgPatch: 22, outline: 2.5, shadow: 0.2, ores: [
+      { color: '#7a8870', highlightColor: '#889880', shape: 'round', count: 5, minSize: 38, maxSize: 65, name: 'Large Mossy Stone', useGradient: false },
+      { color: '#687860', highlightColor: '#788870', shape: 'round', count: 8, minSize: 20, maxSize: 42, name: 'Medium Mossy Stone', useGradient: false },
+      { color: '#405830', highlightColor: '#507040', shape: 'round', count: 6, minSize: 10, maxSize: 22, name: 'Moss Patch', useGradient: false },
+    ] } },
   },
   castle_wall: {
     label: 'Castle Stone Wall',
