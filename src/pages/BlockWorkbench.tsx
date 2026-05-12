@@ -130,22 +130,32 @@ function applyConfigToGenerator(config: FaceTextureConfig) {
       s('tg_ckSh', p.shade ?? 0);
       s('tg_ckTx', p.texture ?? 0);
       break;
-    case 'Brick':
+    case 'Brick': {
+      const bx = (p.x as number | undefined) ?? 6;
+      const by = (p.y as number | undefined) ?? 6;
+      const shape = bx === by ? 'square' : 'rectangular';
+      const count = by;
+      const aspect = by > 0 ? bx / by : 1;
       s('tg_brC', p.color1 || '#e6d7c3');
       s('tg_brC2', p.color2 || '#c9a882');
       s('tg_brGC', p.groutColor || '#665e52');
       s('tg_brGrC', p.gradientColor || '#665e52');
       s('tg_brPa', p.pattern || 'edges');
-      s('tg_brX', p.x ?? 6);
-      s('tg_brY', p.y ?? 6);
+      s('tg_brSh', shape);
+      s('tg_brCn', count);
+      s('tg_brAs', aspect);
+      s('tg_brX', bx);
+      s('tg_brY', by);
       s('tg_brGr', p.grout ?? 6);
       s('tg_brGd', p.gradient ?? 3);
+      s('tg_brGE', p.gradient != null ? (p.gradient as number) > 0 : true);
       s('tg_brCM', p.colorMode || 'random');
       s('tg_brSR', p.shadeRange ?? 0.15);
       s('tg_brTx', p.texture ?? 0.4);
       s('tg_brTS', seed);
       s('tg_brTSc', p.textureScale ?? 30);
       break;
+    }
     case 'Wood':
       s('tg_wdC1', p.color1 || '#c49a6c');
       s('tg_wdC2', p.color2 || '#8b5e3c');
