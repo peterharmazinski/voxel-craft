@@ -2156,8 +2156,8 @@ export function generateStoneWall(
   for (let py = 0; py < size; py++) {
     for (let px = 0; px < size; px++) {
       // Warp the query point so cell boundaries are wavy, not straight
-      const wx = noiseGen.noise2D(px / distortScale, py / distortScale, 'perlin' as NoiseType) * distortAmp;
-      const wy = noiseGen.noise2D((px + 100) / distortScale, (py + 100) / distortScale, 'perlin' as NoiseType) * distortAmp;
+      const wx = noiseGen.noise(px / distortScale, py / distortScale) * distortAmp;
+      const wy = noiseGen.noise((px + 100) / distortScale, (py + 100) / distortScale) * distortAmp;
       const qx = px + wx;
       const qy = py + wy;
 
@@ -2185,7 +2185,7 @@ export function generateStoneWall(
       if (edgeDist < effectiveMw) {
         const t = edgeDist / effectiveMw;
         const dark = 0.45 + t * 0.55;
-        const mn = detailNoise.noise2D(px / 6, py / 6, 'perlin' as NoiseType) * 15;
+        const mn = detailNoise.noise(px / 6, py / 6) * 15;
         data[idx] = Math.max(0, Math.min(255, mortarRgb.r * dark + mn));
         data[idx + 1] = Math.max(0, Math.min(255, mortarRgb.g * dark + mn));
         data[idx + 2] = Math.max(0, Math.min(255, mortarRgb.b * dark + mn));
@@ -2206,9 +2206,9 @@ export function generateStoneWall(
         const light = 1.0 + (-relX * 0.35 - relY * 0.35) * opts.shading;
 
         // Surface roughness from noise — gives each stone a textured face
-        const n1 = detailNoise.noise2D(px / 14, py / 14, 'perlin' as NoiseType);
-        const n2 = detailNoise.noise2D(px / 5, py / 5, 'perlin' as NoiseType) * 0.4;
-        const n3 = detailNoise.noise2D(px / 2.5, py / 2.5, 'perlin' as NoiseType) * 0.15;
+        const n1 = detailNoise.noise(px / 14, py / 14);
+        const n2 = detailNoise.noise(px / 5, py / 5) * 0.4;
+        const n3 = detailNoise.noise(px / 2.5, py / 2.5) * 0.15;
         const nVal = (n1 + n2 + n3) * opts.textureNoise * 30;
 
         const shade = nearest.shade * bevelShade * light;
