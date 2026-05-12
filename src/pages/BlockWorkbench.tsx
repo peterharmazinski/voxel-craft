@@ -26,6 +26,16 @@ function CS({ color, onChange }: { color: string; onChange: (c: string) => void 
 
 type EditorMode = 'texture' | 'voxel';
 
+interface VoxelPreset {
+  label: string;
+  top: VoxelBlockFace;
+  side: VoxelBlockFace;
+  bottom: VoxelBlockFace;
+  sideMode: VoxelBlockSideMode;
+  sideSplitPos: number;
+  sideTopFace: VoxelBlockFace;
+}
+
 const DEFAULT_VOXEL_FACE = (base: VoxelBaseType, ores: VoxelOreLayer[] = []): VoxelBlockFace => ({
   baseType: base,
   baseColor1: '#8b8b8b', baseColor2: '#6b6b6b', baseColor3: '#555555',
@@ -229,6 +239,150 @@ function applyConfigToGenerator(config: FaceTextureConfig) {
       break;
   }
 }
+
+const VOXEL_PRESETS: Record<string, VoxelPreset> = {
+  grass: { label: 'Grass',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#4a8c2a', baseColor2: '#3d7522', baseColor3: '#2d5a18', grainDirection: 'both', grainStrength: 0.5 },
+    side: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#9b7653', baseColor2: '#7a5c3a', baseColor3: '#5c4028' },
+    bottom: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#9b7653', baseColor2: '#7a5c3a', baseColor3: '#5c4028' },
+    sideMode: 'split', sideSplitPos: 0.2,
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#4a8c2a', baseColor2: '#3d7522', baseColor3: '#2d5a18', grainStrength: 0.4 },
+  },
+  stone_ore: { label: 'Iron Ore',
+    top: { ...DEFAULT_VOXEL_FACE('stone'), oreLayers: [{ color: '#888899', highlightColor: '#ccccdd', density: 5, clusterSize: 2, name: 'Iron', style: 'metal', oreScale: 1.5 }] },
+    side: { ...DEFAULT_VOXEL_FACE('stone'), oreLayers: [{ color: '#888899', highlightColor: '#ccccdd', density: 5, clusterSize: 2, name: 'Iron', style: 'metal', oreScale: 1.5 }] },
+    bottom: { ...DEFAULT_VOXEL_FACE('stone'), oreLayers: [{ color: '#888899', highlightColor: '#ccccdd', density: 5, clusterSize: 2, name: 'Iron', style: 'metal', oreScale: 1.5 }] },
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('stone'),
+  },
+  diamond_ore: { label: 'Diamond Ore',
+    top: { ...DEFAULT_VOXEL_FACE('deepslate'), oreLayers: [{ color: '#4488dd', highlightColor: '#cceeff', density: 3, clusterSize: 2, name: 'Diamond', style: 'jewel', oreScale: 1.5 }] },
+    side: { ...DEFAULT_VOXEL_FACE('deepslate'), oreLayers: [{ color: '#4488dd', highlightColor: '#cceeff', density: 3, clusterSize: 2, name: 'Diamond', style: 'jewel', oreScale: 1.5 }] },
+    bottom: { ...DEFAULT_VOXEL_FACE('deepslate'), oreLayers: [{ color: '#4488dd', highlightColor: '#cceeff', density: 3, clusterSize: 2, name: 'Diamond', style: 'jewel', oreScale: 1.5 }] },
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('deepslate'),
+  },
+  sand: { label: 'Sandstone',
+    top: { ...DEFAULT_VOXEL_FACE('sandstone'), baseColor1: '#e8d8a0', baseColor2: '#d4c488', baseColor3: '#c4b070', grainDirection: 'horizontal', grainStrength: 0.2 },
+    side: { ...DEFAULT_VOXEL_FACE('sandstone'), baseColor1: '#d4c298', baseColor2: '#c4a86e', baseColor3: '#a08850', grainDirection: 'horizontal', grainStrength: 0.4 },
+    bottom: { ...DEFAULT_VOXEL_FACE('sandstone'), baseColor1: '#c4a86e', baseColor2: '#a08850', baseColor3: '#8a7040', grainDirection: 'horizontal' },
+    sideMode: 'gradient_top', sideSplitPos: 0.4,
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('sandstone'), baseColor1: '#e8d8a0', baseColor2: '#d4c488', baseColor3: '#c4b070' },
+  },
+  log: { label: 'Wood Log',
+    top: { ...DEFAULT_VOXEL_FACE('rings'), baseColor1: '#c49a6c', baseColor2: '#a07848', baseColor3: '#5c3820', grainStrength: 0.4, grainDirection: 'none', depthShading: 0.5 },
+    side: { ...DEFAULT_VOXEL_FACE('bark'), baseColor1: '#6b4c32', baseColor2: '#553a24', baseColor3: '#3d2818', grainStrength: 0.5, grainDirection: 'vertical', outlineStrength: 0.3 },
+    bottom: { ...DEFAULT_VOXEL_FACE('rings'), baseColor1: '#c49a6c', baseColor2: '#a07848', baseColor3: '#5c3820', grainStrength: 0.4, grainDirection: 'none', depthShading: 0.5 },
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('custom'),
+  },
+  flowery_grass: { label: 'Flowery Grass',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#4a8c2a', baseColor2: '#3d7522', baseColor3: '#2d5a18', grainDirection: 'both', grainStrength: 0.4,
+      oreLayers: [
+        { color: '#dd4466', highlightColor: '#ff88aa', density: 4, clusterSize: 1, name: 'Flowers', style: 'flat', oreScale: 0.5 },
+        { color: '#eedd44', highlightColor: '#ffff88', density: 3, clusterSize: 1, name: 'Dandelions', style: 'flat', oreScale: 0.5 },
+        { color: '#ffffff', highlightColor: '#ffffee', density: 2, clusterSize: 1, name: 'Daisies', style: 'flat', oreScale: 0.5 },
+      ] },
+    side: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#9b7653', baseColor2: '#7a5c3a', baseColor3: '#5c4028' },
+    bottom: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#9b7653', baseColor2: '#7a5c3a', baseColor3: '#5c4028' },
+    sideMode: 'split', sideSplitPos: 0.2,
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#4a8c2a', baseColor2: '#3d7522', baseColor3: '#2d5a18', grainStrength: 0.3 },
+  },
+  leaves: { label: 'Leaves',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#2d8c2a', baseColor2: '#1f6b1e', baseColor3: '#145514', grainDirection: 'both', grainStrength: 0.6, depthShading: 0.3 },
+    side: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#267a24', baseColor2: '#1a6018', baseColor3: '#104810', grainDirection: 'both', grainStrength: 0.7, depthShading: 0.5 },
+    bottom: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#1a5518', baseColor2: '#124010', baseColor3: '#0a300a', grainDirection: 'both', grainStrength: 0.5, depthShading: 0.6 },
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('custom'),
+  },
+  fallen_leaves: { label: 'Fallen Leaves',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#c47a2a', baseColor2: '#a05520', baseColor3: '#7a3a15', grainDirection: 'both', grainStrength: 0.5,
+      oreLayers: [
+        { color: '#dd3322', highlightColor: '#ee6644', density: 5, clusterSize: 1, name: 'Red Leaves', style: 'flat', oreScale: 0.7 },
+        { color: '#eebb22', highlightColor: '#ffdd55', density: 4, clusterSize: 1, name: 'Yellow Leaves', style: 'flat', oreScale: 0.7 },
+      ] },
+    side: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#7a5c3a', baseColor2: '#5c4028', baseColor3: '#3d2818' },
+    bottom: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#7a5c3a', baseColor2: '#5c4028', baseColor3: '#3d2818' },
+    sideMode: 'split', sideSplitPos: 0.15,
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#a06030', baseColor2: '#804820', baseColor3: '#603015', grainStrength: 0.4 },
+  },
+  mud: { label: 'Mud',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#5c4030', baseColor2: '#4a3528', baseColor3: '#382820', grainDirection: 'both', grainStrength: 0.3, outlineStrength: 0.1 },
+    side: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#4a3528', baseColor2: '#382820', baseColor3: '#2a1e18', grainDirection: 'both', grainStrength: 0.2 },
+    bottom: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#382820', baseColor2: '#2a1e18', baseColor3: '#201510', grainDirection: 'none', grainStrength: 0 },
+    sideMode: 'gradient_top', sideSplitPos: 0.6,
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#5c4030', baseColor2: '#4a3528', baseColor3: '#382820' },
+  },
+  lava: { label: 'Lava',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#ff6600', baseColor2: '#cc3300', baseColor3: '#881100', grainDirection: 'both', grainStrength: 0.7, depthShading: 0, outlineStrength: 0.4,
+      oreLayers: [{ color: '#ffcc00', highlightColor: '#ffff66', density: 8, clusterSize: 2, name: 'Hot Spots', style: 'flat', oreScale: 1.5 }] },
+    side: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#cc3300', baseColor2: '#881100', baseColor3: '#440800', grainDirection: 'vertical', grainStrength: 0.5,
+      oreLayers: [{ color: '#ff6600', highlightColor: '#ffaa00', density: 5, clusterSize: 2, name: 'Glow', style: 'flat', oreScale: 1.2 }] },
+    bottom: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#440800', baseColor2: '#220400', baseColor3: '#110200', grainDirection: 'none', grainStrength: 0, depthShading: 0.8 },
+    sideMode: 'gradient_bottom', sideSplitPos: 0.7,
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#ff6600', baseColor2: '#cc3300', baseColor3: '#881100', grainStrength: 0.4 },
+  },
+  tree_trunk: { label: 'Oak Trunk',
+    top: { ...DEFAULT_VOXEL_FACE('rings'), baseColor1: '#c49a6c', baseColor2: '#8b6838', baseColor3: '#5c3820', grainStrength: 0.5, grainDirection: 'none', depthShading: 0.6 },
+    side: { ...DEFAULT_VOXEL_FACE('bark'), baseColor1: '#7a5838', baseColor2: '#5c3f24', baseColor3: '#3d2818', grainStrength: 0.7, grainDirection: 'vertical', outlineStrength: 0.4 },
+    bottom: { ...DEFAULT_VOXEL_FACE('rings'), baseColor1: '#c49a6c', baseColor2: '#8b6838', baseColor3: '#5c3820', grainStrength: 0.5, grainDirection: 'none', depthShading: 0.6 },
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('custom'),
+  },
+  birch_trunk: { label: 'Birch Trunk',
+    top: { ...DEFAULT_VOXEL_FACE('rings'), baseColor1: '#e8dcc0', baseColor2: '#c4a878', baseColor3: '#8b6838', grainStrength: 0.3, grainDirection: 'none', depthShading: 0.4 },
+    side: { ...DEFAULT_VOXEL_FACE('bark'), baseColor1: '#f0ece4', baseColor2: '#d4ccc0', baseColor3: '#2a2420', grainStrength: 0.3, grainDirection: 'vertical', outlineStrength: 0.2 },
+    bottom: { ...DEFAULT_VOXEL_FACE('rings'), baseColor1: '#e8dcc0', baseColor2: '#c4a878', baseColor3: '#8b6838', grainStrength: 0.3, grainDirection: 'none', depthShading: 0.4 },
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('custom'),
+  },
+  dark_oak_trunk: { label: 'Dark Oak Trunk',
+    top: { ...DEFAULT_VOXEL_FACE('rings'), baseColor1: '#6b4c28', baseColor2: '#4a3418', baseColor3: '#2a1c0c', grainStrength: 0.6, grainDirection: 'none', depthShading: 0.7 },
+    side: { ...DEFAULT_VOXEL_FACE('bark'), baseColor1: '#3d2c18', baseColor2: '#2a1c0c', baseColor3: '#1a0f06', grainStrength: 0.8, grainDirection: 'vertical', outlineStrength: 0.5 },
+    bottom: { ...DEFAULT_VOXEL_FACE('rings'), baseColor1: '#6b4c28', baseColor2: '#4a3418', baseColor3: '#2a1c0c', grainStrength: 0.6, grainDirection: 'none', depthShading: 0.7 },
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('custom'),
+  },
+  spruce_trunk: { label: 'Spruce Trunk',
+    top: { ...DEFAULT_VOXEL_FACE('rings'), baseColor1: '#9b7848', baseColor2: '#6b5030', baseColor3: '#3d2818', grainStrength: 0.4, grainDirection: 'none', depthShading: 0.5 },
+    side: { ...DEFAULT_VOXEL_FACE('bark'), baseColor1: '#4a3828', baseColor2: '#352818', baseColor3: '#201810', grainStrength: 0.6, grainDirection: 'vertical', outlineStrength: 0.5 },
+    bottom: { ...DEFAULT_VOXEL_FACE('rings'), baseColor1: '#9b7848', baseColor2: '#6b5030', baseColor3: '#3d2818', grainStrength: 0.4, grainDirection: 'none', depthShading: 0.5 },
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('custom'),
+  },
+  jungle_trunk: { label: 'Jungle Trunk',
+    top: { ...DEFAULT_VOXEL_FACE('rings'), baseColor1: '#b8944c', baseColor2: '#8b6c30', baseColor3: '#5c4820', grainStrength: 0.5, grainDirection: 'none', depthShading: 0.5 },
+    side: { ...DEFAULT_VOXEL_FACE('bark'), baseColor1: '#6b5828', baseColor2: '#4a3c18', baseColor3: '#302810', grainStrength: 0.6, grainDirection: 'vertical', outlineStrength: 0.3,
+      oreLayers: [{ color: '#2a5c18', highlightColor: '#3d7a24', density: 2, clusterSize: 1, name: 'Vines', style: 'flat', oreScale: 1 }] },
+    bottom: { ...DEFAULT_VOXEL_FACE('rings'), baseColor1: '#b8944c', baseColor2: '#8b6c30', baseColor3: '#5c4820', grainStrength: 0.5, grainDirection: 'none', depthShading: 0.5 },
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('custom'),
+  },
+  sand_block: { label: 'Sand',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#f0e0a0', baseColor2: '#e0d090', baseColor3: '#d0c080', grainDirection: 'both', grainStrength: 0.2, outlineStrength: 0 },
+    side: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#e0d090', baseColor2: '#d0c080', baseColor3: '#c0b070', grainDirection: 'horizontal', grainStrength: 0.3 },
+    bottom: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#d0c080', baseColor2: '#c0b070', baseColor3: '#b0a060', grainDirection: 'horizontal', grainStrength: 0.2 },
+    sideMode: 'gradient_top', sideSplitPos: 0.3,
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#f0e0a0', baseColor2: '#e0d090', baseColor3: '#d0c080' },
+  },
+  shell_sand: { label: 'Shell Sand',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#f0e0a0', baseColor2: '#e8d898', baseColor3: '#d4c488', grainDirection: 'both', grainStrength: 0.15,
+      oreLayers: [
+        { color: '#ffe8e0', highlightColor: '#fff8f4', density: 3, clusterSize: 1, name: 'White Shell', style: 'flat', oreScale: 0.7 },
+        { color: '#ffccaa', highlightColor: '#ffeedd', density: 2, clusterSize: 1, name: 'Pink Shell', style: 'jewel', oreScale: 0.6 },
+        { color: '#c0a080', highlightColor: '#e0c8a8', density: 2, clusterSize: 1, name: 'Brown Shell', style: 'flat', oreScale: 0.5 },
+      ] },
+    side: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#e0d090', baseColor2: '#d0c080', baseColor3: '#c0b070', grainDirection: 'horizontal', grainStrength: 0.2 },
+    bottom: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#d0c080', baseColor2: '#c0b070', baseColor3: '#b0a060', grainDirection: 'horizontal', grainStrength: 0.2 },
+    sideMode: 'gradient_top', sideSplitPos: 0.25,
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#f0e0a0', baseColor2: '#e8d898', baseColor3: '#d4c488' },
+  },
+  bouncy: { label: 'Bouncy',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#44cc55', baseColor2: '#33aa44', baseColor3: '#228833', grainDirection: 'none', grainStrength: 0, depthShading: 0.7, outlineStrength: 0.1, paletteSize: 6 },
+    side: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#33aa44', baseColor2: '#228833', baseColor3: '#116622', grainDirection: 'none', grainStrength: 0, depthShading: 0.8, outlineStrength: 0.1, paletteSize: 6 },
+    bottom: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#228833', baseColor2: '#116622', baseColor3: '#005511', grainDirection: 'none', grainStrength: 0, depthShading: 0.9, outlineStrength: 0, paletteSize: 6 },
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('custom'),
+  },
+  glass: { label: 'Glass',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#ccddee', baseColor2: '#bbccdd', baseColor3: '#aabbcc', grainDirection: 'none', grainStrength: 0, depthShading: 0.8, outlineStrength: 0.5, paletteSize: 4,
+      oreLayers: [{ color: '#ffffff', highlightColor: '#ffffff', density: 2, clusterSize: 1, name: 'Glint', style: 'crystal', oreScale: 0.5 }] },
+    side: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#bbccdd', baseColor2: '#aabbcc', baseColor3: '#99aabb', grainDirection: 'none', grainStrength: 0, depthShading: 0.9, outlineStrength: 0.6, paletteSize: 4,
+      oreLayers: [{ color: '#ffffff', highlightColor: '#ffffff', density: 1.5, clusterSize: 1, name: 'Glint', style: 'crystal', oreScale: 0.5 }] },
+    bottom: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#aabbcc', baseColor2: '#99aabb', baseColor3: '#8899aa', grainDirection: 'none', grainStrength: 0, depthShading: 0.7, outlineStrength: 0.4, paletteSize: 4 },
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('custom'),
+  },
+};
 
 type FaceName = 'top' | 'side' | 'bottom';
 
@@ -648,6 +802,17 @@ export default function BlockWorkbench() {
     if (editorMode === 'voxel') renderVoxelToAllFaces();
   }, [editorMode, renderVoxelToAllFaces]);
 
+  const applyVoxelPreset = (name: string) => {
+    const p = VOXEL_PRESETS[name];
+    if (!p) return;
+    setVxTopFace(p.top);
+    setVxSideFace(p.side);
+    setVxBottomFace(p.bottom);
+    setVxSideMode(p.sideMode);
+    setVxSideSplitPos(p.sideSplitPos);
+    setVxSideTopFace(p.sideTopFace);
+  };
+
   const applyPreset = (presetKey: string) => {
     const preset = WORKBENCH_PRESETS[presetKey];
     if (!preset) return;
@@ -767,8 +932,17 @@ export default function BlockWorkbench() {
           <div className="voxel-editor">
             <div className="settings-panel">
               <h3>Block Settings</h3>
+              <div className="settings-row">
+                <label>Preset</label>
+                <select defaultValue="" onChange={e => { if (e.target.value) applyVoxelPreset(e.target.value); e.target.value = ''; }}>
+                  <option value="" disabled>Choose…</option>
+                  {Object.entries(VOXEL_PRESETS).map(([key, p]) => (
+                    <option key={key} value={key}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
               <div className="settings-row"><label>Style</label><select value={vxRenderStyle} onChange={e => setVxRenderStyle(e.target.value as VoxelRenderStyle)}><option value="pixelated">Pixelated</option><option value="cartoon">Cartoon</option><option value="realistic">Realistic</option><option value="painterly">Painterly</option><option value="flat">Flat / Minimal</option></select></div>
-              <div className="settings-row"><label>Resolution</label><select value={vxResolution} onChange={e => setVxResolution(parseInt(e.target.value))}><option value="8">8×8</option><option value="16">16×16</option><option value="32">32×32</option><option value="64">64×64</option><option value="128">128×128</option><option value="256">256×256</option></select></div>
+              <div className="settings-row"><label>Resolution</label><select value={vxResolution} onChange={e => setVxResolution(parseInt(e.target.value))}><option value="8">8×8</option><option value="16">16×16</option><option value="32">32×32</option><option value="64">64×64</option><option value="128">128×128</option><option value="256">256×256</option><option value="512">512×512</option><option value="1024">1024×1024</option></select></div>
               <SliderControl label="Seed" value={vxSeed} min={1} max={1000} step={1} onChange={setVxSeed} />
               <div className="settings-row"><label>Side Blend</label><select value={vxSideMode} onChange={e => setVxSideMode(e.target.value as VoxelBlockSideMode)}><option value="uniform">Uniform (side only)</option><option value="split">Split (top/bottom)</option><option value="gradient_top">Gradient from top</option><option value="gradient_bottom">Gradient from bottom</option></select></div>
               {vxSideMode !== 'uniform' && <>
@@ -782,6 +956,20 @@ export default function BlockWorkbench() {
               <button className={`type-btn ${vxActiveFace === 'top' ? 'active' : ''}`} onClick={() => setVxActiveFace('top')}>Top Face</button>
               <button className={`type-btn ${vxActiveFace === 'side' ? 'active' : ''}`} onClick={() => setVxActiveFace('side')}>Side Face</button>
               <button className={`type-btn ${vxActiveFace === 'bottom' ? 'active' : ''}`} onClick={() => setVxActiveFace('bottom')}>Bottom Face</button>
+            </div>
+
+            <div className="settings-panel" style={{ padding: '10px 16px' }}>
+              <div className="settings-row" style={{ gap: 8 }}>
+                <label style={{ fontSize: '0.85em' }}>Load image for {vxActiveFace} face:</label>
+                <input type="file" accept="image/*" style={{ fontSize: '0.8em' }} onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => setImgs[activeFace](reader.result as string);
+                  reader.readAsDataURL(file);
+                  e.target.value = '';
+                }} />
+              </div>
             </div>
 
             {vxActiveFace === 'top' && <VoxelFaceSettings face={vxTopFace} setFace={setVxTopFace} />}
