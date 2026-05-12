@@ -109,6 +109,7 @@ export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version
   const aoRef = useRef<HTMLCanvasElement>(null);
   const specRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [enabled, setEnabled] = useState(false);
   const [activeMap, setActiveMap] = useState<MapType>('normal');
@@ -125,17 +126,39 @@ export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version
   const [specPower, setSpecPower] = useState(16);
   const [dragging, setDragging] = useState(false);
 
+  const [customHeight, setCustomHeight] = useState<HTMLCanvasElement | null>(null);
+  const [customHeightName, setCustomHeightName] = useState<string>('');
+
+  const heightSource = customHeight ?? sourceCanvas;
+
   useEffect(() => {
     if (onNormalSettingsChange) onNormalSettingsChange(normalSettings);
   }, [normalSettings, onNormalSettingsChange]);
 
+  const handleHeightUpload = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        c.getContext('2d')!.drawImage(img, 0, 0);
+        setCustomHeight(c);
+        setCustomHeightName(file.name);
+      };
+      img.src = ev.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
   const generate = useCallback(() => {
-    if (!enabled || !sourceCanvas || sourceCanvas.width === 0) return;
-    if (normalRef.current) generateNormalMap(sourceCanvas, normalRef.current, normalSettings);
-    if (dispRef.current) generateDisplacementMap(sourceCanvas, dispRef.current, dispSettings);
-    if (aoRef.current) generateAOMap(sourceCanvas, aoRef.current, aoSettings);
-    if (specRef.current) generateSpecularMap(sourceCanvas, specRef.current, specSettings);
-  }, [enabled, sourceCanvas, normalSettings, dispSettings, aoSettings, specSettings, version]);
+    if (!enabled || !heightSource || heightSource.width === 0) return;
+    if (normalRef.current) generateNormalMap(heightSource, normalRef.current, normalSettings);
+    if (dispRef.current) generateDisplacementMap(heightSource, dispRef.current, dispSettings);
+    if (aoRef.current) generateAOMap(heightSource, aoRef.current, aoSettings);
+    if (specRef.current) generateSpecularMap(heightSource, specRef.current, specSettings);
+  }, [enabled, heightSource, normalSettings, dispSettings, aoSettings, specSettings, version]);
 
   useEffect(() => { generate(); }, [generate]);
 
@@ -177,6 +200,29 @@ export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version
       <div className="map-panel-header">
         <h3>Material Maps</h3>
         <button className="btn-small" onClick={() => setEnabled(false)}>Hide</button>
+      </div>
+
+      <div className="settings-row" style={{ alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          style={{ display: 'none' }}
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleHeightUpload(f); e.target.value = ''; }}
+        />
+        <button className="btn-small" onClick={() => fileInputRef.current?.click()} title="Use a custom image as the height map source">
+          {customHeight ? 'Replace height map…' : 'Upload custom height map…'}
+        </button>
+        {customHeight && (
+          <>
+            <span style={{ fontSize: '0.7rem', opacity: 0.7, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {customHeightName}
+            </span>
+            <button className="btn-small" onClick={() => { setCustomHeight(null); setCustomHeightName(''); }} title="Use the active face texture as the height map">
+              Use face texture
+            </button>
+          </>
+        )}
       </div>
 
       {showPreview && (
@@ -269,6 +315,11 @@ export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version
             <label className="check-label"><input type="checkbox" checked={normalSettings.invertR} onChange={e => setNormalSettings(s => ({ ...s, invertR: e.target.checked }))} /> R</label>
             <label className="check-label"><input type="checkbox" checked={normalSettings.invertG} onChange={e => setNormalSettings(s => ({ ...s, invertG: e.target.checked }))} /> G</label>
             <label className="check-label"><input type="checkbox" checked={normalSettings.invertHeight} onChange={e => setNormalSettings(s => ({ ...s, invertHeight: e.target.checked }))} /> H</label>
+          </div>
+          <div className="settings-row">
+            <label className="check-label" title="Remap Z so that maximum tilt darkens fully (matches the standalone Normal Map page behaviour)">
+              <input type="checkbox" checked={normalSettings.zRange} onChange={e => setNormalSettings(s => ({ ...s, zRange: e.target.checked }))} /> Z Range
+            </label>
           </div>
         </div>
       )}

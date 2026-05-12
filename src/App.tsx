@@ -12,7 +12,7 @@ type ToolPage = typeof TOOL_PAGES[number];
 
 function loadPage(): Page {
   const saved = localStorage.getItem('tt_page');
-  return saved && [...TOOL_PAGES, 'guide'].includes(saved as Page) ? saved as Page : 'texture';
+  return saved && [...TOOL_PAGES, 'guide'].includes(saved as Page) ? saved as Page : 'workbench';
 }
 
 export default function App() {
@@ -27,15 +27,15 @@ export default function App() {
 
   const togglePanel = useCallback(() => {
     if (page === 'guide') {
-      setPageState('texture');
-      localStorage.setItem('tt_page', 'texture');
+      setPageState('workbench');
+      localStorage.setItem('tt_page', 'workbench');
       setPanelOpen(true);
     } else {
       setPanelOpen(o => !o);
     }
   }, [page]);
 
-  const activeTool: ToolPage = (page !== 'guide' ? page : 'texture') as ToolPage;
+  const activeTool: ToolPage = (page !== 'guide' ? page : 'workbench') as ToolPage;
 
   return (
     <div className="app">
@@ -43,28 +43,10 @@ export default function App() {
         <div className="nav-brand">VoxelCraft</div>
         <div className="nav-links">
           <button
-            className={`nav-link ${page === 'texture' ? 'active' : ''}`}
-            onClick={() => setPage('texture')}
-          >
-            Texture Generator
-          </button>
-          <button
             className={`nav-link ${page === 'workbench' ? 'active' : ''}`}
             onClick={() => setPage('workbench')}
           >
             Block Workbench
-          </button>
-          <button
-            className={`nav-link ${page === 'voxelblock' ? 'active' : ''}`}
-            onClick={() => setPage('voxelblock')}
-          >
-            Voxel Block
-          </button>
-          <button
-            className={`nav-link ${page === 'normalmap' ? 'active' : ''}`}
-            onClick={() => setPage('normalmap')}
-          >
-            Normal Map
           </button>
           <button
             className={`nav-link ${page === 'guide' ? 'active' : ''}`}

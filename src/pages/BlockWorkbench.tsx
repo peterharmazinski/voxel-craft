@@ -17,7 +17,11 @@ import {
   type VoxelRenderStyle,
 } from '../utils/textureGenerators';
 import { renderFaceTexture, applySnowOverlay, type FaceTextureConfig, type SnowOverlayOptions } from '../utils/renderTexture';
-import { generateNormalMap, DEFAULT_NORMAL, type NormalMapSettings } from '../utils/normalMapProcessor';
+import {
+  generateNormalMap, generateDisplacementMap, generateAOMap, generateSpecularMap,
+  DEFAULT_NORMAL, DEFAULT_DISPLACEMENT, DEFAULT_AO, DEFAULT_SPECULAR,
+  type NormalMapSettings,
+} from '../utils/normalMapProcessor';
 import TextureGenerator from './TextureGenerator';
 import { createZip, canvasToPngBytes } from '../utils/zipExport';
 import {
@@ -1003,6 +1007,13 @@ export default function BlockWorkbench() {
 
   const [exportSize, setExportSize] = useLocalState<number>('bw_exportSize', 256);
   const [tilingPreview, setTilingPreview] = useLocalState('bw_tiling', false);
+  const [zipIncludeDiffuse, setZipIncludeDiffuse] = useLocalState('bw_zipDiff', true);
+  const [zipIncludeNormal, setZipIncludeNormal] = useLocalState('bw_zipNorm', true);
+  const [zipIncludeDisplacement, setZipIncludeDisplacement] = useLocalState('bw_zipDisp', false);
+  const [zipIncludeAO, setZipIncludeAO] = useLocalState('bw_zipAO', false);
+  const [zipIncludeSpecular, setZipIncludeSpec] = useLocalState('bw_zipSpec', false);
+  const [zipIncludeIso, setZipIncludeIso] = useLocalState('bw_zipIso', false);
+  const [zipOptionsOpen, setZipOptionsOpen] = useState(false);
   const [activePresetKey, setActivePresetKey] = useLocalState<string>('bw_activePreset', '');
   const [activeVxPresetKey, setActiveVxPresetKey] = useLocalState<string>('bw_activeVxPreset', '');
   const tilingRef = useRef<HTMLCanvasElement>(null);
@@ -1381,6 +1392,9 @@ export default function BlockWorkbench() {
     const names = ['block_top', 'block_side', 'block_bottom'] as const;
     const entries: { name: string; data: Uint8Array }[] = [];
 
+    const includeAny = zipIncludeDiffuse || zipIncludeNormal || zipIncludeDisplacement || zipIncludeAO || zipIncludeSpecular;
+    if (!includeAny && !zipIncludeIso) return;
+
     for (let i = 0; i < 3; i++) {
       const src = refs[i];
       if (!src) continue;
@@ -1389,12 +1403,37 @@ export default function BlockWorkbench() {
       const ctx = tmp.getContext('2d')!;
       ctx.imageSmoothingEnabled = exportSize > src.width;
       ctx.drawImage(src, 0, 0, exportSize, exportSize);
-      entries.push({ name: `${names[i]}.png`, data: await canvasToPngBytes(tmp) });
 
-      const normCanvas = document.createElement('canvas');
-      generateNormalMap(tmp, normCanvas, normalSettingsRef.current);
-      entries.push({ name: `${names[i]}_normal.png`, data: await canvasToPngBytes(normCanvas) });
+      if (zipIncludeDiffuse) {
+        entries.push({ name: `${names[i]}.png`, data: await canvasToPngBytes(tmp) });
+      }
+      if (zipIncludeNormal) {
+        const c = document.createElement('canvas');
+        generateNormalMap(tmp, c, normalSettingsRef.current);
+        entries.push({ name: `${names[i]}_normal.png`, data: await canvasToPngBytes(c) });
+      }
+      if (zipIncludeDisplacement) {
+        const c = document.createElement('canvas');
+        generateDisplacementMap(tmp, c, DEFAULT_DISPLACEMENT);
+        entries.push({ name: `${names[i]}_displacement.png`, data: await canvasToPngBytes(c) });
+      }
+      if (zipIncludeAO) {
+        const c = document.createElement('canvas');
+        generateAOMap(tmp, c, DEFAULT_AO);
+        entries.push({ name: `${names[i]}_ao.png`, data: await canvasToPngBytes(c) });
+      }
+      if (zipIncludeSpecular) {
+        const c = document.createElement('canvas');
+        generateSpecularMap(tmp, c, DEFAULT_SPECULAR);
+        entries.push({ name: `${names[i]}_specular.png`, data: await canvasToPngBytes(c) });
+      }
     }
+
+    if (zipIncludeIso && isoRef.current) {
+      entries.push({ name: 'block_iso.png', data: await canvasToPngBytes(isoRef.current) });
+    }
+
+    if (entries.length === 0) return;
 
     const blob = createZip(entries);
     const url = URL.createObjectURL(blob);
@@ -1403,7 +1442,7 @@ export default function BlockWorkbench() {
     a.download = 'block_textures.zip';
     a.click();
     URL.revokeObjectURL(url);
-  }, [exportSize]);
+  }, [exportSize, zipIncludeDiffuse, zipIncludeNormal, zipIncludeDisplacement, zipIncludeAO, zipIncludeSpecular, zipIncludeIso]);
 
   const activeCanvasRef = activeFace === 'top' ? topRef : activeFace === 'side' ? sideRef : bottomRef;
 
@@ -1553,7 +1592,51 @@ export default function BlockWorkbench() {
             if (sideRef.current) downloadAtSize(sideRef.current, 'block_side');
             if (bottomRef.current) downloadAtSize(bottomRef.current, 'block_bottom');
           }}>All</button>
-          <button className="btn-primary" onClick={handleZipExport} title="Download all faces + normal maps as ZIP">ZIP</button>
+          <button className="btn-primary" onClick={() => {
+            if (isoRef.current) downloadAtSize(isoRef.current, 'block_iso');
+          }} title="Download assembled isometric 3D block as PNG">Iso 3D</button>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <button className="btn-primary" onClick={handleZipExport} title="Download faces and selected maps as ZIP">ZIP</button>
+            <button
+              className="btn-primary"
+              onClick={() => setZipOptionsOpen(o => !o)}
+              title="Choose what to include in the ZIP"
+              style={{ marginLeft: 2, padding: '2px 6px' }}
+            >▾</button>
+            {zipOptionsOpen && (
+              <div style={{
+                position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 10,
+                background: '#1f1f1f', border: '1px solid #444', borderRadius: 4,
+                padding: 8, minWidth: 180, fontSize: '0.75rem',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+              }}>
+                <div style={{ fontWeight: 600, marginBottom: 6, opacity: 0.7 }}>ZIP contents</div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={zipIncludeDiffuse} onChange={e => setZipIncludeDiffuse(e.target.checked)} /> Diffuse (textures)
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={zipIncludeNormal} onChange={e => setZipIncludeNormal(e.target.checked)} /> Normal map
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={zipIncludeDisplacement} onChange={e => setZipIncludeDisplacement(e.target.checked)} /> Displacement
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={zipIncludeAO} onChange={e => setZipIncludeAO(e.target.checked)} /> Ambient occlusion
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={zipIncludeSpecular} onChange={e => setZipIncludeSpec(e.target.checked)} /> Specular
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer', borderTop: '1px solid #333', marginTop: 4, paddingTop: 6 }}>
+                  <input type="checkbox" checked={zipIncludeIso} onChange={e => setZipIncludeIso(e.target.checked)} /> Iso 3D block
+                </label>
+                <button
+                  className="btn-primary"
+                  onClick={() => setZipOptionsOpen(false)}
+                  style={{ marginTop: 8, width: '100%', padding: '4px 8px' }}
+                >Close</button>
+              </div>
+            )}
+          </div>
         </div>
         {renderCount > 0 && imgs[activeFace] && <MapPanel
           sourceCanvas={activeCanvasRef.current}

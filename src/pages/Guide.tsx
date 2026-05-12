@@ -12,24 +12,28 @@ export default function Guide() {
         <section className="guide-section">
           <h2>Getting Started</h2>
           <p>
-            VoxelCraft has four tools. Use the navigation bar at the top to switch between them.
+            VoxelCraft is one consolidated tool: the <strong>Block Workbench</strong>. It combines procedural texture generation, voxel-style block authoring, and PBR map generation in a single workspace.
           </p>
           <div className="guide-cards">
             <div className="guide-card">
-              <h3>Texture Generator</h3>
-              <p>Create seamless, tileable textures from 14 procedural algorithms. Pick a type, tweak the parameters, and download.</p>
+              <h3>1. Pick a preset</h3>
+              <p>Open the Workbench, choose a preset from the dropdown (organized by category — Wood, Nature, Brick, Stone Walls, etc.). It loads textures into all three faces of a voxel block.</p>
             </div>
             <div className="guide-card">
-              <h3>Block Workbench</h3>
-              <p>Build complete 3D voxel blocks by assigning textures to top, side, and bottom faces with a live isometric preview.</p>
+              <h3>2. Switch modes</h3>
+              <p>Toggle between <em>Texture Generator</em> mode (14 procedural algorithms with deep parameter controls) and <em>Voxel Block</em> mode (Minecraft-style pixel-art presets) for the active face.</p>
             </div>
             <div className="guide-card">
-              <h3>Voxel Block</h3>
-              <p>Quick pixel-art style block generator with built-in presets for common Minecraft-style materials.</p>
+              <h3>3. Tune and capture</h3>
+              <p>Edit the active face's settings in the right panel. Use the <em>Capture to face</em> buttons to commit a generated texture to Top, Side, or Bottom. Use 1 / 2 / 3 keys to switch faces.</p>
             </div>
             <div className="guide-card">
-              <h3>Normal Map Generator</h3>
-              <p>Upload any image and generate Normal, Displacement, Ambient Occlusion, and Specular maps.</p>
+              <h3>4. Generate PBR maps</h3>
+              <p>Under the active face preview, expand <em>Material Maps</em> to generate Normal, Displacement, Ambient Occlusion, and Specular maps. Upload a custom image as the height source for any face.</p>
+            </div>
+            <div className="guide-card">
+              <h3>5. Export</h3>
+              <p>Download individual face textures (16–1024 px), the assembled iso 3D block, or a ZIP bundle with any combination of diffuse, normal, displacement, AO, and specular maps. Save projects as <code>.voxelcraft</code> files for later editing.</p>
             </div>
           </div>
         </section>
@@ -64,6 +68,10 @@ export default function Guide() {
         <section className="guide-section">
           <h2>Tips for Better Textures</h2>
           <div className="guide-tips">
+            <div className="guide-tip">
+              <strong>One workspace, every asset</strong>
+              <span>Everything that used to live in the standalone Texture Generator, Voxel Block, and Normal Map pages is now inside the Workbench. Each PBR map (Normal, Displacement, AO, Specular) can be downloaded individually from the active face's <em>Material Maps</em> panel, or bundled together via the ZIP dropdown.</span>
+            </div>
             <div className="guide-tip">
               <strong>High contrast = more depth</strong>
               <span>Textures with strong light-to-dark variation produce better normal maps and more convincing 3D appearance.</span>

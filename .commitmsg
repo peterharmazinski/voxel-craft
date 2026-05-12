@@ -1,0 +1,7 @@
+Consolidate tools into Block Workbench (Phase 1, functional)
+
+- Nav: hide Texture Generator, Voxel Block, and Normal Map pages; Workbench is now the only tool in the top nav. Legacy localStorage values still route to the old pages for users mid-session.
+- Workbench: new 'Iso 3D' download button for the assembled isometric block.
+- ZIP export: new dropdown with checkboxes lets users include any combination of Diffuse, Normal, Displacement, AO, Specular, and Iso 3D in the bundle.
+- MapPanel: new 'Upload custom height map' button preserves the standalone Normal Map page's killer feature inside the workbench; added missing Z Range checkbox.
+- Guide: rewrote Getting Started for the single-tool workflow; added a tip about the consolidation and per-asset downloads.
