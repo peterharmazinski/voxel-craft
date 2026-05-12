@@ -12,6 +12,10 @@ import {
   generateCartoonOre,
   generateHexagon,
   generateOctagon,
+  type BrickPattern,
+  type BrickColorMode,
+  type TileColorMode,
+  type TextilesPatternType,
 } from './textureGenerators';
 import { SimplexNoise, NoiseType } from './noise';
 
@@ -81,10 +85,10 @@ export function renderFaceTexture(canvas: HTMLCanvasElement, config: FaceTexture
     case 'Brick':
       generateBrick(canvas, size,
         p.color1 as string || '#e6d7c3', p.groutColor as string || '#665e52',
-        p.gradientColor as string || '#665e52', p.pattern as string || 'edges',
+        p.gradientColor as string || '#665e52', p.pattern as BrickPattern || 'edges',
         p.x as number || 12, p.y as number || 6,
         p.grout as number || 6, p.gradient as number || 3,
-        p.colorMode as string || 'random', p.color2 as string || '#c9a882',
+        p.colorMode as BrickColorMode || 'random', p.color2 as string || '#c9a882',
         p.shadeRange as number || 0.15, p.texture as number || 0.4,
         seed, p.textureScale as number || 30);
       break;
@@ -132,13 +136,13 @@ export function renderFaceTexture(canvas: HTMLCanvasElement, config: FaceTexture
         p.xGrout as number || 15, p.yGrout as number || 15,
         p.xGradient as number || 30, p.yGradient as number || 30,
         p.gradientEnabled as boolean ?? true, p.groutGradientEnabled as boolean ?? true,
-        p.color2 as string || '#aaaaaa', p.colorMode as string || 'single',
+        p.color2 as string || '#aaaaaa', p.colorMode as TileColorMode || 'single',
         p.shadeRange as number || 0, p.texture as number || 0, seed);
       break;
     case 'Textiles':
       generateTextiles(canvas, size,
         p.color1 as string || '#e6d7c3', p.color2 as string || '#665e52',
-        p.pattern as number || 4, p.double as boolean || false,
+        p.pattern as TextilesPatternType || 4, p.double as boolean || false,
         p.tightness as number || 1, p.thickness as number || 6,
         p.smoothness as number || 0, p.shading as number || 0);
       break;
