@@ -2120,8 +2120,11 @@ export function generateStoneWall(
     shade: number; blend: number;
     radius: number;
   }
-  const seeds: SeedPt[] = [];
 
+  // Generate seeds for a 3x3 tile pattern so the texture can be sampled
+  // seamlessly without edge artifacts. We'll wrap query points into the
+  // central tile and look across all neighbors.
+  const seeds: SeedPt[] = [];
   for (let gy = -1; gy <= rows; gy++) {
     for (let gx = -1; gx <= cols; gx++) {
       const cx = (gx + 0.5) * cellW + (rng() - 0.5) * cellW * jitter;
@@ -2130,7 +2133,7 @@ export function generateStoneWall(
         x: cx, y: cy, id: seeds.length,
         shade: 0.78 + rng() * 0.44,
         blend: rng(),
-        radius: cellW * (0.35 + rng() * 0.3),
+        radius: Math.min(cellW, cellH) * (0.4 + rng() * 0.25),
       });
     }
   }
@@ -2142,80 +2145,71 @@ export function generateStoneWall(
   const data = imgData.data;
 
   const noiseGen = new SimplexNoise(opts.seed);
+  const detailNoise = new SimplexNoise(opts.seed + 13);
   const mw = opts.mortarWidth;
 
-  // Pre-build a spatial grid for fast nearest-neighbor lookup
-  const gridCols = Math.max(1, Math.floor(size / cellW));
-  const gridRows = Math.max(1, Math.floor(size / cellH));
-  const grid: SeedPt[][][] = [];
-  for (let r = 0; r < gridRows + 2; r++) {
-    grid[r] = [];
-    for (let c = 0; c < gridCols + 2; c++) grid[r][c] = [];
-  }
-  for (const pt of seeds) {
-    const gc = Math.floor(pt.x / cellW) + 1;
-    const gr = Math.floor(pt.y / cellH) + 1;
-    if (gr >= 0 && gr < grid.length && gc >= 0 && gc < (grid[0]?.length ?? 0)) {
-      grid[gr][gc].push(pt);
-    }
-  }
+  // Distortion strength — perturbs query position to break geometric
+  // Voronoi edges into organic, stone-like curves.
+  const distortAmp = Math.min(cellW, cellH) * 0.35;
+  const distortScale = Math.min(cellW, cellH) * 1.5;
 
   for (let py = 0; py < size; py++) {
     for (let px = 0; px < size; px++) {
+      // Warp the query point so cell boundaries are wavy, not straight
+      const wx = noiseGen.noise2D(px / distortScale, py / distortScale, 'perlin' as NoiseType) * distortAmp;
+      const wy = noiseGen.noise2D((px + 100) / distortScale, (py + 100) / distortScale, 'perlin' as NoiseType) * distortAmp;
+      const qx = px + wx;
+      const qy = py + wy;
+
       let minD = Infinity;
       let minD2 = Infinity;
       let nearest = seeds[0];
 
-      const gc = Math.floor(px / cellW) + 1;
-      const gr = Math.floor(py / cellH) + 1;
-      for (let dr = -2; dr <= 2; dr++) {
-        const rr = gr + dr;
-        if (rr < 0 || rr >= grid.length) continue;
-        for (let dc = -2; dc <= 2; dc++) {
-          const cc = gc + dc;
-          if (cc < 0 || cc >= grid[rr].length) continue;
-          for (const pt of grid[rr][cc]) {
-            const dx = px - pt.x;
-            const dy = py - pt.y;
-            const d = dx * dx + dy * dy;
-            if (d < minD) { minD2 = minD; minD = d; nearest = pt; }
-            else if (d < minD2) { minD2 = d; }
-          }
-        }
+      for (const pt of seeds) {
+        const dx = qx - pt.x;
+        const dy = qy - pt.y;
+        const d = dx * dx + dy * dy;
+        if (d < minD) { minD2 = minD; minD = d; nearest = pt; }
+        else if (d < minD2) { minD2 = d; }
       }
 
       const d1 = Math.sqrt(minD);
       const d2 = Math.sqrt(minD2);
       const edgeDist = (d2 - d1) * 0.5;
 
+      // Wider mortar near concave junctions where 3+ stones meet
+      const effectiveMw = mw + (mw * (1 - Math.min(1, edgeDist / (mw * 2))) * 0.3);
+
       const idx = (py * size + px) * 4;
 
-      if (edgeDist < mw) {
-        const t = edgeDist / mw;
-        const dark = 0.55 + t * 0.45;
-        data[idx] = mortarRgb.r * dark;
-        data[idx + 1] = mortarRgb.g * dark;
-        data[idx + 2] = mortarRgb.b * dark;
+      if (edgeDist < effectiveMw) {
+        const t = edgeDist / effectiveMw;
+        const dark = 0.45 + t * 0.55;
+        const mn = detailNoise.noise2D(px / 6, py / 6, 'perlin' as NoiseType) * 15;
+        data[idx] = Math.max(0, Math.min(255, mortarRgb.r * dark + mn));
+        data[idx + 1] = Math.max(0, Math.min(255, mortarRgb.g * dark + mn));
+        data[idx + 2] = Math.max(0, Math.min(255, mortarRgb.b * dark + mn));
         data[idx + 3] = 255;
       } else {
         const stoneR = col1.r + (col2.r - col1.r) * nearest.blend;
         const stoneG = col1.g + (col2.g - col1.g) * nearest.blend;
         const stoneB = col1.b + (col2.b - col1.b) * nearest.blend;
 
-        // Edge darkening: darken near mortar for a rounded/beveled look
-        const bevelZone = nearest.radius * 0.6;
+        // Bevel: stones look rounded — darken near mortar
+        const bevelZone = nearest.radius * 0.45;
         const bevelT = Math.min(1, (edgeDist - mw) / bevelZone);
-        const bevelShade = 0.7 + bevelT * 0.3;
+        const bevelShade = 0.65 + bevelT * 0.35;
 
-        // Light direction: top-left highlight, bottom-right shadow
-        const relX = (px - nearest.x) / (nearest.radius || 1);
-        const relY = (py - nearest.y) / (nearest.radius || 1);
-        const light = 1.0 + (-relX - relY) * opts.shading * 0.12;
+        // Directional light: top-left bright, bottom-right shadow
+        const relX = (qx - nearest.x) / (nearest.radius || 1);
+        const relY = (qy - nearest.y) / (nearest.radius || 1);
+        const light = 1.0 + (-relX * 0.35 - relY * 0.35) * opts.shading;
 
-        // Surface texture from noise
-        const n1 = noiseGen.noise2D(px / 16, py / 16, 'perlin' as NoiseType);
-        const n2 = noiseGen.noise2D(px / 6, py / 6, 'perlin' as NoiseType) * 0.35;
-        const nVal = (n1 + n2) * opts.textureNoise * 22;
+        // Surface roughness from noise — gives each stone a textured face
+        const n1 = detailNoise.noise2D(px / 14, py / 14, 'perlin' as NoiseType);
+        const n2 = detailNoise.noise2D(px / 5, py / 5, 'perlin' as NoiseType) * 0.4;
+        const n3 = detailNoise.noise2D(px / 2.5, py / 2.5, 'perlin' as NoiseType) * 0.15;
+        const nVal = (n1 + n2 + n3) * opts.textureNoise * 30;
 
         const shade = nearest.shade * bevelShade * light;
         data[idx]     = Math.max(0, Math.min(255, stoneR * shade + nVal));
