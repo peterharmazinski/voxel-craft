@@ -876,6 +876,54 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   },
 };
 
+const WORKBENCH_CATEGORIES: [string, string[]][] = [
+  ['Wood & Trees', ['oak_trunk', 'birch_trunk', 'spruce_trunk', 'dark_oak_trunk', 'acacia_trunk', 'jungle_trunk', 'wood_planks', 'pine_needles']],
+  ['Nature', ['grass_block', 'flowery_grass', 'mossy_grass', 'dry_grass', 'oak_leaves', 'birch_leaves', 'autumn_leaves', 'cherry_leaves']],
+  ['Ground & Sand', ['sand_block', 'red_sand', 'gravel', 'mud', 'cobblestone']],
+  ['Snow & Ice', ['snow_block', 'packed_ice', 'blue_ice', 'taiga_podzol', 'tundra', 'frozen_tundra', 'permafrost']],
+  ['Ore', ['ore_block', 'iron_ore', 'gold_ore', 'emerald_ore', 'redstone_ore', 'coal_ore', 'copper_ore']],
+  ['Brick', ['stone_brick', 'red_brick', 'old_brick', 'white_brick', 'sandstone_brick', 'dark_brick']],
+  ['Tile', ['tiled_floor', 'subway_tile', 'marble_tile', 'mosaic_tile', 'terracotta_tile', 'octagon_tile', 'hex_stone']],
+  ['Glass', ['glass', 'stained_glass', 'stained_blue', 'stained_green', 'stained_purple', 'stained_yellow', 'frosted_glass']],
+  ['Stone Walls', ['stone_wall', 'rough_stone_wall', 'mossy_stone_wall', 'castle_wall', 'slate_wall']],
+  ['Other', ['lava', 'woven_fabric']],
+];
+
+const VOXEL_CATEGORIES: [string, string[]][] = [
+  ['Nature', ['grass', 'flowery_grass', 'leaves', 'fallen_leaves']],
+  ['Wood & Trees', ['log', 'tree_trunk', 'birch_trunk', 'dark_oak_trunk', 'spruce_trunk', 'jungle_trunk', 'pine_log', 'pine_needles']],
+  ['Ground & Sand', ['sand', 'sand_block', 'shell_sand', 'mud']],
+  ['Snow & Ice', ['snow', 'packed_ice', 'blue_ice', 'snowy_pine', 'taiga_dirt', 'tundra', 'frozen_tundra', 'permafrost']],
+  ['Ore', ['stone_ore', 'diamond_ore']],
+  ['Other', ['lava', 'bouncy', 'glass']],
+];
+
+function renderGroupedOptions<T extends { label: string }>(
+  presets: Record<string, T>,
+  categories: [string, string[]][],
+) {
+  const categorized = new Set(categories.flatMap(([, keys]) => keys));
+  const uncategorized = Object.keys(presets).filter(k => !categorized.has(k));
+  return (
+    <>
+      {categories.map(([cat, keys]) => {
+        const entries = keys.filter(k => k in presets);
+        if (entries.length === 0) return null;
+        return (
+          <optgroup key={cat} label={cat}>
+            {entries.map(k => <option key={k} value={k}>{presets[k].label}</option>)}
+          </optgroup>
+        );
+      })}
+      {uncategorized.length > 0 && (
+        <optgroup label="Uncategorized">
+          {uncategorized.map(k => <option key={k} value={k}>{presets[k].label}</option>)}
+        </optgroup>
+      )}
+    </>
+  );
+}
+
 export default function BlockWorkbench() {
   const topRef = useRef<HTMLCanvasElement>(null);
   const sideRef = useRef<HTMLCanvasElement>(null);
@@ -1179,9 +1227,7 @@ export default function BlockWorkbench() {
           <label>Block Presets:</label>
           <select defaultValue="" onChange={e => { if (e.target.value) applyPreset(e.target.value); e.target.value = ''; }}>
             <option value="" disabled>Choose a preset…</option>
-            {Object.entries(WORKBENCH_PRESETS).map(([key, preset]) => (
-              <option key={key} value={key}>{preset.label}</option>
-            ))}
+            {renderGroupedOptions(WORKBENCH_PRESETS, WORKBENCH_CATEGORIES)}
           </select>
         </div>
 
@@ -1246,9 +1292,7 @@ export default function BlockWorkbench() {
                 <label>Preset</label>
                 <select defaultValue="" onChange={e => { if (e.target.value) applyVoxelPreset(e.target.value); e.target.value = ''; }}>
                   <option value="" disabled>Choose…</option>
-                  {Object.entries(VOXEL_PRESETS).map(([key, p]) => (
-                    <option key={key} value={key}>{p.label}</option>
-                  ))}
+                  {renderGroupedOptions(VOXEL_PRESETS, VOXEL_CATEGORIES)}
                 </select>
               </div>
               <div className="settings-row"><label>Style</label><select value={vxRenderStyle} onChange={e => setVxRenderStyle(e.target.value as VoxelRenderStyle)}><option value="pixelated">Pixelated</option><option value="cartoon">Cartoon</option><option value="realistic">Realistic</option><option value="painterly">Painterly</option><option value="flat">Flat / Minimal</option></select></div>
