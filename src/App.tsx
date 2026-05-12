@@ -3,10 +3,11 @@ import TextureGenerator from './pages/TextureGenerator'
 import NormalMapGenerator from './pages/NormalMapGenerator'
 import VoxelBlock from './pages/VoxelBlock'
 import BlockWorkbench from './pages/BlockWorkbench'
+import Guide from './pages/Guide'
 
-type Page = 'texture' | 'normalmap' | 'voxelblock' | 'workbench'
+type Page = 'texture' | 'normalmap' | 'voxelblock' | 'workbench' | 'guide'
 
-const VALID_PAGES: Page[] = ['texture', 'normalmap', 'voxelblock', 'workbench'];
+const VALID_PAGES: Page[] = ['texture', 'normalmap', 'voxelblock', 'workbench', 'guide'];
 
 function loadPage(): Page {
   const saved = localStorage.getItem('tt_page');
@@ -49,6 +50,12 @@ export default function App() {
           >
             Normal Map
           </button>
+          <button
+            className={`nav-link ${page === 'guide' ? 'active' : ''}`}
+            onClick={() => setPage('guide')}
+          >
+            Guide
+          </button>
         </div>
       </nav>
       <main className="app-main">
@@ -56,6 +63,7 @@ export default function App() {
         {page === 'workbench' && <BlockWorkbench />}
         {page === 'voxelblock' && <VoxelBlock />}
         {page === 'normalmap' && <NormalMapGenerator />}
+        {page === 'guide' && <Guide />}
       </main>
     </div>
   )
