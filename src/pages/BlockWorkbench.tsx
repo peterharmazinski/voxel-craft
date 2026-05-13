@@ -59,6 +59,11 @@ interface VoxelPreset {
   seed?: number;
   transitionPattern?: SideTransitionPattern;
   transitionNoise?: number;
+  // When defined the preset is a "light source" — picking it auto-
+  // enables the workbench Glow pipeline with these settings so the
+  // block visually emits straight away. Plain (non-light) presets
+  // leave this undefined and turn glow off on apply.
+  glow?: GlowOptions;
 }
 
 const DEFAULT_VOXEL_FACE = (base: VoxelBaseType, ores: VoxelOreLayer[] = []): VoxelBlockFace => ({
@@ -81,6 +86,7 @@ interface OreDescriptor {
   key: string;
   label: string;
   bg?: OreBgVariant;       // stone if unset
+  bgColors?: [string, string, string]; // ad-hoc override of the bg palette (used for light-source presets that want unique colours)
   voxelBase?: VoxelBaseType; // matches bg; defaults to 'stone'
   oreColor: string;
   highlightColor: string;
@@ -95,6 +101,10 @@ interface OreDescriptor {
   voxelClusterSize?: number; // default 2
   voxelOreScale?: number;    // default 0.8
   seedBase: number;
+  // Light-source presets attach a glow recipe here; the factory passes
+  // it through to both texture and voxel sides so picking the preset
+  // makes the block bloom.
+  glow?: GlowOptions;
 }
 
 const ORE_BG: Record<OreBgVariant, [string, string, string]> = {
@@ -112,8 +122,12 @@ function _darkenHex(color: string, amount = 0x10): string {
   return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
 }
 
+function _resolveBg(d: OreDescriptor): [string, string, string] {
+  return d.bgColors ?? ORE_BG[d.bg ?? 'stone'];
+}
+
 function makeOreTexturePreset(d: OreDescriptor): BlockPreset {
-  const [c1, c2, c3] = ORE_BG[d.bg ?? 'stone'];
+  const [c1, c2, c3] = _resolveBg(d);
   const [c1b, c2b, c3b] = [_darkenHex(c1), _darkenHex(c2), _darkenHex(c3)];
   const oreLayer = (count: number) => [{
     color: d.oreColor, highlightColor: d.highlightColor,
@@ -130,11 +144,12 @@ function makeOreTexturePreset(d: OreDescriptor): BlockPreset {
     top:    { type: 'CartoonOre', size: 256, seed: d.seedBase,     params: mkParams(d.count,                 [c1, c2, c3]) },
     side:   { type: 'CartoonOre', size: 256, seed: d.seedBase + 1, params: mkParams(Math.max(2, d.count - 1), [c1, c2, c3]) },
     bottom: { type: 'CartoonOre', size: 256, seed: d.seedBase + 2, params: mkParams(Math.max(1, d.count - 2), [c1b, c2b, c3b]) },
+    glow:   d.glow,
   };
 }
 
 function makeOreVoxelPreset(d: OreDescriptor): VoxelPreset {
-  const [c1, c2, c3] = ORE_BG[d.bg ?? 'stone'];
+  const [c1, c2, c3] = _resolveBg(d);
   const [c1b, c2b, c3b] = [_darkenHex(c1), _darkenHex(c2), _darkenHex(c3)];
   const base: VoxelBaseType = d.voxelBase ?? (d.bg === 'netherrack' ? 'netherrack' : 'stone');
   const ore: VoxelOreLayer = {
@@ -156,6 +171,7 @@ function makeOreVoxelPreset(d: OreDescriptor): VoxelPreset {
     bottom: faceBase(c1b, c2b, c3b),
     sideMode: 'uniform', sideSplitPos: 0.5,
     sideTopFace: DEFAULT_VOXEL_FACE(base),
+    glow:   d.glow,
   };
 }
 
@@ -169,7 +185,8 @@ const ORE_DESCRIPTORS: OreDescriptor[] = [
   { key: 'nether_quartz_ore',  label: 'Nether Quartz',    bg: 'netherrack', oreColor: '#f0e8e0', highlightColor: '#ffffff', shape: 'diamond',  count: 14, minSize: 8,  maxSize: 20, oreName: 'Quartz',         useGradient: true,  voxelStyle: 'crystal', seedBase: 403 },
   { key: 'amethyst_ore',       label: 'Amethyst',         oreColor: '#aa66cc', highlightColor: '#dd99ee', shape: 'hexagon',  count: 8,  minSize: 12, maxSize: 26, oreName: 'Amethyst',       useGradient: true,  voxelStyle: 'crystal', seedBase: 406 },
   { key: 'ancient_debris',     label: 'Ancient Debris',   bg: 'netherrack', oreColor: '#5a4030', highlightColor: '#8a6040', shape: 'round',    count: 5,  minSize: 18, maxSize: 40, oreName: 'Debris',         useGradient: false, voxelStyle: 'metal',   seedBase: 409 },
-  { key: 'glowstone',          label: 'Glowstone',        oreColor: '#ffcc44', highlightColor: '#ffee88', shape: 'round',    count: 22, minSize: 8,  maxSize: 18, oreName: 'Glowstone',      useGradient: true,  voxelStyle: 'jewel',   seedBase: 412 },
+  { key: 'glowstone',          label: 'Glowstone',        oreColor: '#ffcc44', highlightColor: '#ffee88', shape: 'round',    count: 22, minSize: 8,  maxSize: 18, oreName: 'Glowstone',      useGradient: true,  voxelStyle: 'jewel',   seedBase: 412,
+    glow: { intensity: 0.9, radius: 12, threshold: 0.55, color: 'auto' } },
 
   // ── Classic gems ──
   { key: 'ruby_ore',     label: 'Ruby',     oreColor: '#cc1133', highlightColor: '#ff5577', shape: 'diamond',  count: 6,  minSize: 12, maxSize: 26, oreName: 'Ruby',     useGradient: true,  voxelStyle: 'crystal', seedBase: 415 },
@@ -189,20 +206,49 @@ const ORE_DESCRIPTORS: OreDescriptor[] = [
   { key: 'cobalt_ore',     label: 'Cobalt',        oreColor: '#2266dd', highlightColor: '#4488ff', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Cobalt',     useGradient: true,  voxelStyle: 'metal',   seedBase: 451 },
   { key: 'adamantite_ore', label: 'Adamantite',    oreColor: '#dd2266', highlightColor: '#ff5588', shape: 'hexagon', count: 7,  minSize: 12, maxSize: 26, oreName: 'Adamantite', useGradient: true,  voxelStyle: 'crystal', seedBase: 454 },
   { key: 'chlorophyte_ore', label: 'Chlorophyte',  oreColor: '#44dd44', highlightColor: '#88ff88', shape: 'round',   count: 12, minSize: 8,  maxSize: 20, oreName: 'Chlorophyte', useGradient: true, voxelStyle: 'jewel',   seedBase: 457 },
-  { key: 'hellstone_ore',  label: 'Hellstone',     bg: 'netherrack', oreColor: '#ff5500', highlightColor: '#ffaa00', shape: 'round',   count: 12, minSize: 10, maxSize: 22, oreName: 'Hellstone',  useGradient: true,  voxelStyle: 'metal',   seedBase: 460 },
+  { key: 'hellstone_ore',  label: 'Hellstone',     bg: 'netherrack', oreColor: '#ff5500', highlightColor: '#ffaa00', shape: 'round',   count: 12, minSize: 10, maxSize: 22, oreName: 'Hellstone',  useGradient: true,  voxelStyle: 'metal',   seedBase: 460,
+    glow: { intensity: 0.8, radius: 12, threshold: 0.55, color: '#ff5500' } },
 
   // ── Industrial / chemistry ──
   { key: 'sulfur_ore',     label: 'Sulfur',        oreColor: '#ddcc22', highlightColor: '#ffee66', shape: 'round',   count: 14, minSize: 8,  maxSize: 18, oreName: 'Sulfur',     useGradient: false, voxelStyle: 'flat',    seedBase: 463 },
   { key: 'saltpeter_ore',  label: 'Saltpeter',     oreColor: '#e8e8d8', highlightColor: '#ffffff', shape: 'round',   count: 12, minSize: 8,  maxSize: 18, oreName: 'Saltpeter',  useGradient: false, voxelStyle: 'flat',    seedBase: 466 },
   { key: 'bauxite_ore',    label: 'Bauxite',       oreColor: '#a85a30', highlightColor: '#c87a50', shape: 'round',   count: 10, minSize: 10, maxSize: 22, oreName: 'Bauxite',    useGradient: false, voxelStyle: 'metal',   seedBase: 469 },
   { key: 'cinnabar_ore',   label: 'Cinnabar',      oreColor: '#cc2222', highlightColor: '#ee4444', shape: 'round',   count: 12, minSize: 8,  maxSize: 20, oreName: 'Cinnabar',   useGradient: true,  voxelStyle: 'crystal', seedBase: 472 },
-  { key: 'uranium_ore',    label: 'Uranium',       oreColor: '#ccdd44', highlightColor: '#eeff88', shape: 'round',   count: 9,  minSize: 10, maxSize: 22, oreName: 'Uranium',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 475 },
+  { key: 'uranium_ore',    label: 'Uranium',       oreColor: '#ccdd44', highlightColor: '#eeff88', shape: 'round',   count: 9,  minSize: 10, maxSize: 22, oreName: 'Uranium',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 475,
+    glow: { intensity: 0.7, radius: 14, threshold: 0.55, color: '#ccdd44' } },
   { key: 'bismuth_ore',    label: 'Bismuth',       oreColor: '#aa66cc', highlightColor: '#66ddcc', shape: 'square',  count: 8,  minSize: 12, maxSize: 26, oreName: 'Bismuth',    useGradient: true,  voxelStyle: 'crystal', seedBase: 478 },
 
   // ── Fantasy / magic ──
-  { key: 'aether_crystal', label: 'Aether Crystal', bg: 'dark_stone', oreColor: '#aaeeff', highlightColor: '#ffffff', shape: 'diamond', count: 8, minSize: 14, maxSize: 28, oreName: 'Aether', useGradient: true, voxelStyle: 'crystal', seedBase: 481 },
-  { key: 'arcane_crystal', label: 'Arcane Crystal', bg: 'dark_stone', oreColor: '#bb44ff', highlightColor: '#ee88ff', shape: 'diamond', count: 8, minSize: 14, maxSize: 28, oreName: 'Arcane', useGradient: true, voxelStyle: 'crystal', seedBase: 484 },
+  { key: 'aether_crystal', label: 'Aether Crystal', bg: 'dark_stone', oreColor: '#aaeeff', highlightColor: '#ffffff', shape: 'diamond', count: 8, minSize: 14, maxSize: 28, oreName: 'Aether', useGradient: true, voxelStyle: 'crystal', seedBase: 481,
+    glow: { intensity: 0.7, radius: 14, threshold: 0.55, color: 'auto' } },
+  { key: 'arcane_crystal', label: 'Arcane Crystal', bg: 'dark_stone', oreColor: '#bb44ff', highlightColor: '#ee88ff', shape: 'diamond', count: 8, minSize: 14, maxSize: 28, oreName: 'Arcane', useGradient: true, voxelStyle: 'crystal', seedBase: 484,
+    glow: { intensity: 0.8, radius: 14, threshold: 0.5, color: '#bb55ff' } },
   { key: 'iridium_ore',    label: 'Iridium',        bg: 'dark_stone', oreColor: '#884488', highlightColor: '#cc66cc', shape: 'hexagon', count: 6, minSize: 12, maxSize: 26, oreName: 'Iridium', useGradient: true, voxelStyle: 'metal',   seedBase: 487 },
+
+  // ── Light sources ───────────────────────────────────────────────────
+  // Each of these auto-enables the workbench glow pipeline with a
+  // recipe tuned to the preset's bright pixels — pick one and the
+  // block emits without any extra clicks.
+  { key: 'sea_lantern',        label: 'Sea Lantern',       bgColors: ['#aae0f0', '#7ab0d0', '#5a90b0'], oreColor: '#ffffff', highlightColor: '#ccffff', shape: 'square',   count: 8,  minSize: 14, maxSize: 30, oreName: 'Crystal',   useGradient: false, voxelStyle: 'crystal', seedBase: 490,
+    glow: { intensity: 0.85, radius: 12, threshold: 0.65, color: 'auto' } },
+  { key: 'shroomlight',        label: 'Shroomlight',       bgColors: ['#c05030', '#a04020', '#702010'], oreColor: '#ffaa44', highlightColor: '#ffd070', shape: 'round',    count: 18, minSize: 10, maxSize: 22, oreName: 'Spore',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 493,
+    glow: { intensity: 1.0, radius: 14, threshold: 0.5, color: '#ffaa44' } },
+  { key: 'magma_block',        label: 'Magma Block',       bgColors: ['#3a0a08', '#280808', '#1a0404'], oreColor: '#ff5500', highlightColor: '#ffaa22', shape: 'triangle', count: 14, minSize: 10, maxSize: 26, oreName: 'Magma',     useGradient: true,  voxelStyle: 'crystal', seedBase: 496,
+    glow: { intensity: 1.2, radius: 14, threshold: 0.4, color: '#ff5500' } },
+  { key: 'jack_o_lantern',     label: 'Jack O\'Lantern',   bgColors: ['#d07030', '#a05828', '#7a4020'], oreColor: '#ffdd44', highlightColor: '#ffee88', shape: 'round',    count: 6,  minSize: 16, maxSize: 32, oreName: 'Face',      useGradient: true,  voxelStyle: 'jewel',   seedBase: 499,
+    glow: { intensity: 0.95, radius: 14, threshold: 0.55, color: '#ffcc44' } },
+  { key: 'lit_redstone_lamp',  label: 'Redstone Lamp (lit)', bgColors: ['#5a3a30', '#4a2a20', '#3a1a10'], oreColor: '#ff4422', highlightColor: '#ff8866', shape: 'round',  count: 14, minSize: 8,  maxSize: 20, oreName: 'Filament',  useGradient: true,  voxelStyle: 'jewel',   seedBase: 502,
+    glow: { intensity: 1.0, radius: 12, threshold: 0.5, color: '#ff5533' } },
+  { key: 'end_rod',            label: 'End Rod Cluster',   bgColors: ['#1a1828', '#0e0c20', '#040414'], oreColor: '#ffffff', highlightColor: '#ddccff', shape: 'square',   count: 8,  minSize: 14, maxSize: 30, oreName: 'Pearl',     useGradient: false, voxelStyle: 'crystal', seedBase: 505,
+    glow: { intensity: 0.9, radius: 16, threshold: 0.5, color: 'auto' } },
+  { key: 'crying_obsidian',    label: 'Crying Obsidian',   bgColors: ['#1a0a20', '#0e0414', '#04020a'], oreColor: '#aa44ff', highlightColor: '#cc88ff', shape: 'round',    count: 10, minSize: 10, maxSize: 22, oreName: 'Tear',      useGradient: true,  voxelStyle: 'crystal', seedBase: 508,
+    glow: { intensity: 0.75, radius: 12, threshold: 0.45, color: '#aa55ff' } },
+  { key: 'soul_lantern',       label: 'Soul Lantern',      bgColors: ['#2a3030', '#1c2020', '#101414'], oreColor: '#66ddff', highlightColor: '#aaffff', shape: 'flower',   count: 7,  minSize: 12, maxSize: 26, oreName: 'Soul Flame', useGradient: true, voxelStyle: 'jewel',   seedBase: 511,
+    glow: { intensity: 1.0, radius: 14, threshold: 0.4, color: '#66ddff' } },
+  { key: 'beacon',             label: 'Beacon',            bgColors: ['#aaccff', '#88aadd', '#6688cc'], oreColor: '#ffffff', highlightColor: '#ffffff', shape: 'hexagon',  count: 6,  minSize: 16, maxSize: 36, oreName: 'Crystal',   useGradient: true,  voxelStyle: 'crystal', seedBase: 514,
+    glow: { intensity: 0.7, radius: 20, threshold: 0.7, color: 'auto' } },
+  { key: 'lit_glowstone',      label: 'Glowstone (lit)',   bgColors: ['#5a4820', '#4a3818', '#382810'], oreColor: '#ffdd44', highlightColor: '#ffee88', shape: 'round',    count: 22, minSize: 8,  maxSize: 18, oreName: 'Glowstone', useGradient: true,  voxelStyle: 'jewel',   seedBase: 517,
+    glow: { intensity: 1.1, radius: 14, threshold: 0.45, color: 'auto' } },
 ];
 
 const NEW_ORE_TEXTURE_PRESETS: Record<string, BlockPreset> = Object.fromEntries(
@@ -218,6 +264,10 @@ const NEW_ORE_CATEGORIES: { label: string; keys: string[] }[] = [
   { label: 'Ore — Metals',        keys: ['silver_ore', 'tin_ore', 'lead_ore', 'platinum_ore', 'tungsten_ore', 'mithril_ore', 'cobalt_ore', 'adamantite_ore', 'chlorophyte_ore', 'hellstone_ore'] },
   { label: 'Ore — Industrial',    keys: ['sulfur_ore', 'saltpeter_ore', 'bauxite_ore', 'cinnabar_ore', 'uranium_ore', 'bismuth_ore'] },
   { label: 'Ore — Fantasy',       keys: ['aether_crystal', 'arcane_crystal', 'iridium_ore'] },
+  // Light sources auto-enable the workbench glow pipeline. Picking any
+  // of these turns on bloom with a recipe tuned to that block, so they
+  // emit straight away in the preview.
+  { label: 'Light Sources',       keys: ['lit_glowstone', 'sea_lantern', 'shroomlight', 'magma_block', 'jack_o_lantern', 'lit_redstone_lamp', 'end_rod', 'crying_obsidian', 'soul_lantern', 'beacon'] },
 ];
 
 function VoxelFaceSettings({ face, setFace }: { face: VoxelBlockFace; setFace: (f: VoxelBlockFace) => void }) {
@@ -707,6 +757,9 @@ interface BlockPreset {
   top: FaceTextureConfig;
   side: FaceTextureConfig;
   bottom: FaceTextureConfig;
+  // Mirrors VoxelPreset.glow — light-source presets carry their bloom
+  // recipe so picking them turns glow on automatically.
+  glow?: GlowOptions;
 }
 
 // Pulls the dominant colors out of a 2D texture preset so we can build
@@ -1355,6 +1408,10 @@ function deriveTexturePresetFromVoxel(v: VoxelPreset, baseSeed = 700): BlockPres
     top:    deriveTextureFaceFromVoxel(v.top,    baseSeed),
     side:   deriveTextureFaceFromVoxel(v.side,   baseSeed + 1),
     bottom: deriveTextureFaceFromVoxel(v.bottom, baseSeed + 2),
+    // Carry the light-source glow recipe through derivation so a voxel
+    // light preset still glows when the user views it under the
+    // Texture tab from the unified library.
+    glow:   v.glow,
   };
 }
 
@@ -1366,6 +1423,9 @@ function deriveVoxelPresetFromTexture(p: BlockPreset): VoxelPreset {
     bottom: deriveVoxelFaceFromTexture(p.bottom),
     sideMode: 'uniform', sideSplitPos: 0.5,
     sideTopFace: deriveVoxelFaceFromTexture(p.top),
+    // Mirror of the texture-side derivation: keep glow recipes intact
+    // when a texture-only light preset is viewed as a voxel.
+    glow:   p.glow,
   };
 }
 
@@ -1909,6 +1969,30 @@ export default function BlockWorkbench() {
   }, [previewSource, vxSeed, vxRenderStyle, vxSideMode, vxSideSplitPos,
       vxTransitionPattern, vxTransitionNoise]);
 
+  // Sync the workbench glow state from a preset's optional `glow`
+  // recipe. Light-source presets define it; plain presets leave it
+  // undefined, in which case we turn glow off so switching from a
+  // glowing preset to a plain one doesn't leave the bloom on. Other
+  // glow state (intensity, radius, etc.) is preserved while glow is
+  // off so the user's last manual setup comes back if they tick the
+  // toggle on themselves.
+  const applyPresetGlow = (glow: GlowOptions | undefined) => {
+    if (!glow) {
+      setGlowEnabled(false);
+      return;
+    }
+    setGlowEnabled(true);
+    setGlowIntensity(glow.intensity);
+    setGlowRadius(glow.radius);
+    setGlowThreshold(glow.threshold);
+    if (glow.color && glow.color !== 'auto') {
+      setGlowColorMode('custom');
+      setGlowColor(glow.color);
+    } else {
+      setGlowColorMode('auto');
+    }
+  };
+
   // `presetOverride` mirrors applyPreset — lets the unified library
   // pass a derived voxel preset for texture-only entries.
   const applyVoxelPreset = (name: string, presetOverride?: VoxelPreset) => {
@@ -1933,6 +2017,7 @@ export default function BlockWorkbench() {
     setVxTransitionPattern(p.transitionPattern ?? 'straight');
     setVxTransitionNoise(p.transitionNoise ?? 0.5);
     setActiveVxPresetKey(name);
+    applyPresetGlow(p.glow);
     // Picking a voxel preset from the library should drop the user into
     // voxel mode automatically — otherwise the selection appears to do nothing.
     setEditorMode('voxel');
@@ -2001,6 +2086,7 @@ export default function BlockWorkbench() {
       setVxTransitionNoise(0.5);
       setActiveVxPresetKey('');
     }
+    applyPresetGlow(preset.glow);
   };
 
   // Single dispatcher backing the unified preset library. Looks up the
