@@ -379,17 +379,18 @@ input[type='range'] {
   flex: 1;
   min-width: 0;
   min-height: 0;
-  overflow: auto;
+  /* Every page that lives inside .app-main owns its own scrolling
+     (workbench columns scroll independently, .guide-page is its own
+     scroll container). Keeping this hidden guarantees no second
+     outer scrollbar ever appears, regardless of :has() support. */
+  overflow: hidden;
 }
 
-/* When the workbench page owns the main area, defer all scrolling to
-   its inner columns so the outer page scrollbar never appears. The
-   workbench-page is itself height: 100% + overflow: hidden, so its
-   columns are the only scroll containers. Below 1080px the columns
-   stack and the outer area is allowed to scroll again. */
-@media (min-width: 1081px) {
-  .app-main:has(.workbench-page) {
-    overflow: hidden;
+/* On phones/tablets where the workbench columns stack, allow the
+   outer area to scroll the whole stack again. */
+@media (max-width: 1080px) {
+  .app-main {
+    overflow-y: auto;
   }
 }
 
@@ -1411,6 +1412,11 @@ input[type='range'] {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  /* Sections are flex items in a flex-column. Without this they'd shrink
+     to share the column's height, squishing headers/content. Locking
+     flex-shrink to 0 makes the column overflow naturally so the column's
+     own overflow-y:auto kicks in. */
+  flex-shrink: 0;
 }
 
 .wb-section-header {
@@ -1421,6 +1427,10 @@ input[type='range'] {
   padding: 10px 14px;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border);
+  /* Anchor a comfortable tap height so the row stays readable even
+     when the column is tight on space. */
+  min-height: 38px;
+  flex-shrink: 0;
 }
 
 .wb-section-header h3 {
@@ -1430,6 +1440,9 @@ input[type='range'] {
   letter-spacing: 0.06em;
   color: var(--text-secondary);
   margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Collapsible toggle: the entire title row is one clickable button.
@@ -2039,6 +2052,19 @@ input[type='range'] {
   max-width: 820px;
   margin: 0 auto;
   padding: 40px 24px 80px;
+  /* The Guide page is the only thing inside .app-main when active,
+     so it owns its own scrolling now that .app-main is overflow:hidden. */
+  height: 100%;
+  overflow-y: auto;
+}
+
+@media (max-width: 1080px) {
+  /* On stacked layouts the outer .app-main scrolls, so the guide
+     should flow naturally without claiming its own scroll container. */
+  .guide-page {
+    height: auto;
+    overflow-y: visible;
+  }
 }
 
 .guide-content {
