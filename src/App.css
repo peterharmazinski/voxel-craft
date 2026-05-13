@@ -1126,6 +1126,10 @@ input[type='range'] {
 .workbench-layout {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) 440px;
+  /* Explicitly pin the single row to the container's height so each
+     column's overflow-y: auto kicks in instead of the row growing to
+     fit content. */
+  grid-template-rows: minmax(0, 1fr);
   gap: 16px;
   width: 100%;
   max-width: 1800px;
@@ -1144,11 +1148,13 @@ input[type='range'] {
   gap: 12px;
   min-width: 0;
   min-height: 0;
+  /* Match the grid row exactly so overflowing content scrolls inside
+     this column instead of pushing the layout taller. */
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  /* Give each column a little inner padding so the scrollbar doesn't
-     sit flush against the section card edge */
+  /* Inner padding so the scrollbar doesn't sit flush against the
+     section card edge */
   padding-right: 4px;
 }
 
