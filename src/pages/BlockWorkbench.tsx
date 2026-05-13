@@ -1638,12 +1638,13 @@ export default function BlockWorkbench() {
             )}
           </div>
         </div>
-        {renderCount > 0 && imgs[activeFace] && <MapPanel
+        <MapPanel
           sourceCanvas={activeCanvasRef.current}
           filePrefix={`block_${activeFace}`}
           version={renderCount}
           onNormalSettingsChange={setNormalSettings}
-        />}
+          hasSource={renderCount > 0 && !!imgs[activeFace]}
+        />
       </div>
 
       <div className="workbench-editor-panel">

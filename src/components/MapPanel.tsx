@@ -23,6 +23,8 @@ interface MapPanelProps {
   filePrefix?: string;
   version?: number;
   onNormalSettingsChange?: (settings: NormalMapSettings) => void;
+  /** If false, the "Generate Maps" button is shown disabled with a hint instead. Defaults to true (assume source is ready). */
+  hasSource?: boolean;
 }
 
 function renderLitPreview(
@@ -103,7 +105,7 @@ function renderLitPreview(
   ctx.putImageData(outImg, 0, 0);
 }
 
-export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version = 0, onNormalSettingsChange }: MapPanelProps) {
+export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version = 0, onNormalSettingsChange, hasSource = true }: MapPanelProps) {
   const normalRef = useRef<HTMLCanvasElement>(null);
   const dispRef = useRef<HTMLCanvasElement>(null);
   const aoRef = useRef<HTMLCanvasElement>(null);
@@ -188,9 +190,32 @@ export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version
                        activeMap === 'ao' ? aoRef : specRef;
 
   if (!enabled) {
+    const canEnable = hasSource || !!customHeight;
     return (
       <div className="map-panel-toggle">
-        <button className="btn-primary" onClick={() => setEnabled(true)}>Generate Maps (Normal, Displacement, AO, Specular)</button>
+        <button
+          className="btn-primary"
+          onClick={() => setEnabled(true)}
+          disabled={!canEnable}
+          title={canEnable ? 'Generate Normal / Displacement / AO / Specular maps for this face' : 'Capture a texture to this face first, or upload a custom height map below'}
+          style={{ opacity: canEnable ? 1 : 0.55, cursor: canEnable ? 'pointer' : 'not-allowed' }}
+        >
+          Generate Maps (Normal, Displacement, AO, Specular)
+        </button>
+        {!canEnable && (
+          <div style={{ marginTop: 6 }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) { handleHeightUpload(f); setEnabled(true); } e.target.value = ''; }}
+            />
+            <button className="btn-small" onClick={() => fileInputRef.current?.click()}>
+              …or upload a custom height map
+            </button>
+          </div>
+        )}
       </div>
     );
   }
