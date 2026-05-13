@@ -6,7 +6,8 @@
   padding: 0;
 }
 
-:root {
+:root,
+[data-theme='dark'] {
   /* Dark Pro Studio palette — warm charcoal with orange accent */
   --bg-primary: #14110f;
   --bg-secondary: #1d1a17;
@@ -18,14 +19,71 @@
   --text-muted: #6e645a;
   --accent: #f97316;
   --accent-hover: #fb923c;
+  --accent-text: #ffffff;
   --accent-soft: rgba(249, 115, 22, 0.12);
   --accent-glow: rgba(249, 115, 22, 0.22);
   --border: #2a2622;
   --border-strong: #3a3530;
+  --status-good: #4ade80;
+  --danger: #b91c1c;
+  --danger-text: #fecaca;
+  --danger-soft: rgba(185, 28, 28, 0.15);
   --radius: 8px;
   --radius-lg: 12px;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Light Theme — warm cream / deep orange ───────────────────────── */
+
+[data-theme='light'] {
+  --bg-primary: #fafaf5;
+  --bg-secondary: #f3eee3;
+  --bg-tertiary: #e8e1cf;
+  --bg-hover: #ddd4bd;
+  --bg-canvas: #c8c0a8;
+  --text-primary: #1f1c17;
+  --text-secondary: #5c544a;
+  --text-muted: #8c8273;
+  --accent: #d4570e;
+  --accent-hover: #ea580c;
+  --accent-text: #ffffff;
+  --accent-soft: rgba(212, 87, 14, 0.10);
+  --accent-glow: rgba(212, 87, 14, 0.20);
+  --border: #d8d0bc;
+  --border-strong: #b8ad96;
+  --status-good: #15803d;
+  --danger: #b91c1c;
+  --danger-text: #7f1d1d;
+  --danger-soft: rgba(185, 28, 28, 0.10);
+  --shadow-sm: 0 1px 2px rgba(30, 25, 15, 0.08);
+  --shadow-md: 0 4px 12px rgba(30, 25, 15, 0.12);
+}
+
+/* ── High-Contrast Theme — pure black + neon orange ───────────────── */
+
+[data-theme='contrast'] {
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-tertiary: #1a1a1a;
+  --bg-hover: #2c2c2c;
+  --bg-canvas: #000000;
+  --text-primary: #ffffff;
+  --text-secondary: #f0f0f0;
+  --text-muted: #c0c0c0;
+  --accent: #ff9500;
+  --accent-hover: #ffb340;
+  --accent-text: #000000;
+  --accent-soft: rgba(255, 149, 0, 0.22);
+  --accent-glow: rgba(255, 149, 0, 0.40);
+  --border: #5a5a5a;
+  --border-strong: #888888;
+  --status-good: #4ade80;
+  --danger: #ff4444;
+  --danger-text: #ffdddd;
+  --danger-soft: rgba(255, 68, 68, 0.28);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.7);
 }
 
 html, body, #root {
@@ -44,6 +102,52 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+
+/* ── Skip Link (WCAG 2.4.1 Bypass Blocks) ──────────────────────────── */
+
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1000;
+  padding: 10px 16px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+  border-radius: var(--radius);
+  text-decoration: none;
+  box-shadow: var(--shadow-md);
+  /* Visually hide until focused, but stay reachable for assistive tech. */
+  transform: translateY(-200%);
+  transition: transform 0.15s;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline: none;
+  box-shadow: 0 0 0 3px var(--accent-glow), var(--shadow-md);
+}
+
+/* Take focus on programmatic main-content navigation without showing a ring. */
+#main-content:focus,
+#main-content:focus-visible {
+  outline: none;
+}
+
+/* ── Global Focus-Visible (WCAG 2.4.7) ─────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* ── Universal Form Controls ───────────────────────────────────────── */
@@ -175,10 +279,65 @@ input[type='range'] {
   border-color: transparent;
 }
 
+/* ── Nav Right Group (theme switcher + help) ──────────────────────── */
+
+.nav-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Theme Switcher ──────────────────────────────────────────────── */
+
+.theme-switcher {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  gap: 2px;
+}
+
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.theme-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.theme-btn:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.theme-btn.active {
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow: var(--shadow-sm);
+}
+
 /* ── Nav Help Button ─────────────────────────────────────────────── */
 
 .nav-help-btn {
-  margin-left: auto;
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -204,7 +363,7 @@ input[type='range'] {
 .nav-help-btn.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
 }
 
 /* ── Body / Main ─────────────────────────────────────────────────── */
@@ -398,7 +557,7 @@ input[type='range'] {
 
 .type-btn.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent), var(--shadow-sm);
 }
@@ -590,7 +749,7 @@ input[type='range'] {
   border: none;
   border-radius: var(--radius);
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -624,7 +783,7 @@ input[type='range'] {
 
 .btn-small.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
   border-color: var(--accent);
 }
 
@@ -837,10 +996,21 @@ input[type='range'] {
   text-align: center;
   transition: border-color 0.2s, background 0.2s;
   background: var(--bg-secondary);
+  color: inherit;
+  font: inherit;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .face-preview:hover {
   border-color: var(--accent-hover);
+}
+
+.face-preview:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 .face-preview.active {
@@ -1082,7 +1252,7 @@ input[type='range'] {
 }
 
 .workbench-toolbar-status.saved .workbench-toolbar-dot {
-  background: #4ade80;
+  background: var(--status-good);
 }
 
 .workbench-toolbar-help-wrap {
@@ -1102,9 +1272,9 @@ input[type='range'] {
 }
 
 .workbench-toolbar-reset:hover {
-  color: #fecaca;
-  border-color: #b91c1c;
-  background: rgba(185, 28, 28, 0.15);
+  color: var(--danger-text);
+  border-color: var(--danger);
+  background: var(--danger-soft);
 }
 
 .workbench-toolbar-popover-backdrop {
@@ -1321,6 +1491,12 @@ input[type='range'] {
 
 .wb-project-row:hover {
   background: var(--bg-hover);
+}
+
+.wb-project-row:focus-visible {
+  outline: none;
+  background: var(--bg-hover);
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
 
 .wb-project-row:last-child {
@@ -1588,10 +1764,16 @@ input[type='range'] {
   color: var(--text-secondary);
 }
 
-.wb-snow-controls > span {
+.wb-snow-controls > span,
+.wb-snow-controls > label {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  cursor: default;
+}
+
+.wb-snow-controls > label {
+  cursor: pointer;
 }
 
 .wb-snow-controls input[type='range'] {
@@ -1979,7 +2161,7 @@ input[type='range'] {
   align-items: center;
   justify-content: center;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
   border-radius: 50%;
   font-size: 12px;
   font-weight: 700;
@@ -2109,5 +2291,227 @@ input[type='range'] {
   }
   .guide-tip strong {
     min-width: 0;
+  }
+}
+
+/* ============================================================
+   Mobile / Tablet Responsive Refinements
+   ============================================================ */
+
+/* ── Nav: stack and shrink under ~760px ──────────────────────────── */
+
+@media (max-width: 760px) {
+  .app-nav {
+    gap: 12px;
+    padding: 0 12px;
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  .nav-brand {
+    font-size: 14px;
+  }
+  .nav-link {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .nav-right {
+    gap: 6px;
+  }
+}
+
+/* ── Workbench toolbar: stack the two sides on narrow ─────────────── */
+
+@media (max-width: 760px) {
+  .workbench-toolbar {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .workbench-toolbar-left,
+  .workbench-toolbar-right {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .workbench-toolbar-title {
+    font-size: 12px;
+  }
+  .workbench-toolbar-preset {
+    font-size: 12px;
+    max-width: 100%;
+  }
+  /* Keep the shortcuts popover from spilling off-screen on phones */
+  .workbench-toolbar-popover {
+    position: fixed;
+    top: auto;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    min-width: 0;
+    max-height: 70vh;
+    overflow: auto;
+  }
+}
+
+/* ── Workbench layout & stage on small screens ───────────────────── */
+
+@media (max-width: 1080px) {
+  .workbench-page {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 640px) {
+  .workbench-layout {
+    padding: 8px;
+    gap: 12px;
+  }
+  .iso-canvas {
+    width: 100%;
+    max-width: 320px;
+    height: auto;
+    aspect-ratio: 1;
+  }
+  .wb-tiling-canvas {
+    width: 100%;
+    max-width: 320px;
+    height: auto;
+    aspect-ratio: 1;
+  }
+  .face-previews {
+    gap: 6px;
+  }
+  .face-preview canvas {
+    width: 64px !important;
+    height: 64px !important;
+  }
+  .face-preview {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .wb-preview-toggles,
+  .wb-snow-controls,
+  .wb-copy-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .workbench-mode-toggle,
+  .face-tabs {
+    flex-wrap: wrap;
+  }
+  .workbench-toolbar-popover dl {
+    grid-template-columns: 1fr;
+    gap: 4px 0;
+  }
+  .workbench-toolbar-popover dt {
+    margin-top: 8px;
+  }
+}
+
+/* ============================================================
+   Touch Target Enlargement (WCAG 2.5.5 — coarse pointers only)
+   Keeps the dense desktop UI but enlarges hit areas on phones/tablets.
+   ============================================================ */
+
+@media (pointer: coarse) {
+  .btn-small {
+    padding: 10px 14px;
+    font-size: 13px;
+    min-height: 44px;
+  }
+  .btn-icon,
+  .theme-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .theme-switcher {
+    padding: 3px;
+  }
+  .nav-help-btn {
+    width: 44px;
+    height: 44px;
+  }
+  .nav-link {
+    padding: 12px 16px;
+    min-height: 44px;
+  }
+  .type-btn {
+    padding: 10px 14px;
+    min-height: 44px;
+  }
+  .face-preview {
+    padding: 8px;
+  }
+  .preset-card {
+    min-height: 44px;
+  }
+  /* Make number/text inputs comfortable to tap into */
+  input[type='text'],
+  input[type='number'],
+  input[type='search'],
+  select,
+  .wb-input,
+  .wb-select {
+    min-height: 40px;
+    font-size: 16px; /* prevents iOS zoom-on-focus */
+  }
+  /* Beef up range thumb so it's easier to grab */
+  input[type='range']::-webkit-slider-thumb {
+    width: 22px;
+    height: 22px;
+  }
+  input[type='range']::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+/* ============================================================
+   Reduced Motion (WCAG 2.3.3 — prefers-reduced-motion)
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .nav-brand:hover .nav-brand-logo,
+  .workbench-toolbar-thumb:hover,
+  input[type='range']::-webkit-slider-thumb:hover,
+  input[type='range']::-moz-range-thumb:hover {
+    transform: none !important;
+  }
+  .skip-link {
+    transition: none;
+  }
+}
+
+/* ============================================================
+   Forced Colors Mode (Windows High Contrast / WCAG 1.4.1)
+   Keeps the UI usable when the OS overrides colors.
+   ============================================================ */
+
+@media (forced-colors: active) {
+  .nav-link.active,
+  .theme-btn.active,
+  .btn-small.active,
+  .type-btn.active,
+  .nav-help-btn.active {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+    border-color: Highlight;
+  }
+  :focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 2px;
   }
 }

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 interface SliderControlProps {
   label: string;
@@ -11,19 +11,29 @@ interface SliderControlProps {
 }
 
 export default function SliderControl({ label, value, min, max, step, onChange, extra }: SliderControlProps) {
+  const baseId = useId();
+  const rangeId = `${baseId}-range`;
+  const numberId = `${baseId}-number`;
+
   return (
     <div className="slider-control">
-      <label className="slider-label">{label}</label>
+      {/* Visible label points at the range; the number input still gets
+          its own aria-label so screen readers announce both controls
+          with the same semantic name. */}
+      <label className="slider-label" htmlFor={rangeId}>{label}</label>
       <div className="slider-row">
         <input
+          id={rangeId}
           type="range"
           min={min}
           max={max}
           step={step}
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
+          aria-label={label}
         />
         <input
+          id={numberId}
           type="number"
           min={min}
           max={max}
@@ -31,6 +41,7 @@ export default function SliderControl({ label, value, min, max, step, onChange, 
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
           className="slider-number"
+          aria-label={`${label} value`}
         />
         {extra}
       </div>

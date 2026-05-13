@@ -1385,6 +1385,9 @@ export default function BlockWorkbench() {
     setVxSideSplitPos(p.sideSplitPos);
     setVxSideTopFace(p.sideTopFace);
     setActiveVxPresetKey(name);
+    // Picking a voxel preset from the library should drop the user into
+    // voxel mode automatically — otherwise the selection appears to do nothing.
+    setEditorMode('voxel');
   };
 
   const applyPreset = (presetKey: string) => {
@@ -1634,6 +1637,11 @@ export default function BlockWorkbench() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Escape always dismisses transient overlays, even when focus is in an input.
+      if (e.key === 'Escape') {
+        if (showShortcuts) { setShowShortcuts(false); return; }
+        if (zipOptionsOpen) { setZipOptionsOpen(false); return; }
+      }
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
       if (e.key === '1') { e.preventDefault(); setActiveFace('top'); }
@@ -1646,7 +1654,7 @@ export default function BlockWorkbench() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [setActiveFace, setVxSeed, setTilingPreview, setSnowEnabled, handleSaveProject]);
+  }, [setActiveFace, setVxSeed, setTilingPreview, setSnowEnabled, handleSaveProject, showShortcuts, zipOptionsOpen, setZipOptionsOpen]);
 
   const activePresetLabel =
     editorMode === 'voxel'
@@ -1663,6 +1671,7 @@ export default function BlockWorkbench() {
             height={32}
             className="workbench-toolbar-thumb"
             title="Live preview of the assembled block"
+            role="img"
             aria-label="Block preview"
           />
           <span className="workbench-toolbar-title">Block Workbench</span>
@@ -1690,7 +1699,11 @@ export default function BlockWorkbench() {
             >Shortcuts</button>
             {showShortcuts && (
               <>
-                <div className="workbench-toolbar-popover-backdrop" onClick={() => setShowShortcuts(false)} />
+                <div
+                  className="workbench-toolbar-popover-backdrop"
+                  onClick={() => setShowShortcuts(false)}
+                  aria-hidden="true"
+                />
                 <div className="workbench-toolbar-popover" role="dialog" aria-label="Keyboard shortcuts">
                   <h4>Keyboard Shortcuts</h4>
                   <dl>
@@ -1740,13 +1753,31 @@ export default function BlockWorkbench() {
               <div className="wb-project-browser">
                 {projectList.length === 0 && <div className="wb-empty-state">No projects in this folder</div>}
                 {projectList.map(p => (
-                  <div key={p.filename} className="wb-project-row" onClick={() => handleLoadFromFolder(p.filename)}>
+                  <div
+                    key={p.filename}
+                    className="wb-project-row"
+                    onClick={() => handleLoadFromFolder(p.filename)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleLoadFromFolder(p.filename);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Load project ${p.name}`}
+                  >
                     {p.thumbnail && <img src={p.thumbnail} alt="" className="wb-project-thumb" />}
                     <div className="wb-project-info">
                       <div className="wb-project-name">{p.name}</div>
                       <div className="wb-project-date">{new Date(p.createdAt).toLocaleDateString()}</div>
                     </div>
-                    <button className="btn-small wb-project-del" onClick={e => { e.stopPropagation(); handleDeleteFromFolder(p.filename); }}>Del</button>
+                    <button
+                      type="button"
+                      className="btn-small wb-project-del"
+                      onClick={e => { e.stopPropagation(); handleDeleteFromFolder(p.filename); }}
+                      aria-label={`Delete project ${p.name}`}
+                    >Del</button>
                   </div>
                 ))}
               </div>
@@ -1770,13 +1801,46 @@ export default function BlockWorkbench() {
             />
           </div>
         </section>
+
+        <section className="wb-section">
+          <header className="wb-section-header">
+            <h3>Voxel Presets</h3>
+          </header>
+          <div className="wb-section-body wb-library-body">
+            <PresetGrid
+              presets={VOXEL_PRESETS}
+              categories={VOXEL_CATEGORIES}
+              activeKey={activeVxPresetKey}
+              onPick={applyVoxelPreset}
+              renderThumb={renderVoxelPresetThumb}
+              storageKey="bw_vxLibCollapsed"
+              searchPlaceholder="Search voxel presets…"
+            />
+          </div>
+        </section>
       </aside>
 
       {/* ───────────────── Center: Stage ───────────────── */}
       <main className="workbench-stage">
-        <section className="wb-section wb-preview-section">
-          <canvas ref={isoRef} className="texture-canvas iso-canvas" width={300} height={300} />
-          {tilingPreview && <canvas ref={tilingRef} width={300} height={300} className="wb-tiling-canvas" />}
+        <section className="wb-section wb-preview-section" aria-label="Block preview">
+          <canvas
+            ref={isoRef}
+            className="texture-canvas iso-canvas"
+            width={300}
+            height={300}
+            role="img"
+            aria-label={`Isometric preview of the assembled block${activePresetLabel ? `: ${activePresetLabel}` : ''}`}
+          />
+          {tilingPreview && (
+            <canvas
+              ref={tilingRef}
+              width={300}
+              height={300}
+              className="wb-tiling-canvas"
+              role="img"
+              aria-label="Tiling preview, 3 by 3 grid of the active face"
+            />
+          )}
 
           <div className="wb-preview-toggles">
             <label>
@@ -1791,9 +1855,9 @@ export default function BlockWorkbench() {
               <input type="checkbox" checked={tilingPreview} onChange={e => setTilingPreview(e.target.checked)} />
               {' '}Tiling (3x3)
             </label>
-            <span className="wb-preview-bg">
-              BG:
-              <select value={bgMode} onChange={e => setBgMode(e.target.value)}>
+            <label className="wb-preview-bg">
+              <span>BG:</span>
+              <select value={bgMode} onChange={e => setBgMode(e.target.value)} aria-label="Preview background color">
                 <option value="#2d2d2d">Dark</option>
                 <option value="#1a1a2e">Navy</option>
                 <option value="#000000">Black</option>
@@ -1802,35 +1866,77 @@ export default function BlockWorkbench() {
                 <option value="#87ceeb">Sky</option>
                 <option value="checker">Transparency</option>
               </select>
-            </span>
+            </label>
           </div>
 
           {snowEnabled && (
-            <div className="wb-snow-controls">
-              <span>
-                Depth:
-                <input type="range" min={0.05} max={0.8} step={0.01} value={snowDepth} onChange={e => setSnowDepth(+e.target.value)} />
-                <em>{Math.round(snowDepth * 100)}%</em>
+            <div className="wb-snow-controls" role="group" aria-label="Snow overlay settings">
+              <label>
+                <span>Depth:</span>
+                <input
+                  type="range"
+                  min={0.05}
+                  max={0.8}
+                  step={0.01}
+                  value={snowDepth}
+                  onChange={e => setSnowDepth(+e.target.value)}
+                  aria-label="Snow depth"
+                  aria-valuetext={`${Math.round(snowDepth * 100)} percent`}
+                />
+                <em aria-hidden="true">{Math.round(snowDepth * 100)}%</em>
+              </label>
+              <span className="wb-snow-color-group">
+                <span>Color:</span>
+                <input
+                  type="color"
+                  value={snowColor1}
+                  onChange={e => setSnowColor1(e.target.value)}
+                  aria-label="Snow primary color"
+                />
+                <input
+                  type="color"
+                  value={snowColor2}
+                  onChange={e => setSnowColor2(e.target.value)}
+                  aria-label="Snow secondary color"
+                />
               </span>
-              <span>
-                Color:
-                <input type="color" value={snowColor1} onChange={e => setSnowColor1(e.target.value)} />
-                <input type="color" value={snowColor2} onChange={e => setSnowColor2(e.target.value)} />
-              </span>
-              <span>
-                Seed:
-                <input type="number" value={snowSeed} onChange={e => setSnowSeed(+e.target.value)} />
-              </span>
+              <label>
+                <span>Seed:</span>
+                <input
+                  type="number"
+                  value={snowSeed}
+                  onChange={e => setSnowSeed(+e.target.value)}
+                  aria-label="Snow noise seed"
+                />
+              </label>
             </div>
           )}
 
-          <div className="face-previews">
-            {(['top', 'side', 'bottom'] as const).map(face => (
-              <div key={face} className={`face-preview ${activeFace === face ? 'active' : ''}`} onClick={() => setActiveFace(face)}>
-                <canvas ref={face === 'top' ? topRef : face === 'side' ? sideRef : bottomRef} width={256} height={256} />
-                <span>{face.charAt(0).toUpperCase() + face.slice(1)}{imgs[face] ? '' : ' (empty)'}</span>
-              </div>
-            ))}
+          <div className="face-previews" role="tablist" aria-label="Active face">
+            {(['top', 'side', 'bottom'] as const).map(face => {
+              const isActive = activeFace === face;
+              const labelText = face.charAt(0).toUpperCase() + face.slice(1);
+              const hasImg = !!imgs[face];
+              return (
+                <button
+                  key={face}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-label={`${labelText} face${hasImg ? '' : ' (empty)'}`}
+                  className={`face-preview ${isActive ? 'active' : ''}`}
+                  onClick={() => setActiveFace(face)}
+                >
+                  <canvas
+                    ref={face === 'top' ? topRef : face === 'side' ? sideRef : bottomRef}
+                    width={256}
+                    height={256}
+                    aria-hidden="true"
+                  />
+                  <span>{labelText}{hasImg ? '' : ' (empty)'}</span>
+                </button>
+              );
+            })}
           </div>
 
           {imgs[activeFace] && (
@@ -1902,9 +2008,19 @@ export default function BlockWorkbench() {
       <aside className="workbench-inspector">
         <section className="wb-section">
           <header className="wb-section-header">
-            <div className="workbench-mode-toggle">
-              <button className={`type-btn ${editorMode === 'texture' ? 'active' : ''}`} onClick={() => setEditorMode('texture')}>Texture</button>
-              <button className={`type-btn ${editorMode === 'voxel' ? 'active' : ''}`} onClick={() => setEditorMode('voxel')}>Voxel Block</button>
+            <div className="workbench-mode-toggle" role="group" aria-label="Editor mode">
+              <button
+                type="button"
+                className={`type-btn ${editorMode === 'texture' ? 'active' : ''}`}
+                onClick={() => setEditorMode('texture')}
+                aria-pressed={editorMode === 'texture'}
+              >Texture</button>
+              <button
+                type="button"
+                className={`type-btn ${editorMode === 'voxel' ? 'active' : ''}`}
+                onClick={() => setEditorMode('voxel')}
+                aria-pressed={editorMode === 'voxel'}
+              >Voxel Block</button>
             </div>
             {editorMode === 'texture' && (
               <span className="workbench-editing-label">
@@ -1939,23 +2055,6 @@ export default function BlockWorkbench() {
 
         {editorMode === 'voxel' && (
           <div className="voxel-editor">
-            <section className="wb-section">
-              <header className="wb-section-header">
-                <h3>Voxel Presets</h3>
-              </header>
-              <div className="wb-section-body wb-library-body">
-                <PresetGrid
-                  presets={VOXEL_PRESETS}
-                  categories={VOXEL_CATEGORIES}
-                  activeKey={activeVxPresetKey}
-                  onPick={applyVoxelPreset}
-                  renderThumb={renderVoxelPresetThumb}
-                  storageKey="bw_vxLibCollapsed"
-                  searchPlaceholder="Search voxel presets…"
-                />
-              </div>
-            </section>
-
             <div className="settings-panel">
               <h3>Block Settings</h3>
               <div className="settings-row"><label>Style</label><select value={vxRenderStyle} onChange={e => setVxRenderStyle(e.target.value as VoxelRenderStyle)}><option value="pixelated">Pixelated</option><option value="cartoon">Cartoon</option><option value="realistic">Realistic</option><option value="painterly">Painterly</option><option value="flat">Flat / Minimal</option></select></div>
@@ -1969,10 +2068,28 @@ export default function BlockWorkbench() {
               </>}
             </div>
 
-            <div className="face-tabs">
-              <button className={`type-btn ${vxActiveFace === 'top' ? 'active' : ''}`} onClick={() => setVxActiveFace('top')}>Top Face</button>
-              <button className={`type-btn ${vxActiveFace === 'side' ? 'active' : ''}`} onClick={() => setVxActiveFace('side')}>Side Face</button>
-              <button className={`type-btn ${vxActiveFace === 'bottom' ? 'active' : ''}`} onClick={() => setVxActiveFace('bottom')}>Bottom Face</button>
+            <div className="face-tabs" role="tablist" aria-label="Voxel face">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={vxActiveFace === 'top'}
+                className={`type-btn ${vxActiveFace === 'top' ? 'active' : ''}`}
+                onClick={() => setVxActiveFace('top')}
+              >Top Face</button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={vxActiveFace === 'side'}
+                className={`type-btn ${vxActiveFace === 'side' ? 'active' : ''}`}
+                onClick={() => setVxActiveFace('side')}
+              >Side Face</button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={vxActiveFace === 'bottom'}
+                className={`type-btn ${vxActiveFace === 'bottom' ? 'active' : ''}`}
+                onClick={() => setVxActiveFace('bottom')}
+              >Bottom Face</button>
             </div>
 
             <div className="settings-panel" style={{ padding: '10px 16px' }}>
