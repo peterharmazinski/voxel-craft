@@ -16,7 +16,7 @@ import {
   type SideTransitionPattern,
   type VoxelRenderStyle,
 } from '../utils/textureGenerators';
-import { renderFaceTexture, applySnowOverlay, applyBlockStylePostProcess, compositeTextureSide, applyGlow, generateEmissionMap, type FaceTextureConfig, type SnowOverlayOptions, type GlowOptions, type BlockRenderStyle } from '../utils/renderTexture';
+import { renderFaceTexture, applySnowOverlay, applyBlockStylePostProcess, compositeTextureSide, applyGlow, generateEmissionMap, type FaceTextureConfig, type SnowOverlayOptions, type GlowOptions, type BlockRenderStyle, type TextureType } from '../utils/renderTexture';
 import {
   generateNormalMap, generateDisplacementMap, generateAOMap, generateSpecularMap,
   DEFAULT_NORMAL, DEFAULT_DISPLACEMENT, DEFAULT_AO, DEFAULT_SPECULAR,
@@ -277,48 +277,40 @@ const ORE_DESCRIPTORS: OreDescriptor[] = [
   // ── Surfaces: paths, roads, concrete, asphalt ───────────────────────
   // Worn / paved ground covers. Most use a muted bg with sparse darker
   // grit so they read as textured but not noisy at a distance.
+  // dirt_path, gravel_path, concrete_weathered, and asphalt_road stay
+  // here — they're genuine fleck-on-bg surfaces. Cobblestone and
+  // smooth concrete are handled by dedicated generators below
+  // (StoneWall and PerlinNoise) for a more convincing look.
   { key: 'dirt_path',          label: 'Dirt Path',         bgColors: ['#8a6438', '#6a4a28', '#4a3018'], oreColor: '#a07848', highlightColor: '#c0905c', shape: 'round',    count: 12, minSize: 8,  maxSize: 18, oreName: 'Earth',    useGradient: false, voxelStyle: 'metal',   seedBase: 540 },
   { key: 'gravel_path',        label: 'Gravel Path',       bgColors: ['#888880', '#707068', '#585850'], oreColor: '#bcbcb4', highlightColor: '#dddddd', shape: 'round',    count: 22, minSize: 6,  maxSize: 14, oreName: 'Gravel',   useGradient: true,  voxelStyle: 'metal',   seedBase: 543 },
-  { key: 'cobblestone_path',   label: 'Cobblestone Path',  bgColors: ['#787068', '#585048', '#383028'], oreColor: '#a09888', highlightColor: '#c0b8a8', shape: 'round',    count: 14, minSize: 14, maxSize: 26, oreName: 'Cobble',   useGradient: true,  voxelStyle: 'metal',   seedBase: 546 },
-  { key: 'concrete_smooth',    label: 'Concrete (smooth)', bgColors: ['#c0c0bc', '#aaaaa6', '#909088'], oreColor: '#b8b8b4', highlightColor: '#ccc8c0', shape: 'round',    count: 6,  minSize: 8,  maxSize: 18, oreName: 'Grit',     useGradient: false, voxelStyle: 'metal',   seedBase: 549 },
   { key: 'concrete_weathered', label: 'Concrete (weathered)', bgColors: ['#a8a8a4', '#888884', '#686864'], oreColor: '#7a7a76', highlightColor: '#9a9a94', shape: 'round',    count: 14, minSize: 10, maxSize: 22, oreName: 'Stain',    useGradient: false, voxelStyle: 'metal',   seedBase: 552 },
   { key: 'asphalt_road',       label: 'Asphalt Road',      bgColors: ['#383838', '#282828', '#181818'], oreColor: '#5a5a5a', highlightColor: '#787878', shape: 'round',    count: 22, minSize: 6,  maxSize: 12, oreName: 'Aggregate',useGradient: false, voxelStyle: 'metal',   seedBase: 555 },
 
   // ── Beach & shell ───────────────────────────────────────────────────
-  { key: 'beach_sand',         label: 'Beach Sand',        bgColors: ['#e8d8a0', '#d8c890', '#b8a878'], oreColor: '#fff8d8', highlightColor: '#ffffff', shape: 'round',    count: 8,  minSize: 10, maxSize: 20, oreName: 'Shell',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 558 },
-  { key: 'wet_sand',           label: 'Wet Sand',          bgColors: ['#a89878', '#887858', '#686048'], oreColor: '#f0e0c0', highlightColor: '#ffffff', shape: 'round',    count: 10, minSize: 8,  maxSize: 18, oreName: 'Shell',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 561 },
-  { key: 'pebble_beach',       label: 'Pebble Beach',      bgColors: ['#a0a098', '#888880', '#686860'], oreColor: '#d0c8b8', highlightColor: '#ffffff', shape: 'round',    count: 18, minSize: 12, maxSize: 22, oreName: 'Pebble',   useGradient: true,  voxelStyle: 'metal',   seedBase: 564 },
+  // beach_sand / wet_sand / pebble_beach migrated to PerlinNoise +
+  // StoneWall generators below — finer grain looks much better than
+  // ore flecks. Coral sand and Seashell Bed keep their ore-fleck
+  // treatment for the visible shells.
   { key: 'coral_sand',         label: 'Coral Sand',        bgColors: ['#f8d8c8', '#e8c8b8', '#d8b8a8'], oreColor: '#ffeae8', highlightColor: '#ffffff', shape: 'round',    count: 14, minSize: 8,  maxSize: 16, oreName: 'Coral',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 567 },
   { key: 'seashell_bed',       label: 'Seashell Bed',      bgColors: ['#f8e8c8', '#e8d8b8', '#d8c8a8'], oreColor: '#ff88aa', highlightColor: '#ffccdd', shape: 'round',    count: 18, minSize: 10, maxSize: 20, oreName: 'Conch',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 570 },
 
-  // ── Water ───────────────────────────────────────────────────────────
-  // Single-layer ore approximation: blue/green bg with bright flecks
-  // for ripples and whitecaps. Good enough at distance, especially in
-  // voxel form where the blocky upscale reads as water already.
-  { key: 'water_calm',         label: 'Calm Water',        bgColors: ['#5588cc', '#4477bb', '#3366aa'], oreColor: '#cce4ff', highlightColor: '#ffffff', shape: 'round',    count: 18, minSize: 4,  maxSize: 10, oreName: 'Ripple',   useGradient: true,  voxelStyle: 'jewel',   seedBase: 573 },
-  { key: 'water_deep',         label: 'Deep Water',        bgColors: ['#1a3866', '#122a4a', '#0a1c34'], oreColor: '#3a6cb0', highlightColor: '#88aae0', shape: 'round',    count: 10, minSize: 6,  maxSize: 12, oreName: 'Sparkle',  useGradient: true,  voxelStyle: 'jewel',   seedBase: 576 },
-  { key: 'river_water',        label: 'River Water',       bgColors: ['#3a8888', '#2a6868', '#1a4848'], oreColor: '#a8e8d8', highlightColor: '#ffffff', shape: 'round',    count: 16, minSize: 6,  maxSize: 14, oreName: 'Foam',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 579 },
-  { key: 'swamp_water',        label: 'Swamp Water',       bgColors: ['#4a5838', '#3a4828', '#2a3818'], oreColor: '#7a8848', highlightColor: '#aab868', shape: 'round',    count: 14, minSize: 6,  maxSize: 14, oreName: 'Algae',    useGradient: false, voxelStyle: 'metal',   seedBase: 582 },
-
   // ── Underwater biome ────────────────────────────────────────────────
+  // Water and prismarine migrated to dedicated generators below.
   { key: 'coral_reef',         label: 'Coral Reef',        bgColors: ['#d0b0a8', '#b09088', '#806858'], oreColor: '#ff5588', highlightColor: '#ffaaaa', shape: 'round',    count: 18, minSize: 10, maxSize: 22, oreName: 'Coral',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 585 },
   { key: 'kelp_bed',           label: 'Kelp Bed',          bgColors: ['#384838', '#283828', '#182818'], oreColor: '#5a8a3a', highlightColor: '#88ba66', shape: 'flower',   count: 14, minSize: 12, maxSize: 22, oreName: 'Kelp',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 588 },
   { key: 'sea_floor',          label: 'Sea Floor',         bgColors: ['#88806c', '#686048', '#484028'], oreColor: '#c8c0a8', highlightColor: '#ffffff', shape: 'round',    count: 12, minSize: 6,  maxSize: 14, oreName: 'Shell',    useGradient: false, voxelStyle: 'metal',   seedBase: 591 },
-  { key: 'prismarine',         label: 'Prismarine',        bgColors: ['#3a8888', '#2a7878', '#1a6868'], oreColor: '#5aaaa0', highlightColor: '#88dde0', shape: 'diamond',  count: 10, minSize: 12, maxSize: 22, oreName: 'Prism',    useGradient: true,  voxelStyle: 'crystal', seedBase: 594 },
   { key: 'ocean_rock',         label: 'Ocean Rock',        bgColors: ['#384848', '#283838', '#182828'], oreColor: '#3a6a4a', highlightColor: '#5a8a6a', shape: 'round',    count: 12, minSize: 10, maxSize: 22, oreName: 'Moss',     useGradient: true,  voxelStyle: 'metal',   seedBase: 597 },
 
   // ── Clouds ──────────────────────────────────────────────────────────
-  { key: 'cloud_soft',         label: 'Cloud (soft)',      bgColors: ['#e8eef8', '#d0d8e8', '#b8c0d8'], oreColor: '#ffffff', highlightColor: '#ffffff', shape: 'round',    count: 10, minSize: 16, maxSize: 32, oreName: 'Puff',     useGradient: false, voxelStyle: 'metal',   seedBase: 600 },
-  { key: 'cloud_dense',        label: 'Cloud (dense)',     bgColors: ['#ffffff', '#f0f0f8', '#d8d8e0'], oreColor: '#ffffff', highlightColor: '#ffffff', shape: 'round',    count: 6,  minSize: 18, maxSize: 36, oreName: 'Puff',     useGradient: false, voxelStyle: 'metal',   seedBase: 603 },
-  { key: 'cloud_storm',        label: 'Storm Cloud',       bgColors: ['#585868', '#404858', '#283848'], oreColor: '#787888', highlightColor: '#a0a0b0', shape: 'round',    count: 12, minSize: 14, maxSize: 26, oreName: 'Bolt',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 606 },
-  { key: 'cloud_sunset',       label: 'Sunset Cloud',      bgColors: ['#ffaa88', '#ee8866', '#cc6644'], oreColor: '#ffffff', highlightColor: '#ffd8c8', shape: 'round',    count: 10, minSize: 14, maxSize: 30, oreName: 'Glow',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 609,
-    glow: { intensity: 0.4, radius: 18, threshold: 0.8, color: '#ffaa66' } },
+  // All four cloud variants migrated to the dedicated Clouds generator
+  // below — see CUSTOM_TEXTURE_PRESETS / CUSTOM_VOXEL_PRESETS.
 
   // ── Rusted / mechanical / cybernetic ───────────────────────────────
   { key: 'rusted_iron',        label: 'Rusted Iron',       bgColors: ['#9a6840', '#7a5028', '#5a3818'], oreColor: '#c08858', highlightColor: '#e8a878', shape: 'round',    count: 16, minSize: 8,  maxSize: 18, oreName: 'Rust',     useGradient: true,  voxelStyle: 'metal',   seedBase: 612 },
   { key: 'rusted_steel',       label: 'Rusted Steel',      bgColors: ['#785838', '#583820', '#382818'], oreColor: '#a07050', highlightColor: '#c89070', shape: 'round',    count: 14, minSize: 8,  maxSize: 16, oreName: 'Rust',     useGradient: true,  voxelStyle: 'metal',   seedBase: 615 },
   { key: 'mechanical_plate',   label: 'Mechanical Plate',  bgColors: ['#5a5a5a', '#484848', '#383838'], oreColor: '#888888', highlightColor: '#bbbbbb', shape: 'round',    count: 14, minSize: 12, maxSize: 22, oreName: 'Rivet',    useGradient: true,  voxelStyle: 'metal',   seedBase: 618 },
-  { key: 'chrome_plate',       label: 'Chrome Plate',      bgColors: ['#b0b8c8', '#909aa8', '#707888'], oreColor: '#dcdde6', highlightColor: '#ffffff', shape: 'round',    count: 6,  minSize: 10, maxSize: 20, oreName: 'Buff',     useGradient: true,  voxelStyle: 'metal',   seedBase: 621 },
+  // chrome_plate migrated to a multi-stop linear Gradient below for
+  // the classic chrome highlight band.
   { key: 'cyber_grid',         label: 'Cyber Grid',        bgColors: ['#0a1a2a', '#061222', '#020a1a'], oreColor: '#00ddff', highlightColor: '#aaffff', shape: 'square',   count: 14, minSize: 12, maxSize: 24, oreName: 'Trace',    useGradient: true,  voxelStyle: 'crystal', seedBase: 624,
     glow: { intensity: 0.9, radius: 12, threshold: 0.55, color: '#00ddff' } },
   { key: 'circuit_board',      label: 'Circuit Board',     bgColors: ['#1a4828', '#143820', '#0a2818'], oreColor: '#88dd88', highlightColor: '#c0ffc0', shape: 'square',   count: 18, minSize: 10, maxSize: 22, oreName: 'Trace',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 627,
@@ -352,35 +344,234 @@ const ORE_DESCRIPTORS: OreDescriptor[] = [
   { key: 'corrupted_stone',    label: 'Corrupted Stone',   bgColors: ['#3a2848', '#281838', '#180828'], oreColor: '#6a3878', highlightColor: '#9a58aa', shape: 'triangle', count: 14, minSize: 10, maxSize: 22, oreName: 'Rot',      useGradient: false, voxelStyle: 'metal',   seedBase: 666 },
 
   // ── Candy & dessert ────────────────────────────────────────────────
-  { key: 'chocolate',          label: 'Chocolate',         bgColors: ['#5a3018', '#4a2810', '#381808'], oreColor: '#785838', highlightColor: '#9a7858', shape: 'round',    count: 8,  minSize: 12, maxSize: 24, oreName: 'Swirl',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 669 },
+  // chocolate, waffle, caramel, and marshmallow migrated to dedicated
+  // generators below (PerlinNoise / Tiles / Gradient) — desserts
+  // benefit a lot from smoother textures than ore flecks can give.
   { key: 'choc_chip_cookie',   label: 'Choc-Chip Cookie',  bgColors: ['#d8b078', '#b08858', '#886038'], oreColor: '#3a1808', highlightColor: '#5a2818', shape: 'round',    count: 14, minSize: 8,  maxSize: 18, oreName: 'Chip',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 672 },
   { key: 'gumdrop',            label: 'Gumdrop',           bgColors: ['#ff8888', '#ee6666', '#cc4444'], oreColor: '#ffccaa', highlightColor: '#ffffff', shape: 'round',    count: 12, minSize: 12, maxSize: 22, oreName: 'Sugar',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 675 },
   { key: 'frosting',           label: 'Pink Frosting',     bgColors: ['#ffaacc', '#ee88bb', '#cc6699'], oreColor: '#ffffff', highlightColor: '#ffddee', shape: 'round',    count: 20, minSize: 4,  maxSize: 10, oreName: 'Sprinkle', useGradient: true,  voxelStyle: 'jewel',   seedBase: 678 },
   { key: 'gingerbread',        label: 'Gingerbread',       bgColors: ['#b07840', '#905828', '#704818'], oreColor: '#ffffff', highlightColor: '#fff0d8', shape: 'round',    count: 12, minSize: 6,  maxSize: 14, oreName: 'Icing',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 681 },
-  { key: 'waffle',             label: 'Waffle',            bgColors: ['#d8a050', '#b88030', '#a06018'], oreColor: '#a06820', highlightColor: '#c08840', shape: 'square',   count: 16, minSize: 14, maxSize: 22, oreName: 'Grid',     useGradient: false, voxelStyle: 'metal',   seedBase: 684 },
   { key: 'licorice',           label: 'Licorice',          bgColors: ['#1a1010', '#100808', '#060404'], oreColor: '#dd2244', highlightColor: '#ff6688', shape: 'round',    count: 10, minSize: 10, maxSize: 18, oreName: 'Drop',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 687 },
-  { key: 'caramel',            label: 'Caramel',           bgColors: ['#b87038', '#985828', '#784818'], oreColor: '#d89048', highlightColor: '#f0b070', shape: 'round',    count: 6,  minSize: 14, maxSize: 26, oreName: 'Swirl',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 690 },
-  { key: 'marshmallow',        label: 'Marshmallow',       bgColors: ['#ffe8e8', '#f0d0d0', '#d8b8b8'], oreColor: '#ffd0d8', highlightColor: '#ffffff', shape: 'round',    count: 8,  minSize: 16, maxSize: 30, oreName: 'Fluff',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 693 },
 
   // ── Mystical / arcane ──────────────────────────────────────────────
+  // moonstone migrated to a radial gradient below — works much better
+  // for the ethereal "pearl" look than ore flecks.
   { key: 'mystic_runes',       label: 'Mystic Runes',      bgColors: ['#1a1828', '#0e0c20', '#040414'], oreColor: '#88aaff', highlightColor: '#cce0ff', shape: 'square',   count: 8,  minSize: 12, maxSize: 22, oreName: 'Rune',     useGradient: true,  voxelStyle: 'crystal', seedBase: 696,
     glow: { intensity: 0.9, radius: 14, threshold: 0.5, color: '#88aaff' } },
   { key: 'enchanted_stone',    label: 'Enchanted Stone',   bgColors: ['#484868', '#383858', '#282848'], oreColor: '#66aaff', highlightColor: '#aaccff', shape: 'triangle', count: 12, minSize: 10, maxSize: 22, oreName: 'Vein',     useGradient: true,  voxelStyle: 'crystal', seedBase: 699,
     glow: { intensity: 0.5, radius: 14, threshold: 0.6, color: '#66aaff' } },
-  { key: 'moonstone',          label: 'Moonstone',         bgColors: ['#c8d0e0', '#a8b0c8', '#889098'], oreColor: '#ffffff', highlightColor: '#e0e8ff', shape: 'round',    count: 10, minSize: 14, maxSize: 26, oreName: 'Glow',     useGradient: true,  voxelStyle: 'crystal', seedBase: 702,
-    glow: { intensity: 0.4, radius: 18, threshold: 0.75, color: 'auto' } },
   { key: 'starcloth',          label: 'Starcloth',         bgColors: ['#0c1a4a', '#061238', '#020824'], oreColor: '#ffffaa', highlightColor: '#ffffff', shape: 'square',   count: 22, minSize: 4,  maxSize: 12, oreName: 'Star',     useGradient: false, voxelStyle: 'crystal', seedBase: 705,
     glow: { intensity: 0.8, radius: 16, threshold: 0.5, color: '#ffffaa' } },
   { key: 'shrine_stone',       label: 'Shrine Stone',      bgColors: ['#383830', '#282820', '#181810'], oreColor: '#ffcc44', highlightColor: '#ffe888', shape: 'diamond',  count: 8,  minSize: 12, maxSize: 24, oreName: 'Sigil',    useGradient: true,  voxelStyle: 'crystal', seedBase: 708,
     glow: { intensity: 0.6, radius: 14, threshold: 0.6, color: '#ffcc44' } },
 ];
 
-const NEW_ORE_TEXTURE_PRESETS: Record<string, BlockPreset> = Object.fromEntries(
-  ORE_DESCRIPTORS.map(d => [d.key, makeOreTexturePreset(d)])
-);
-const NEW_ORE_VOXEL_PRESETS: Record<string, VoxelPreset> = Object.fromEntries(
-  ORE_DESCRIPTORS.map(d => [d.key, makeOreVoxelPreset(d)])
-);
+// ── Custom non-ore preset helpers ──────────────────────────────────────
+// Some blocks (clouds, water, smooth surfaces, gradients, stone walls,
+// brick grids) read much better when rendered by a dedicated generator
+// than by the generic ore factory. These helpers build matching
+// texture + voxel preset pairs:
+//   - the TEXTURE side picks the right generator (Clouds, PerlinNoise,
+//     StoneWall, Tiles, Brick, Gradient, Hexagon) with tuned params
+//     per preset.
+//   - the VOXEL side keeps the blocky aesthetic by using uniform base
+//     colours plus an optional accent oreLayer, so the same key still
+//     produces a recognizable block in the library's Voxel view.
+
+function _voxFace(b1: string, b2: string, b3: string, ore?: VoxelOreLayer): VoxelBlockFace {
+  return {
+    ...DEFAULT_VOXEL_FACE('stone'),
+    baseColor1: b1, baseColor2: b2, baseColor3: b3,
+    oreLayers: ore ? [ore] : [],
+  };
+}
+
+function _voxPreset(label: string, face: VoxelBlockFace, glow?: GlowOptions): VoxelPreset {
+  return {
+    label, top: face, side: face, bottom: face,
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: face,
+    glow,
+  };
+}
+
+// Build a texture-only BlockPreset where all three faces share the same
+// generator + params but get distinct seeds so they don't tile
+// identically.
+function _texPreset(
+  label: string, type: TextureType, params: Record<string, unknown>,
+  seedBase: number, glow?: GlowOptions,
+): BlockPreset {
+  return {
+    label,
+    top:    { type, size: 256, seed: seedBase,     params },
+    side:   { type, size: 256, seed: seedBase + 1, params },
+    bottom: { type, size: 256, seed: seedBase + 2, params },
+    glow,
+  };
+}
+
+// Ore layer factory for voxel accents on custom presets. Kept small so
+// the voxel view still reads as the same material but blocky.
+function _voxOre(color: string, highlightColor: string, name: string, density = 1.0, clusterSize = 1.5, style: OreStyle = 'metal', oreScale = 0.6): VoxelOreLayer {
+  return { color, highlightColor, density, clusterSize, name, style, oreScale };
+}
+
+const CUSTOM_TEXTURE_PRESETS: Record<string, BlockPreset> = {
+  // ── Clouds: dedicated Clouds generator (Perlin tuned for puffy
+  //    coverage). Tweak `percentage` for coverage, `scale` for size.
+  cloud_soft: _texPreset('Cloud (soft)', 'Clouds',
+    { color1: '#ffffff', color2: '#c8d8ec', scale: 10, detail: 0.5, percentage: 0.6 }, 1000),
+  cloud_dense: _texPreset('Cloud (dense)', 'Clouds',
+    { color1: '#ffffff', color2: '#e0e4ee', scale: 7, detail: 0.45, percentage: 0.85 }, 1003),
+  cloud_storm: _texPreset('Storm Cloud', 'Clouds',
+    { color1: '#7a8090', color2: '#2c3245', scale: 12, detail: 0.6, percentage: 0.7 }, 1006),
+  cloud_sunset: _texPreset('Sunset Cloud', 'Clouds',
+    { color1: '#ffe4d0', color2: '#d06040', scale: 10, detail: 0.55, percentage: 0.6 }, 1009,
+    { intensity: 0.4, radius: 18, threshold: 0.8, color: '#ffaa66' }),
+
+  // ── Water surfaces: PerlinNoise with cool palettes. Lower scale
+  //    gives finer ripples; higher gives broader swells.
+  water_calm: _texPreset('Calm Water', 'PerlinNoise',
+    { color1: '#cce4ff', color2: '#2a5c9a', noiseType: 'PerlinNoise', octaves: 5, persistence: 0.55, scale: 60 }, 1020),
+  water_deep: _texPreset('Deep Water', 'PerlinNoise',
+    { color1: '#2266aa', color2: '#061a3a', noiseType: 'PerlinNoise', octaves: 6, persistence: 0.5, scale: 80 }, 1023),
+  river_water: _texPreset('River Water', 'PerlinNoise',
+    { color1: '#a8e8d8', color2: '#1a5048', noiseType: 'PerlinNoise', octaves: 6, persistence: 0.55, scale: 50 }, 1026),
+  swamp_water: _texPreset('Swamp Water', 'PerlinNoise',
+    { color1: '#7a8848', color2: '#2a3818', noiseType: 'Turbulence', octaves: 6, persistence: 0.6, scale: 40 }, 1029),
+
+  // ── Sand: PerlinNoise with warm earthy palettes. Fine-grain
+  //    Turbulence variant gives that "many grains of sand" look the
+  //    ore factory can't approximate.
+  beach_sand: _texPreset('Beach Sand', 'PerlinNoise',
+    { color1: '#fff0c8', color2: '#c8a868', noiseType: 'Turbulence', octaves: 5, persistence: 0.5, scale: 40 }, 1040),
+  wet_sand: _texPreset('Wet Sand', 'PerlinNoise',
+    { color1: '#d8c098', color2: '#6a5838', noiseType: 'Turbulence', octaves: 5, persistence: 0.5, scale: 35 }, 1043),
+
+  // ── Stone wall / pebble beach: Voronoi-based StoneWall gives true
+  //    rounded stones with mortar, far more convincing than ore
+  //    flecks.
+  cobblestone_path: _texPreset('Cobblestone Path', 'StoneWall',
+    { color1: '#a89880', color2: '#786858', mortarColor: '#383028', columns: 6, rows: 6, mortarWidth: 4, jitter: 0.9, shading: 0.6, textureNoise: 0.5 }, 1050),
+  pebble_beach: _texPreset('Pebble Beach', 'StoneWall',
+    { color1: '#d0c8b8', color2: '#a09888', mortarColor: '#686048', columns: 10, rows: 10, mortarWidth: 2, jitter: 0.7, shading: 0.5, textureNoise: 0.5 }, 1053),
+
+  // ── Concrete (smooth): subtle PerlinNoise. Low contrast palette and
+  //    few octaves keep it close to a solid surface with just a hint
+  //    of variation.
+  concrete_smooth: _texPreset('Concrete (smooth)', 'PerlinNoise',
+    { color1: '#cccac4', color2: '#989488', noiseType: 'FractalNoise', octaves: 4, persistence: 0.4, scale: 30 }, 1060),
+
+  // ── Chrome plate: multi-stop linear Gradient for the classic
+  //    chrome highlight band.
+  chrome_plate: _texPreset('Chrome Plate', 'Gradient',
+    {
+      colors: [
+        { color: '#ffffff', position: 0 },
+        { color: '#dde2ec', position: 30 },
+        { color: '#5a606c', position: 50 },
+        { color: '#dde2ec', position: 70 },
+        { color: '#ffffff', position: 100 },
+      ],
+      gradType: 'linear',
+    }, 1070),
+
+  // ── Prismarine: Hexagon generator gives the underwater temple's
+  //    crystalline lattice look the ore version was reaching for.
+  prismarine: _texPreset('Prismarine', 'Hexagon',
+    { color1: '#4aaaa0', color2: '#2c7878', groutColor: '#1a4848', columns: 7, groutSize: 3, shade: 0.3, gradient: true }, 1080),
+
+  // ── Desserts: PerlinNoise and Gradient give smoother, more
+  //    appetizing surfaces than the ore factory could.
+  chocolate: _texPreset('Chocolate', 'PerlinNoise',
+    { color1: '#6a3818', color2: '#2a1408', noiseType: 'FractalNoise', octaves: 5, persistence: 0.6, scale: 40 }, 1090),
+  caramel: _texPreset('Caramel', 'Gradient',
+    {
+      colors: [
+        { color: '#f0c080', position: 0 },
+        { color: '#b87038', position: 50 },
+        { color: '#784818', position: 100 },
+      ],
+      gradType: 'radial',
+    }, 1093),
+  marshmallow: _texPreset('Marshmallow', 'PerlinNoise',
+    { color1: '#ffffff', color2: '#f0d0d0', noiseType: 'FractalNoise', octaves: 3, persistence: 0.4, scale: 50 }, 1096),
+
+  // ── Waffle: Brick generator with a small, square pattern gives a
+  //    proper grid of pockets — way more readable than ore squares.
+  waffle: _texPreset('Waffle', 'Brick',
+    { color1: '#d0a058', color2: '#a07028', groutColor: '#785428', pattern: 'simple', x: 5, y: 5, grout: 10, gradient: 4, colorMode: 'shade', shadeRange: 0.2, texture: 0.3, textureScale: 30 }, 1100),
+
+  // ── Moonstone: radial Gradient gives the ethereal pearl glow that
+  //    spawned the original ore version.
+  moonstone: _texPreset('Moonstone', 'Gradient',
+    {
+      colors: [
+        { color: '#ffffff', position: 0 },
+        { color: '#c8d8f0', position: 40 },
+        { color: '#889098', position: 100 },
+      ],
+      gradType: 'radial',
+    }, 1110,
+    { intensity: 0.4, radius: 18, threshold: 0.75, color: 'auto' }),
+};
+
+const CUSTOM_VOXEL_PRESETS: Record<string, VoxelPreset> = {
+  // Cloud voxels: faint puffy accent on a near-uniform bg.
+  cloud_soft:  _voxPreset('Cloud (soft)',  _voxFace('#ffffff', '#f0f0f8', '#d8d8e0', _voxOre('#ffffff', '#ffffff', 'Puff', 0.6, 3, 'metal', 1.2))),
+  cloud_dense: _voxPreset('Cloud (dense)', _voxFace('#ffffff', '#f8f8fa', '#e0e0e8', _voxOre('#ffffff', '#ffffff', 'Puff', 0.4, 3, 'metal', 1.2))),
+  cloud_storm: _voxPreset('Storm Cloud',   _voxFace('#7a8090', '#4a4e60', '#2c3245', _voxOre('#a0a8b8', '#dde0e8', 'Bolt', 0.8, 2, 'jewel', 0.6))),
+  cloud_sunset:_voxPreset('Sunset Cloud',  _voxFace('#ffd0b0', '#d06040', '#a04020', _voxOre('#ffffff', '#ffe0c0', 'Glow', 0.6, 3, 'jewel', 1.0)), { intensity: 0.4, radius: 18, threshold: 0.8, color: '#ffaa66' }),
+
+  // Water voxels: solid blue bgs, optional foam highlight at low density.
+  water_calm:  _voxPreset('Calm Water',  _voxFace('#5588cc', '#4477bb', '#3366aa', _voxOre('#cce4ff', '#ffffff', 'Foam', 0.6, 1.5, 'jewel', 0.5))),
+  water_deep:  _voxPreset('Deep Water',  _voxFace('#1a3866', '#122a4a', '#0a1c34', _voxOre('#3a6cb0', '#88aae0', 'Spark', 0.4, 1.2, 'jewel', 0.4))),
+  river_water: _voxPreset('River Water', _voxFace('#3a8888', '#2a6868', '#1a4848', _voxOre('#a8e8d8', '#ffffff', 'Foam', 0.6, 1.5, 'jewel', 0.5))),
+  swamp_water: _voxPreset('Swamp Water', _voxFace('#4a5838', '#3a4828', '#2a3818', _voxOre('#7a8848', '#aab868', 'Algae', 0.8, 2, 'metal', 0.6))),
+
+  // Sand voxels: warm earthy bg, very subtle shell/grit accent.
+  beach_sand: _voxPreset('Beach Sand', _voxFace('#e8d8a0', '#d8c890', '#b8a878', _voxOre('#fff8d8', '#ffffff', 'Shell', 0.5, 1.2, 'jewel', 0.4))),
+  wet_sand:   _voxPreset('Wet Sand',   _voxFace('#a89878', '#887858', '#686048', _voxOre('#d0c0a0', '#f0e0c0', 'Shell', 0.5, 1.2, 'metal', 0.4))),
+
+  // Stone wall voxels: chunky pebble ore on rocky bg.
+  cobblestone_path: _voxPreset('Cobblestone Path', _voxFace('#a89880', '#786858', '#383028', _voxOre('#c0b8a8', '#e0d8c8', 'Cobble', 1.6, 2.5, 'metal', 0.9))),
+  pebble_beach:     _voxPreset('Pebble Beach',     _voxFace('#d0c8b8', '#a09888', '#686048', _voxOre('#c0b8a8', '#ffffff', 'Pebble', 1.8, 2, 'jewel', 0.7))),
+
+  // Concrete (smooth): near-uniform grey bg, minimal grit.
+  concrete_smooth: _voxPreset('Concrete (smooth)', _voxFace('#c0c0bc', '#aaaaa6', '#909088', _voxOre('#b0b0ac', '#c8c8c4', 'Grit', 0.3, 1.5, 'metal', 0.5))),
+
+  // Chrome plate: smooth metallic gradient in voxel form — bright top,
+  //    darker mid, bright lower edges to mimic the highlight band.
+  chrome_plate: _voxPreset('Chrome Plate', _voxFace('#ffffff', '#909aa8', '#5a606c')),
+
+  // Prismarine voxels: teal bg with diamond crystal accent.
+  prismarine: _voxPreset('Prismarine', _voxFace('#3a8888', '#2a7878', '#1a6868', _voxOre('#5aaaa0', '#88dde0', 'Prism', 1.2, 2, 'crystal', 0.8))),
+
+  // Desserts voxels: smooth bg, minimal accent.
+  chocolate:   _voxPreset('Chocolate',   _voxFace('#5a3018', '#4a2810', '#381808', _voxOre('#785838', '#9a7858', 'Swirl', 0.5, 1.5, 'jewel', 0.5))),
+  caramel:     _voxPreset('Caramel',     _voxFace('#d89048', '#b87038', '#784818', _voxOre('#f0c080', '#ffe0a0', 'Glaze', 0.4, 2, 'jewel', 0.6))),
+  marshmallow: _voxPreset('Marshmallow', _voxFace('#ffe8e8', '#f0d0d0', '#d8b8b8', _voxOre('#ffffff', '#ffffff', 'Fluff', 0.5, 2, 'metal', 0.8))),
+
+  // Waffle voxels: gold bg with darker square cell ore.
+  waffle: _voxPreset('Waffle', _voxFace('#d0a058', '#a07028', '#785428', _voxOre('#785428', '#a07028', 'Cell', 1.4, 2, 'metal', 0.9))),
+
+  // Moonstone voxels: pearly bg with glowing highlight.
+  moonstone: _voxPreset('Moonstone', _voxFace('#e0e8f0', '#c8d0e0', '#889098', _voxOre('#ffffff', '#e0e8ff', 'Glow', 0.6, 2.5, 'crystal', 0.9)),
+    { intensity: 0.4, radius: 18, threshold: 0.75, color: 'auto' }),
+};
+
+// Final preset maps: ore-factory entries first, custom-generator
+// entries layered on top so they win for any shared key. This makes it
+// safe to leave behind the old ORE_DESCRIPTORS comments while ensuring
+// the custom version is what actually renders.
+const NEW_ORE_TEXTURE_PRESETS: Record<string, BlockPreset> = {
+  ...Object.fromEntries(ORE_DESCRIPTORS.map(d => [d.key, makeOreTexturePreset(d)])),
+  ...CUSTOM_TEXTURE_PRESETS,
+};
+const NEW_ORE_VOXEL_PRESETS: Record<string, VoxelPreset> = {
+  ...Object.fromEntries(ORE_DESCRIPTORS.map(d => [d.key, makeOreVoxelPreset(d)])),
+  ...CUSTOM_VOXEL_PRESETS,
+};
 
 const NEW_ORE_CATEGORIES: { label: string; keys: string[] }[] = [
   { label: 'Ore — Minecraft',     keys: ['lapis_ore', 'nether_quartz_ore', 'amethyst_ore', 'ancient_debris', 'glowstone'] },
