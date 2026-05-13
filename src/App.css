@@ -2027,6 +2027,15 @@ input[type='range'] {
   min-width: 0;
 }
 
+/* Small, non-shouty button for explicitly converting a texture preview
+   to voxel rendering. Subtle by design — we don't want to nudge users
+   into clicking it the way a primary CTA would. */
+.wb-render-voxel-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
 .voxel-editor {
   display: flex;
   flex-direction: column;

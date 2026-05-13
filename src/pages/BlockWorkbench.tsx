@@ -1500,13 +1500,16 @@ export default function BlockWorkbench() {
       suppressVoxelRenderRef.current = false;
       return;
     }
-    // Live preview: any voxel-state change in voxel mode renders the
-    // block immediately, so users see edits without clicking a
-    // separate apply button.
-    if (editorMode === 'voxel') {
+    // Live preview, but only when the preview is already voxel-sourced
+    // (the user picked a voxel preset, or already converted to voxel).
+    // While a texture preset is on screen we silently let the user
+    // tweak voxel sliders without overwriting the texture render — the
+    // tweaks apply once they explicitly switch to voxel rendering
+    // (via the inspector's "Render as voxel" button or a voxel preset).
+    if (editorMode === 'voxel' && previewSource === 'voxel') {
       renderVoxelToAllFaces();
     }
-  }, [editorMode, vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
+  }, [editorMode, previewSource, vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
       vxResolution, vxSeed, vxSideMode, vxSideSplitPos,
       vxTransitionPattern, vxTransitionNoise, vxRenderStyle,
       renderVoxelToAllFaces]);
@@ -2372,12 +2375,27 @@ export default function BlockWorkbench() {
                 )}
               </>
             )}
-            {editorMode === 'voxel' && (
+            {editorMode === 'voxel' && previewSource === 'voxel' && (
               <p className="wb-inspector-hint">
                 Tweak any setting below and the preview updates live. Pick a
                 voxel preset from the library to reset to a known starting
                 point.
               </p>
+            )}
+            {editorMode === 'voxel' && previewSource === 'texture' && (
+              <>
+                <p className="wb-inspector-hint">
+                  A texture preset is on screen. Adjustments here are saved,
+                  but won't show in the preview until you switch to voxel
+                  rendering — picking a voxel preset does this, or you can
+                  convert the current texture preview now.
+                </p>
+                <button
+                  type="button"
+                  className="btn-small wb-render-voxel-btn"
+                  onClick={renderVoxelToAllFaces}
+                >Render current settings as voxel</button>
+              </>
             )}
             {editorMode === 'normal' && (
               <p className="wb-inspector-hint">
