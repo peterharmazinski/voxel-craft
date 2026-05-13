@@ -1521,6 +1521,10 @@ export default function BlockWorkbench() {
   const [zipIncludeSpecular, setZipIncludeSpec] = useLocalState('bw_zipSpec', false);
   const [zipIncludeIso, setZipIncludeIso] = useLocalState('bw_zipIso', false);
   const [zipOptionsOpen, setZipOptionsOpen] = useState(false);
+  // Multi-size ZIP export — when more than one size is selected the ZIP
+  // contains every face × every map × every size, with `_<px>` suffixed
+  // onto each filename (or a `<px>/` subfolder when single-map-per-face).
+  const [zipSizes, setZipSizes] = useLocalState<number[]>('bw_zipSizes', [256]);
   const [activePresetKey, setActivePresetKey] = useLocalState<string>('bw_activePreset', '');
   const [activeVxPresetKey, setActiveVxPresetKey] = useLocalState<string>('bw_activeVxPreset', '');
   // Unified library view mode — picking a preset applies the texture
@@ -2206,42 +2210,65 @@ export default function BlockWorkbench() {
     const includeAny = zipIncludeDiffuse || zipIncludeNormal || zipIncludeDisplacement || zipIncludeAO || zipIncludeSpecular;
     if (!includeAny && !zipIncludeIso) return;
 
-    for (let i = 0; i < 3; i++) {
-      const src = refs[i];
-      if (!src) continue;
-      const tmp = document.createElement('canvas');
-      tmp.width = exportSize; tmp.height = exportSize;
-      const ctx = tmp.getContext('2d')!;
-      ctx.imageSmoothingEnabled = exportSize > src.width;
-      ctx.drawImage(src, 0, 0, exportSize, exportSize);
+    // De-dupe and sort the requested sizes; fall back to the single
+    // exportSize if the user somehow has an empty selection.
+    const sizes = (zipSizes && zipSizes.length ? Array.from(new Set(zipSizes)) : [exportSize])
+      .sort((a, b) => a - b);
+    const multiSize = sizes.length > 1;
 
-      if (zipIncludeDiffuse) {
-        entries.push({ name: `${names[i]}.png`, data: await canvasToPngBytes(tmp) });
-      }
-      if (zipIncludeNormal) {
-        const c = document.createElement('canvas');
-        generateNormalMap(tmp, c, normalSettingsRef.current);
-        entries.push({ name: `${names[i]}_normal.png`, data: await canvasToPngBytes(c) });
-      }
-      if (zipIncludeDisplacement) {
-        const c = document.createElement('canvas');
-        generateDisplacementMap(tmp, c, DEFAULT_DISPLACEMENT);
-        entries.push({ name: `${names[i]}_displacement.png`, data: await canvasToPngBytes(c) });
-      }
-      if (zipIncludeAO) {
-        const c = document.createElement('canvas');
-        generateAOMap(tmp, c, DEFAULT_AO);
-        entries.push({ name: `${names[i]}_ao.png`, data: await canvasToPngBytes(c) });
-      }
-      if (zipIncludeSpecular) {
-        const c = document.createElement('canvas');
-        generateSpecularMap(tmp, c, DEFAULT_SPECULAR);
-        entries.push({ name: `${names[i]}_specular.png`, data: await canvasToPngBytes(c) });
-      }
-    }
+    // Helper: build a filename, putting the size in a parent folder when
+    // multiple sizes are bundled so the user can drop them straight into
+    // tools that expect resolution-keyed directories (e.g. game asset
+    // packs). Falls back to a flat name for the single-size case.
+    const nameFor = (base: string, size: number) => multiSize ? `${size}/${base}.png` : `${base}.png`;
 
-    if (zipIncludeIso && isoRef.current) {
-      entries.push({ name: 'block_iso.png', data: await canvasToPngBytes(isoRef.current) });
+    for (const size of sizes) {
+      for (let i = 0; i < 3; i++) {
+        const src = refs[i];
+        if (!src) continue;
+        const tmp = document.createElement('canvas');
+        tmp.width = size; tmp.height = size;
+        const ctx = tmp.getContext('2d')!;
+        ctx.imageSmoothingEnabled = size > src.width;
+        ctx.drawImage(src, 0, 0, size, size);
+
+        if (zipIncludeDiffuse) {
+          entries.push({ name: nameFor(names[i], size), data: await canvasToPngBytes(tmp) });
+        }
+        if (zipIncludeNormal) {
+          const c = document.createElement('canvas');
+          generateNormalMap(tmp, c, normalSettingsRef.current);
+          entries.push({ name: nameFor(`${names[i]}_normal`, size), data: await canvasToPngBytes(c) });
+        }
+        if (zipIncludeDisplacement) {
+          const c = document.createElement('canvas');
+          generateDisplacementMap(tmp, c, DEFAULT_DISPLACEMENT);
+          entries.push({ name: nameFor(`${names[i]}_displacement`, size), data: await canvasToPngBytes(c) });
+        }
+        if (zipIncludeAO) {
+          const c = document.createElement('canvas');
+          generateAOMap(tmp, c, DEFAULT_AO);
+          entries.push({ name: nameFor(`${names[i]}_ao`, size), data: await canvasToPngBytes(c) });
+        }
+        if (zipIncludeSpecular) {
+          const c = document.createElement('canvas');
+          generateSpecularMap(tmp, c, DEFAULT_SPECULAR);
+          entries.push({ name: nameFor(`${names[i]}_specular`, size), data: await canvasToPngBytes(c) });
+        }
+      }
+
+      if (zipIncludeIso && isoRef.current) {
+        // The iso preview is rendered at a fixed 300px on the stage, so
+        // scale it into a square canvas at the requested size before
+        // encoding. Keeps the bundled iso consistent with the other
+        // face sizes.
+        const iso = document.createElement('canvas');
+        iso.width = size; iso.height = size;
+        const ictx = iso.getContext('2d')!;
+        ictx.imageSmoothingEnabled = size > isoRef.current.width;
+        ictx.drawImage(isoRef.current, 0, 0, size, size);
+        entries.push({ name: nameFor('block_iso', size), data: await canvasToPngBytes(iso) });
+      }
     }
 
     if (entries.length === 0) return;
@@ -2250,10 +2277,10 @@ export default function BlockWorkbench() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'block_textures.zip';
+    a.download = multiSize ? 'block_textures_multi.zip' : 'block_textures.zip';
     a.click();
     URL.revokeObjectURL(url);
-  }, [exportSize, zipIncludeDiffuse, zipIncludeNormal, zipIncludeDisplacement, zipIncludeAO, zipIncludeSpecular, zipIncludeIso]);
+  }, [exportSize, zipSizes, zipIncludeDiffuse, zipIncludeNormal, zipIncludeDisplacement, zipIncludeAO, zipIncludeSpecular, zipIncludeIso]);
 
   const activeCanvasRef = activeFace === 'top' ? topRef : activeFace === 'side' ? sideRef : bottomRef;
 
@@ -2862,6 +2889,45 @@ export default function BlockWorkbench() {
                   <label><input type="checkbox" checked={zipIncludeAO} onChange={e => setZipIncludeAO(e.target.checked)} /> Ambient occlusion</label>
                   <label><input type="checkbox" checked={zipIncludeSpecular} onChange={e => setZipIncludeSpec(e.target.checked)} /> Specular</label>
                   <label className="wb-zip-popover-divider"><input type="checkbox" checked={zipIncludeIso} onChange={e => setZipIncludeIso(e.target.checked)} /> Iso 3D block</label>
+
+                  <div className="wb-zip-popover-title wb-zip-popover-divider">Sizes (each face × map at every size)</div>
+                  <div className="wb-zip-sizes">
+                    {[16, 32, 64, 128, 256, 512, 1024].map(s => {
+                      const checked = zipSizes.includes(s);
+                      return (
+                        <label key={s} className="wb-zip-size-chip">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={e => {
+                              if (e.target.checked) {
+                                setZipSizes([...zipSizes, s].sort((a, b) => a - b));
+                              } else {
+                                // Never let the user reduce the list to
+                                // nothing — keep at least one size so
+                                // the export button never silently no-ops.
+                                const next = zipSizes.filter(x => x !== s);
+                                setZipSizes(next.length ? next : [s]);
+                              }
+                            }}
+                          />
+                          {s}px
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="wb-zip-size-quick">
+                    <button type="button" className="btn-small" onClick={() => setZipSizes([exportSize])}>Single</button>
+                    <button type="button" className="btn-small" onClick={() => setZipSizes([32, 64, 128, 256])} title="Common in-game pixel art sizes">Pixel art</button>
+                    <button type="button" className="btn-small" onClick={() => setZipSizes([128, 256, 512, 1024])} title="High-res mip levels for shader work">HD mips</button>
+                    <button type="button" className="btn-small" onClick={() => setZipSizes([16, 32, 64, 128, 256, 512, 1024])} title="Every power-of-2 size">All</button>
+                  </div>
+                  <div className="wb-zip-size-summary">
+                    {zipSizes.length === 1
+                      ? `Single size: ${zipSizes[0]}px`
+                      : `${zipSizes.length} sizes (${zipSizes.join(', ')}px) — bundled in size folders`}
+                  </div>
+
                   <button className="btn-primary wb-zip-close" onClick={() => setZipOptionsOpen(false)}>Close</button>
                 </div>
               )}
