@@ -28,18 +28,60 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
+html, body, #root {
+  height: 100%;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
-  min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  overflow: hidden;
 }
 
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100%;
+}
+
+/* ── Themed Scrollbars ─────────────────────────────────────────────── */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background 0.15s;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background: var(--accent);
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* ── Navigation ──────────────────────────────────────────────────── */
@@ -816,6 +858,9 @@ body {
 .workbench-page {
   display: flex;
   flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ── Workbench Toolbar ──────────────────────────────────────────────── */
@@ -829,8 +874,7 @@ body {
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   z-index: 30;
 }
 
@@ -990,25 +1034,25 @@ body {
   max-width: 1800px;
   margin: 0 auto;
   padding: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .workbench-library,
-.workbench-inspector {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  position: sticky;
-  top: 56px;
-  max-height: calc(100vh - 130px);
-  overflow-y: auto;
-  min-width: 0;
-}
-
+.workbench-inspector,
 .workbench-stage {
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Give each column a little inner padding so the scrollbar doesn't
+     sit flush against the section card edge */
+  padding-right: 4px;
 }
 
 /* ── Section Cards ─────────────────────────────────────────────────── */
@@ -1557,15 +1601,23 @@ body {
 }
 
 @media (max-width: 1080px) {
+  .workbench-page {
+    height: auto;
+    overflow: visible;
+  }
   .workbench-layout {
     grid-template-columns: 1fr;
     padding: 12px;
+    height: auto;
+    overflow: visible;
+    flex: none;
   }
   .workbench-library,
-  .workbench-inspector {
-    position: static;
-    max-height: none;
-    overflow-y: visible;
+  .workbench-inspector,
+  .workbench-stage {
+    height: auto;
+    overflow: visible;
+    padding-right: 0;
   }
 }
 
