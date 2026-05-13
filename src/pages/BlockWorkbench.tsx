@@ -963,6 +963,138 @@ function renderGroupedOptions<T extends { label: string }>(
   );
 }
 
+/**
+ * Visual grid of block presets with thumbnails, collapsible categories,
+ * and a search box. Replaces the old dropdown for the Library column.
+ *
+ * Thumbnails are rendered lazily (one per idle frame) by drawing each
+ * preset's `side` face at full size into an off-screen canvas, then
+ * scaling down into a 64×64 thumb. Results are cached in component
+ * state so they persist as the user types in the search box.
+ */
+function BlockPresetGrid({ presets, categories, activeKey, onPick }: {
+  presets: Record<string, BlockPreset>;
+  categories: [string, string[]][];
+  activeKey: string;
+  onPick: (key: string) => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [collapsed, setCollapsed] = useLocalState<Record<string, boolean>>('bw_libCollapsed', {});
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+
+  // Lazy thumbnail generation, prioritised by category order so above-the-fold cards
+  // appear first. Cancellable on unmount via a flag.
+  useEffect(() => {
+    let cancelled = false;
+    const orderedFromCategories = categories.flatMap(([, ks]) => ks.filter(k => k in presets));
+    const orderedSet = new Set(orderedFromCategories);
+    const rest = Object.keys(presets).filter(k => !orderedSet.has(k));
+    const queue = [...orderedFromCategories, ...rest];
+
+    const renderCanvas = document.createElement('canvas');
+    const thumbCanvas = document.createElement('canvas');
+    thumbCanvas.width = 64;
+    thumbCanvas.height = 64;
+    const tctx = thumbCanvas.getContext('2d')!;
+    tctx.imageSmoothingEnabled = true;
+
+    const generateOne = (i: number) => {
+      if (cancelled || i >= queue.length) return;
+      const key = queue[i];
+      try {
+        const config = presets[key].side;
+        renderCanvas.width = config.size;
+        renderCanvas.height = config.size;
+        renderFaceTexture(renderCanvas, config);
+        tctx.clearRect(0, 0, 64, 64);
+        tctx.drawImage(renderCanvas, 0, 0, 64, 64);
+        const dataUrl = thumbCanvas.toDataURL('image/png');
+        if (!cancelled) setThumbs(prev => ({ ...prev, [key]: dataUrl }));
+      } catch {
+        // ignore presets that fail to render — placeholder will remain
+      }
+
+      const next = () => generateOne(i + 1);
+      const w = window as unknown as { requestIdleCallback?: (cb: () => void, opts?: { timeout?: number }) => void };
+      if (typeof w.requestIdleCallback === 'function') w.requestIdleCallback(next, { timeout: 80 });
+      else setTimeout(next, 0);
+    };
+
+    generateOne(0);
+    return () => { cancelled = true; };
+  }, [presets, categories]);
+
+  const q = search.trim().toLowerCase();
+  const matches = (key: string) => !q || presets[key].label.toLowerCase().includes(q);
+
+  const categorized = new Set(categories.flatMap(([, ks]) => ks));
+  const uncategorized = Object.keys(presets).filter(k => !categorized.has(k));
+  const allCategories: [string, string[]][] = uncategorized.length > 0
+    ? [...categories, ['Uncategorized', uncategorized]]
+    : categories;
+
+  let totalMatches = 0;
+
+  return (
+    <div className="preset-library">
+      <input
+        type="search"
+        className="preset-search"
+        placeholder="Search presets…"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        aria-label="Search presets"
+      />
+
+      {allCategories.map(([cat, keys]) => {
+        const filteredKeys = keys.filter(k => k in presets && matches(k));
+        if (filteredKeys.length === 0) return null;
+        totalMatches += filteredKeys.length;
+        // When searching, force all matching categories open
+        const isCollapsed = !!collapsed[cat] && !q;
+        return (
+          <div key={cat} className="preset-category">
+            <button
+              type="button"
+              className="preset-category-header"
+              onClick={() => setCollapsed(c => ({ ...c, [cat]: !c[cat] }))}
+              aria-expanded={!isCollapsed}
+            >
+              <span className="preset-category-chevron">{isCollapsed ? '▸' : '▾'}</span>
+              <span className="preset-category-name">{cat}</span>
+              <span className="preset-category-count">{filteredKeys.length}</span>
+            </button>
+            {!isCollapsed && (
+              <div className="preset-category-grid">
+                {filteredKeys.map(key => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`preset-card ${activeKey === key ? 'active' : ''}`}
+                    onClick={() => onPick(key)}
+                    title={presets[key].label}
+                  >
+                    {thumbs[key] ? (
+                      <img src={thumbs[key]} alt="" className="preset-card-thumb" />
+                    ) : (
+                      <div className="preset-card-thumb preset-card-skeleton" aria-hidden />
+                    )}
+                    <span className="preset-card-label">{presets[key].label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {q && totalMatches === 0 && (
+        <div className="preset-library-empty">No presets match "{search}"</div>
+      )}
+    </div>
+  );
+}
+
 export default function BlockWorkbench() {
   const topRef = useRef<HTMLCanvasElement>(null);
   const sideRef = useRef<HTMLCanvasElement>(null);
@@ -1580,15 +1712,13 @@ export default function BlockWorkbench() {
           <header className="wb-section-header">
             <h3>Block Presets</h3>
           </header>
-          <div className="wb-section-body">
-            <select
-              className="wb-select"
-              value={activePresetKey}
-              onChange={e => { if (e.target.value) applyPreset(e.target.value); }}
-            >
-              <option value="" disabled>Choose a preset…</option>
-              {renderGroupedOptions(WORKBENCH_PRESETS, WORKBENCH_CATEGORIES)}
-            </select>
+          <div className="wb-section-body wb-library-body">
+            <BlockPresetGrid
+              presets={WORKBENCH_PRESETS}
+              categories={WORKBENCH_CATEGORIES}
+              activeKey={activePresetKey}
+              onPick={applyPreset}
+            />
           </div>
         </section>
       </aside>
