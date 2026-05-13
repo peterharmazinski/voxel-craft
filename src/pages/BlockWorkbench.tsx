@@ -2236,17 +2236,6 @@ export default function BlockWorkbench() {
             role="img"
             aria-label={`Isometric preview of the assembled block${activePresetLabel ? `: ${activePresetLabel}` : ''}`}
           />
-          {tilingPreview && (
-            <canvas
-              ref={tilingRef}
-              width={300}
-              height={300}
-              className="wb-tiling-canvas"
-              role="img"
-              aria-label="Tiling preview, 3 by 3 grid of the active face"
-            />
-          )}
-
           <div className="wb-preview-toggles">
             <label>
               <input type="checkbox" checked={litPreview} onChange={e => setLitPreview(e.target.checked)} />
@@ -2273,6 +2262,17 @@ export default function BlockWorkbench() {
               </select>
             </label>
           </div>
+
+          {tilingPreview && (
+            <canvas
+              ref={tilingRef}
+              width={300}
+              height={300}
+              className="wb-tiling-canvas"
+              role="img"
+              aria-label="Tiling preview, 3 by 3 grid of the active face"
+            />
+          )}
 
           {snowEnabled && (
             <div className="wb-snow-controls" role="group" aria-label="Snow overlay settings">
