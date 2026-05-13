@@ -1771,12 +1771,123 @@ export default function BlockWorkbench() {
       vxRenderStyle, vxSideMode, vxSideSplitPos, vxTransitionPattern, vxTransitionNoise,
       snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed]);
 
+  // ─────────────────────────────────────────────────────────────────────
+  //   Undo / Redo
+  // ─────────────────────────────────────────────────────────────────────
+
+  type Snapshot = {
+    projectName: string;
+    topImg: string | null; sideImg: string | null; bottomImg: string | null;
+    topConfig: FaceTextureConfig | null; sideConfig: FaceTextureConfig | null; bottomConfig: FaceTextureConfig | null;
+    vxTopFace: VoxelBlockFace; vxSideFace: VoxelBlockFace; vxBottomFace: VoxelBlockFace; vxSideTopFace: VoxelBlockFace;
+    vxResolution: number; vxSeed: number; vxRenderStyle: VoxelRenderStyle;
+    vxSideMode: VoxelBlockSideMode; vxSideSplitPos: number;
+    vxTransitionPattern: SideTransitionPattern; vxTransitionNoise: number;
+    snowEnabled: boolean; snowDepth: number; snowColor1: string; snowColor2: string; snowSeed: number;
+    activePresetKey: string; activeVxPresetKey: string;
+  };
+
+  const HISTORY_LIMIT = 30;
+  const historyRef = useRef<Snapshot[]>([]);
+  const [historyPos, setHistoryPos] = useState(-1);
+  const suppressHistoryRef = useRef(false);
+
+  const captureSnapshot = useCallback((): Snapshot => ({
+    projectName,
+    topImg, sideImg, bottomImg,
+    topConfig, sideConfig, bottomConfig,
+    vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
+    vxResolution, vxSeed, vxRenderStyle,
+    vxSideMode, vxSideSplitPos,
+    vxTransitionPattern, vxTransitionNoise,
+    snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed,
+    activePresetKey, activeVxPresetKey,
+  }), [projectName, topImg, sideImg, bottomImg, topConfig, sideConfig, bottomConfig,
+      vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace, vxResolution, vxSeed, vxRenderStyle,
+      vxSideMode, vxSideSplitPos, vxTransitionPattern, vxTransitionNoise,
+      snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed,
+      activePresetKey, activeVxPresetKey]);
+
+  // Apply a snapshot back into all the relevant state slots. Suppression
+  // refs prevent the dirty/voxel-render effects from clobbering the
+  // restored faces while React is flushing this state batch.
+  const applySnapshot = useCallback((snap: Snapshot) => {
+    suppressHistoryRef.current = true;
+    suppressVoxelRenderRef.current = true;
+    setProjectName(snap.projectName);
+    setTopImg(snap.topImg); setSideImg(snap.sideImg); setBottomImg(snap.bottomImg);
+    setTopConfig(snap.topConfig); setSideConfig(snap.sideConfig); setBottomConfig(snap.bottomConfig);
+    setVxTopFace(snap.vxTopFace); setVxSideFace(snap.vxSideFace); setVxBottomFace(snap.vxBottomFace); setVxSideTopFace(snap.vxSideTopFace);
+    setVxResolution(snap.vxResolution); setVxSeed(snap.vxSeed); setVxRenderStyle(snap.vxRenderStyle);
+    setVxSideMode(snap.vxSideMode); setVxSideSplitPos(snap.vxSideSplitPos);
+    setVxTransitionPattern(snap.vxTransitionPattern); setVxTransitionNoise(snap.vxTransitionNoise);
+    setSnowEnabled(snap.snowEnabled); setSnowDepth(snap.snowDepth);
+    setSnowColor1(snap.snowColor1); setSnowColor2(snap.snowColor2); setSnowSeed(snap.snowSeed);
+    setActivePresetKey(snap.activePresetKey); setActiveVxPresetKey(snap.activeVxPresetKey);
+  }, [setProjectName, setTopImg, setSideImg, setBottomImg, setTopConfig, setSideConfig, setBottomConfig,
+      setVxTopFace, setVxSideFace, setVxBottomFace, setVxSideTopFace,
+      setVxResolution, setVxSeed, setVxRenderStyle, setVxSideMode, setVxSideSplitPos,
+      setVxTransitionPattern, setVxTransitionNoise,
+      setSnowEnabled, setSnowDepth, setSnowColor1, setSnowColor2, setSnowSeed,
+      setActivePresetKey, setActiveVxPresetKey]);
+
+  // Push a snapshot on every meaningful state change, debounced so a
+  // slider drag doesn't flood the history with one entry per frame.
+  // The first run primes history[0] with the mounted state so an undo
+  // from the user's first edit goes back to where they started.
+  useEffect(() => {
+    if (suppressHistoryRef.current) {
+      // The change came from undo/redo applying a snapshot — don't
+      // re-push it on top of itself.
+      suppressHistoryRef.current = false;
+      return;
+    }
+    const id = window.setTimeout(() => {
+      const snap = captureSnapshot();
+      const list = historyRef.current;
+      const cur = historyPos >= 0 ? list[historyPos] : null;
+      if (cur && JSON.stringify(cur) === JSON.stringify(snap)) return;
+      // Drop any redo-future when the user starts a new branch.
+      const truncated = list.slice(0, historyPos + 1);
+      truncated.push(snap);
+      while (truncated.length > HISTORY_LIMIT) truncated.shift();
+      historyRef.current = truncated;
+      setHistoryPos(truncated.length - 1);
+    }, 350);
+    return () => window.clearTimeout(id);
+  }, [captureSnapshot, historyPos]);
+
+  const canUndo = historyPos > 0;
+  const canRedo = historyPos >= 0 && historyPos < historyRef.current.length - 1;
+
+  const undo = useCallback(() => {
+    if (!canUndo) return;
+    const newPos = historyPos - 1;
+    applySnapshot(historyRef.current[newPos]);
+    setHistoryPos(newPos);
+  }, [canUndo, historyPos, applySnapshot]);
+
+  const redo = useCallback(() => {
+    if (!canRedo) return;
+    const newPos = historyPos + 1;
+    applySnapshot(historyRef.current[newPos]);
+    setHistoryPos(newPos);
+  }, [canRedo, historyPos, applySnapshot]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // Escape always dismisses transient overlays, even when focus is in an input.
       if (e.key === 'Escape') {
         if (showShortcuts) { setShowShortcuts(false); return; }
         if (zipOptionsOpen) { setZipOptionsOpen(false); return; }
+      }
+      // Undo/Redo work from anywhere, including text inputs — matches
+      // every other app's expectations. Ctrl/Cmd+Z for undo,
+      // Ctrl/Cmd+Shift+Z (or Ctrl+Y on Windows) for redo.
+      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
+        const k = e.key.toLowerCase();
+        if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+        if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); redo(); return; }
       }
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
@@ -1790,7 +1901,7 @@ export default function BlockWorkbench() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [setActiveFace, setVxSeed, setTilingPreview, setSnowEnabled, handleSaveProject, showShortcuts, zipOptionsOpen, setZipOptionsOpen]);
+  }, [setActiveFace, setVxSeed, setTilingPreview, setSnowEnabled, handleSaveProject, showShortcuts, zipOptionsOpen, setZipOptionsOpen, undo, redo]);
 
   const activePresetLabel =
     editorMode === 'voxel'
@@ -1818,6 +1929,24 @@ export default function BlockWorkbench() {
           )}
         </div>
         <div className="workbench-toolbar-right">
+          <div className="workbench-toolbar-undo" role="group" aria-label="History">
+            <button
+              type="button"
+              className="btn-small workbench-toolbar-undo-btn"
+              onClick={undo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+              aria-label="Undo"
+            >↶</button>
+            <button
+              type="button"
+              className="btn-small workbench-toolbar-undo-btn"
+              onClick={redo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Shift+Z or Ctrl+Y)"
+              aria-label="Redo"
+            >↷</button>
+          </div>
           <span className={`workbench-toolbar-status ${dirty ? 'dirty' : 'saved'}`} title={dirty ? 'Unsaved changes — press Ctrl+S to save' : 'All changes saved'}>
             <span className="workbench-toolbar-dot" />
             {dirty ? 'Unsaved' : 'Saved'}
@@ -1853,6 +1982,10 @@ export default function BlockWorkbench() {
                     <dd>Toggle snow layer</dd>
                     <dt><kbd>Ctrl</kbd>+<kbd>S</kbd></dt>
                     <dd>Save project</dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd></dt>
+                    <dd>Undo</dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></dt>
+                    <dd>Redo</dd>
                   </dl>
                   <p className="workbench-toolbar-popover-note">Shortcuts are disabled while typing in inputs.</p>
                 </div>

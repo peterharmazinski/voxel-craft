@@ -1277,6 +1277,36 @@ input[type='range'] {
   font-weight: 600;
 }
 
+.workbench-toolbar-undo {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.workbench-toolbar-undo-btn {
+  /* Glyphs need slightly more vertical room and a fixed width to keep
+     the two arrows visually balanced regardless of font hinting. */
+  min-width: 30px;
+  padding-inline: 8px;
+  font-size: 15px;
+  line-height: 1;
+  border-radius: 0;
+}
+
+.workbench-toolbar-undo-btn + .workbench-toolbar-undo-btn {
+  margin-left: -1px;
+}
+
+.workbench-toolbar-undo-btn:first-child { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+.workbench-toolbar-undo-btn:last-child { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+
+.workbench-toolbar-undo-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .workbench-toolbar-reset {
   font-weight: 600;
   /* Slightly muted by default so it doesn't compete with the save pill,
