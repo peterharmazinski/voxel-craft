@@ -1325,6 +1325,17 @@ export default function BlockWorkbench() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // What kind of rendering produced the current preview faces. Auto-
+  // applying voxel slider changes is only safe when the preview is
+  // already voxel-sourced — otherwise tweaking a voxel slider while a
+  // texture preset is on screen would clobber it with stale voxel
+  // defaults (ore on sides, no flowers on top, etc).
+  // Declared here (above `updatePreview`) because the snow overlay reads
+  // it to decide between smooth and voxel-cell snow.
+  const [previewSource, setPreviewSource] = useState<'texture' | 'voxel'>(
+    editorMode === 'voxel' ? 'voxel' : 'texture'
+  );
+
   const updatePreview = useCallback(async () => {
     const faces: [HTMLCanvasElement | null, string | null][] = [
       [topRef.current, topImg],
@@ -1347,7 +1358,17 @@ export default function BlockWorkbench() {
     }
 
     if (snowEnabled) {
-      const snowOpts: SnowOverlayOptions = { color1: snowColor1, color2: snowColor2, depth: snowDepth, seed: snowSeed };
+      // When the preview is voxel-sourced, drive the snow overlay with
+      // the same voxel grid the block is rendered at so the snow strip
+      // / top dusting reads as voxel cells. Texture-rendered blocks
+      // keep the smooth noise look.
+      const snowOpts: SnowOverlayOptions = {
+        color1: snowColor1,
+        color2: snowColor2,
+        depth: snowDepth,
+        seed: snowSeed,
+        voxelGrid: previewSource === 'voxel' ? vxResolution : undefined,
+      };
       if (topRef.current && topImg) applySnowOverlay(topRef.current, snowOpts, 'top');
       if (sideRef.current && sideImg) applySnowOverlay(sideRef.current, snowOpts, 'side');
     }
@@ -1408,7 +1429,7 @@ export default function BlockWorkbench() {
     }
 
     setRenderCount(c => c + 1);
-  }, [topImg, sideImg, bottomImg, drawImg, applyLighting, litPreview, normalSettings, bgMode, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed, tilingPreview, activeFace]);
+  }, [topImg, sideImg, bottomImg, drawImg, applyLighting, litPreview, normalSettings, bgMode, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed, tilingPreview, activeFace, previewSource, vxResolution]);
 
   useEffect(() => { updatePreview(); }, [updatePreview]);
 
@@ -1473,15 +1494,6 @@ export default function BlockWorkbench() {
     vxTransitionPattern, vxTransitionNoise, vxRenderStyle,
   }));
   const suppressVoxelRenderRef = useRef(false);
-
-  // What kind of rendering produced the current preview faces. Auto-
-  // applying voxel slider changes is only safe when the preview is
-  // already voxel-sourced — otherwise tweaking a voxel slider while a
-  // texture preset is on screen would clobber it with stale voxel
-  // defaults (ore on sides, no flowers on top, etc).
-  const [previewSource, setPreviewSource] = useState<'texture' | 'voxel'>(
-    editorMode === 'voxel' ? 'voxel' : 'texture'
-  );
 
   useEffect(() => {
     const key = JSON.stringify({

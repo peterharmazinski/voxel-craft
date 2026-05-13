@@ -438,28 +438,52 @@ export interface SnowOverlayOptions {
   color2: string;
   depth: number;   // 0–1, how far down the snow extends
   seed: number;
+  // Optional voxel grid: when set, the snow noise is generated at this
+  // resolution and stepped to those cell boundaries so it visually
+  // matches the rest of a voxel-rendered block (blocky strip on sides,
+  // chunky coverage on top). Leave undefined for smooth noise on
+  // texture-rendered blocks.
+  voxelGrid?: number;
 }
 
 export function applySnowOverlay(canvas: HTMLCanvasElement, opts: SnowOverlayOptions, face: 'top' | 'side' | 'bottom') {
-  const { color1, color2, depth, seed } = opts;
+  const { color1, color2, depth, seed, voxelGrid } = opts;
   const w = canvas.width;
   const h = canvas.height;
   const ctx = canvas.getContext('2d')!;
 
+  // Effective grid: when in voxel mode use the voxel resolution, capped
+  // so we don't render single-cell snow on huge faces. Otherwise we
+  // render at full face resolution for smooth noise.
+  const useVoxel = !!voxelGrid && voxelGrid > 0;
+  const gridW = useVoxel ? Math.max(2, Math.min(voxelGrid!, w)) : w;
+  const gridH = useVoxel ? Math.max(2, Math.min(voxelGrid!, h)) : h;
+
   if (face === 'top') {
     const snowCanvas = document.createElement('canvas');
-    snowCanvas.width = w;
-    snowCanvas.height = h;
-    generatePerlinNoise(snowCanvas, w, color1, color2, 'FractalNoise', 4, 0.4, 30, seed, 1);
+    snowCanvas.width = gridW;
+    snowCanvas.height = gridH;
+    // Tighter scale at low grid sizes so each voxel cell carries
+    // distinct snow shading rather than averaging to one flat colour.
+    const noiseScale = useVoxel ? Math.max(4, gridW * 0.6) : 30;
+    generatePerlinNoise(snowCanvas, gridW, color1, color2, 'FractalNoise', 4, 0.4, noiseScale, seed, 1);
     const baseData = ctx.getImageData(0, 0, w, h);
-    const snowData = snowCanvas.getContext('2d')!.getImageData(0, 0, w, h);
+    const snowData = snowCanvas.getContext('2d')!.getImageData(0, 0, gridW, gridH);
     const bd = baseData.data;
     const sd = snowData.data;
     const coverage = 0.5 + depth * 0.5;
-    for (let i = 0; i < bd.length; i += 4) {
-      bd[i]     = Math.round(bd[i] * (1 - coverage) + sd[i] * coverage);
-      bd[i + 1] = Math.round(bd[i + 1] * (1 - coverage) + sd[i + 1] * coverage);
-      bd[i + 2] = Math.round(bd[i + 2] * (1 - coverage) + sd[i + 2] * coverage);
+    for (let y = 0; y < h; y++) {
+      // Nearest-neighbour sample into the (possibly smaller) snow grid
+      // so the overlay reads as voxel cells instead of smooth gradients.
+      const sy = Math.min(gridH - 1, Math.floor(y * gridH / h));
+      for (let x = 0; x < w; x++) {
+        const sx = Math.min(gridW - 1, Math.floor(x * gridW / w));
+        const i = (y * w + x) * 4;
+        const j = (sy * gridW + sx) * 4;
+        bd[i]     = Math.round(bd[i] * (1 - coverage) + sd[j] * coverage);
+        bd[i + 1] = Math.round(bd[i + 1] * (1 - coverage) + sd[j + 1] * coverage);
+        bd[i + 2] = Math.round(bd[i + 2] * (1 - coverage) + sd[j + 2] * coverage);
+      }
     }
     ctx.putImageData(baseData, 0, 0);
     return;
@@ -467,25 +491,46 @@ export function applySnowOverlay(canvas: HTMLCanvasElement, opts: SnowOverlayOpt
 
   if (face === 'side') {
     const snowCanvas = document.createElement('canvas');
-    snowCanvas.width = w;
-    snowCanvas.height = h;
-    generatePerlinNoise(snowCanvas, w, color1, color2, 'FractalNoise', 5, 0.5, 40, seed + 10, 1);
+    snowCanvas.width = gridW;
+    snowCanvas.height = gridH;
+    const noiseScale = useVoxel ? Math.max(4, gridW * 0.7) : 40;
+    generatePerlinNoise(snowCanvas, gridW, color1, color2, 'FractalNoise', 5, 0.5, noiseScale, seed + 10, 1);
     const baseData = ctx.getImageData(0, 0, w, h);
-    const snowData = snowCanvas.getContext('2d')!.getImageData(0, 0, w, h);
+    const snowData = snowCanvas.getContext('2d')!.getImageData(0, 0, gridW, gridH);
     const bd = baseData.data;
     const sd = snowData.data;
     const edgeNoise = new SimplexNoise(seed + 77);
     const stripH = depth * h;
+    // Pre-compute per-column edge once per voxel column so the edge
+    // steps in chunky vertical blocks rather than wiggling per pixel.
+    const edgesByCol = new Array<number>(gridW);
+    const cellW = w / gridW;
+    const cellH = h / gridH;
+    for (let cx = 0; cx < gridW; cx++) {
+      const sampleX = (cx + 0.5) * cellW;
+      const wobble = edgeNoise.simplexNoise(NoiseType.FRACTAL, w, 3, 0.5, 1, 8, sampleX, 0) * stripH * 0.5;
+      let edge = stripH + wobble;
+      if (useVoxel) {
+        // Snap the snowline to the nearest cell row so the strip looks
+        // built out of stacked voxel blocks instead of a smooth slope.
+        edge = Math.round(edge / cellH) * cellH;
+      }
+      edgesByCol[cx] = edge;
+    }
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
-        const wobble = edgeNoise.simplexNoise(NoiseType.FRACTAL, w, 3, 0.5, 1, 8, x, y * 0.3) * stripH * 0.5;
-        const edge = stripH + wobble;
-        const blend = y < edge - 3 ? 1 : y > edge + 3 ? 0 : (edge + 3 - y) / 6;
+        const cx = Math.min(gridW - 1, Math.floor(x * gridW / w));
+        const cy = Math.min(gridH - 1, Math.floor(y * gridH / h));
+        const edge = edgesByCol[cx];
+        const blend = useVoxel
+          ? (y < edge ? 1 : 0)
+          : (y < edge - 3 ? 1 : y > edge + 3 ? 0 : (edge + 3 - y) / 6);
         if (blend > 0) {
           const i = (y * w + x) * 4;
-          bd[i]     = Math.round(bd[i] * (1 - blend) + sd[i] * blend);
-          bd[i + 1] = Math.round(bd[i + 1] * (1 - blend) + sd[i + 1] * blend);
-          bd[i + 2] = Math.round(bd[i + 2] * (1 - blend) + sd[i + 2] * blend);
+          const j = (cy * gridW + cx) * 4;
+          bd[i]     = Math.round(bd[i] * (1 - blend) + sd[j] * blend);
+          bd[i + 1] = Math.round(bd[i + 1] * (1 - blend) + sd[j + 1] * blend);
+          bd[i + 2] = Math.round(bd[i + 2] * (1 - blend) + sd[j + 2] * blend);
         }
       }
     }
