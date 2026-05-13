@@ -56,7 +56,7 @@ function CS({ color, onChange }: { color: string; onChange: (c: string) => void 
 }
 
 const DiceBtn = ({ onClick }: { onClick: () => void }) => (
-  <button type="button" onClick={onClick} title="Randomize seed" style={{ padding: '2px 6px', fontSize: '0.85rem', cursor: 'pointer', lineHeight: 1 }}>&#x1F3B2;</button>
+  <button type="button" onClick={onClick} title="Randomize seed" className="btn-icon">&#x1F3B2;</button>
 );
 
 export default function TextureGenerator({ hideMapPanel = false }: { hideMapPanel?: boolean } = {}) {
