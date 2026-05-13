@@ -2036,6 +2036,23 @@ input[type='range'] {
   font-size: 12px;
 }
 
+/* Helper text below an inspector section header. Used in the
+   texture-mode Block settings panel to explain which controls apply
+   to which rendering pipeline. */
+.wb-inspector-note {
+  margin: 0 0 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.wb-block-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
 .voxel-editor {
   display: flex;
   flex-direction: column;

@@ -1615,6 +1615,42 @@ export default function BlockWorkbench() {
     for (const f of ['top', 'side', 'bottom'] as FaceName[]) copyFaceTo(f);
   };
 
+  // Block-level shuffle for texture-rendered blocks: bump each face
+  // config's seed and re-render so the user gets a new variation of
+  // the same preset without leaving the Block inspector.
+  const randomizeFaceTextureSeeds = () => {
+    const tempCanvas = document.createElement('canvas');
+    for (const face of ['top', 'side', 'bottom'] as FaceName[]) {
+      const cfg = faceConfigs[face];
+      if (!cfg) continue;
+      const nextSeed = Math.floor(Math.random() * 9999) + 1;
+      const nextCfg: FaceTextureConfig = { ...cfg, seed: nextSeed };
+      tempCanvas.width = nextCfg.size;
+      tempCanvas.height = nextCfg.size;
+      renderFaceTexture(tempCanvas, nextCfg);
+      setImgs[face](tempCanvas.toDataURL('image/png'));
+      setFaceConfigs[face](nextCfg);
+    }
+  };
+
+  // Re-render every loaded texture face with its current config. Useful
+  // after the user changed something the Block inspector exposes that
+  // affects the underlying face configs (currently only seeds; future
+  // unified settings would slot in here).
+  const regenerateTextureFaces = () => {
+    const tempCanvas = document.createElement('canvas');
+    for (const face of ['top', 'side', 'bottom'] as FaceName[]) {
+      const cfg = faceConfigs[face];
+      if (!cfg) continue;
+      tempCanvas.width = cfg.size;
+      tempCanvas.height = cfg.size;
+      renderFaceTexture(tempCanvas, cfg);
+      setImgs[face](tempCanvas.toDataURL('image/png'));
+    }
+  };
+
+  const anyTextureConfig = !!(topConfig || sideConfig || bottomConfig);
+
   const buildProject = useCallback((name: string): VoxelCraftProject => {
     let thumbnail: string | undefined;
     if (isoRef.current) {
@@ -2350,7 +2386,8 @@ export default function BlockWorkbench() {
                 className={`type-btn ${editorMode === 'voxel' ? 'active' : ''}`}
                 onClick={() => setEditorMode('voxel')}
                 aria-pressed={editorMode === 'voxel'}
-              >Voxel Block</button>
+                title="Block-level settings (rendering style adapts to the loaded preset)"
+              >Block</button>
               <button
                 type="button"
                 className={`type-btn ${editorMode === 'normal' ? 'active' : ''}`}
@@ -2377,25 +2414,16 @@ export default function BlockWorkbench() {
             )}
             {editorMode === 'voxel' && previewSource === 'voxel' && (
               <p className="wb-inspector-hint">
-                Tweak any setting below and the preview updates live. Pick a
-                voxel preset from the library to reset to a known starting
-                point.
+                Voxel rendering is active. Tweak any setting below and the
+                preview updates live.
               </p>
             )}
             {editorMode === 'voxel' && previewSource === 'texture' && (
-              <>
-                <p className="wb-inspector-hint">
-                  A texture preset is on screen. Adjustments here are saved,
-                  but won't show in the preview until you switch to voxel
-                  rendering — picking a voxel preset does this, or you can
-                  convert the current texture preview now.
-                </p>
-                <button
-                  type="button"
-                  className="btn-small wb-render-voxel-btn"
-                  onClick={renderVoxelToAllFaces}
-                >Render current settings as voxel</button>
-              </>
+              <p className="wb-inspector-hint">
+                Texture rendering is active. Block-level settings apply to
+                the texture-rendered preview. Per-face textures are edited
+                in the <strong>Texture</strong> tab.
+              </p>
             )}
             {editorMode === 'normal' && (
               <p className="wb-inspector-hint">
@@ -2411,10 +2439,51 @@ export default function BlockWorkbench() {
           </div>
         )}
 
-        {editorMode === 'voxel' && (
+        {editorMode === 'voxel' && previewSource === 'texture' && (
           <div className="voxel-editor">
             <div className="settings-panel">
-              <h3>Block Settings</h3>
+              <h3>Block Settings — Texture</h3>
+              <p className="wb-inspector-note">
+                The preview is rendered from a texture preset. The
+                voxel-only block controls (resolution, render style,
+                side blend, transition) only take effect once you
+                convert this block to voxel rendering.
+              </p>
+              {anyTextureConfig ? (
+                <div className="wb-block-actions">
+                  <button
+                    type="button"
+                    className="btn-small"
+                    onClick={randomizeFaceTextureSeeds}
+                    title="Pick new random seeds for every face and re-render with the same preset"
+                  >Randomize face seeds</button>
+                  <button
+                    type="button"
+                    className="btn-small"
+                    onClick={regenerateTextureFaces}
+                    title="Re-render every face with its current texture config"
+                  >Re-render faces</button>
+                </div>
+              ) : (
+                <p className="wb-inspector-note">
+                  Tip: pick a block preset from the library or capture a
+                  face in the Texture tab to enable these actions.
+                </p>
+              )}
+              <button
+                type="button"
+                className="btn-small wb-render-voxel-btn"
+                onClick={renderVoxelToAllFaces}
+                title="Switch the preview to voxel rendering using the current voxel state"
+              >Convert to voxel rendering</button>
+            </div>
+          </div>
+        )}
+
+        {editorMode === 'voxel' && previewSource === 'voxel' && (
+          <div className="voxel-editor">
+            <div className="settings-panel">
+              <h3>Block Settings — Voxel</h3>
               <div className="settings-row"><label>Style</label><select value={vxRenderStyle} onChange={e => setVxRenderStyle(e.target.value as VoxelRenderStyle)}><option value="pixelated">Pixelated</option><option value="cartoon">Cartoon</option><option value="realistic">Realistic</option><option value="painterly">Painterly</option><option value="flat">Flat / Minimal</option></select></div>
               <div className="settings-row"><label>Resolution</label><select value={vxResolution} onChange={e => setVxResolution(parseInt(e.target.value))}><option value="8">8×8</option><option value="16">16×16</option><option value="32">32×32</option><option value="64">64×64</option><option value="128">128×128</option><option value="256">256×256</option><option value="512">512×512</option><option value="1024">1024×1024</option></select></div>
               <SliderControl label="Seed" value={vxSeed} min={1} max={1000} step={1} onChange={setVxSeed} extra={<button type="button" onClick={() => setVxSeed(Math.floor(Math.random() * 999) + 1)} title="Randomize seed" className="btn-icon">&#x1F3B2;</button>} />
