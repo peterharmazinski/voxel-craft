@@ -937,53 +937,39 @@ const VOXEL_CATEGORIES: [string, string[]][] = [
   ['Other', ['lava', 'bouncy', 'glass']],
 ];
 
-function renderGroupedOptions<T extends { label: string }>(
-  presets: Record<string, T>,
-  categories: [string, string[]][],
-) {
-  const categorized = new Set(categories.flatMap(([, keys]) => keys));
-  const uncategorized = Object.keys(presets).filter(k => !categorized.has(k));
-  return (
-    <>
-      {categories.map(([cat, keys]) => {
-        const entries = keys.filter(k => k in presets);
-        if (entries.length === 0) return null;
-        return (
-          <optgroup key={cat} label={cat}>
-            {entries.map(k => <option key={k} value={k}>{presets[k].label}</option>)}
-          </optgroup>
-        );
-      })}
-      {uncategorized.length > 0 && (
-        <optgroup label="Uncategorized">
-          {uncategorized.map(k => <option key={k} value={k}>{presets[k].label}</option>)}
-        </optgroup>
-      )}
-    </>
-  );
-}
-
 /**
- * Visual grid of block presets with thumbnails, collapsible categories,
- * and a search box. Replaces the old dropdown for the Library column.
+ * Visual grid of presets with thumbnails, collapsible categories, and a
+ * search box. Works for any preset type that has a `label` field; the
+ * caller provides a `renderThumb` function that draws each preset into a
+ * given off-screen canvas at whatever native size it wants. The grid
+ * scales that result down to 64×64 for the thumbnail cache.
  *
- * Thumbnails are rendered lazily (one per idle frame) by drawing each
- * preset's `side` face at full size into an off-screen canvas, then
- * scaling down into a 64×64 thumb. Results are cached in component
- * state so they persist as the user types in the search box.
+ * Thumbnails are generated lazily (one per `requestIdleCallback` tick)
+ * in category order so above-the-fold cards appear first. The cache
+ * lives in component state and persists across search-keystroke
+ * re-renders.
  */
-function BlockPresetGrid({ presets, categories, activeKey, onPick }: {
-  presets: Record<string, BlockPreset>;
+function PresetGrid<T extends { label: string }>({
+  presets,
+  categories,
+  activeKey,
+  onPick,
+  renderThumb,
+  storageKey,
+  searchPlaceholder = 'Search presets…',
+}: {
+  presets: Record<string, T>;
   categories: [string, string[]][];
   activeKey: string;
   onPick: (key: string) => void;
+  renderThumb: (canvas: HTMLCanvasElement, preset: T) => void;
+  storageKey: string;
+  searchPlaceholder?: string;
 }) {
   const [search, setSearch] = useState('');
-  const [collapsed, setCollapsed] = useLocalState<Record<string, boolean>>('bw_libCollapsed', {});
+  const [collapsed, setCollapsed] = useLocalState<Record<string, boolean>>(storageKey, {});
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
 
-  // Lazy thumbnail generation, prioritised by category order so above-the-fold cards
-  // appear first. Cancellable on unmount via a flag.
   useEffect(() => {
     let cancelled = false;
     const orderedFromCategories = categories.flatMap(([, ks]) => ks.filter(k => k in presets));
@@ -1002,10 +988,7 @@ function BlockPresetGrid({ presets, categories, activeKey, onPick }: {
       if (cancelled || i >= queue.length) return;
       const key = queue[i];
       try {
-        const config = presets[key].side;
-        renderCanvas.width = config.size;
-        renderCanvas.height = config.size;
-        renderFaceTexture(renderCanvas, config);
+        renderThumb(renderCanvas, presets[key]);
         tctx.clearRect(0, 0, 64, 64);
         tctx.drawImage(renderCanvas, 0, 0, 64, 64);
         const dataUrl = thumbCanvas.toDataURL('image/png');
@@ -1022,7 +1005,7 @@ function BlockPresetGrid({ presets, categories, activeKey, onPick }: {
 
     generateOne(0);
     return () => { cancelled = true; };
-  }, [presets, categories]);
+  }, [presets, categories, renderThumb]);
 
   const q = search.trim().toLowerCase();
   const matches = (key: string) => !q || presets[key].label.toLowerCase().includes(q);
@@ -1040,17 +1023,16 @@ function BlockPresetGrid({ presets, categories, activeKey, onPick }: {
       <input
         type="search"
         className="preset-search"
-        placeholder="Search presets…"
+        placeholder={searchPlaceholder}
         value={search}
         onChange={e => setSearch(e.target.value)}
-        aria-label="Search presets"
+        aria-label={searchPlaceholder}
       />
 
       {allCategories.map(([cat, keys]) => {
         const filteredKeys = keys.filter(k => k in presets && matches(k));
         if (filteredKeys.length === 0) return null;
         totalMatches += filteredKeys.length;
-        // When searching, force all matching categories open
         const isCollapsed = !!collapsed[cat] && !q;
         return (
           <div key={cat} className="preset-category">
@@ -1094,6 +1076,21 @@ function BlockPresetGrid({ presets, categories, activeKey, onPick }: {
     </div>
   );
 }
+
+// Stable thumbnail renderers — defined at module scope so PresetGrid's
+// useEffect dependency on `renderThumb` doesn't churn.
+const renderBlockPresetThumb = (canvas: HTMLCanvasElement, preset: BlockPreset) => {
+  const config = preset.side;
+  canvas.width = config.size;
+  canvas.height = config.size;
+  renderFaceTexture(canvas, config);
+};
+
+const renderVoxelPresetThumb = (canvas: HTMLCanvasElement, preset: VoxelPreset) => {
+  // Use a stable resolution and seed so thumbs are consistent across
+  // sessions; 16×16 is fast and reads well as a 64×64 pixelated card.
+  generateVoxelBlockFace(canvas, 128, preset.side, 16, 42);
+};
 
 export default function BlockWorkbench() {
   const topRef = useRef<HTMLCanvasElement>(null);
@@ -1713,11 +1710,14 @@ export default function BlockWorkbench() {
             <h3>Block Presets</h3>
           </header>
           <div className="wb-section-body wb-library-body">
-            <BlockPresetGrid
+            <PresetGrid
               presets={WORKBENCH_PRESETS}
               categories={WORKBENCH_CATEGORIES}
               activeKey={activePresetKey}
               onPick={applyPreset}
+              renderThumb={renderBlockPresetThumb}
+              storageKey="bw_libCollapsed"
+              searchPlaceholder="Search block presets…"
             />
           </div>
         </section>
@@ -1890,15 +1890,25 @@ export default function BlockWorkbench() {
 
         {editorMode === 'voxel' && (
           <div className="voxel-editor">
+            <section className="wb-section">
+              <header className="wb-section-header">
+                <h3>Voxel Presets</h3>
+              </header>
+              <div className="wb-section-body wb-library-body">
+                <PresetGrid
+                  presets={VOXEL_PRESETS}
+                  categories={VOXEL_CATEGORIES}
+                  activeKey={activeVxPresetKey}
+                  onPick={applyVoxelPreset}
+                  renderThumb={renderVoxelPresetThumb}
+                  storageKey="bw_vxLibCollapsed"
+                  searchPlaceholder="Search voxel presets…"
+                />
+              </div>
+            </section>
+
             <div className="settings-panel">
               <h3>Block Settings</h3>
-              <div className="settings-row">
-                <label>Preset</label>
-                <select value={activeVxPresetKey} onChange={e => { if (e.target.value) applyVoxelPreset(e.target.value); }}>
-                  <option value="" disabled>Choose…</option>
-                  {renderGroupedOptions(VOXEL_PRESETS, VOXEL_CATEGORIES)}
-                </select>
-              </div>
               <div className="settings-row"><label>Style</label><select value={vxRenderStyle} onChange={e => setVxRenderStyle(e.target.value as VoxelRenderStyle)}><option value="pixelated">Pixelated</option><option value="cartoon">Cartoon</option><option value="realistic">Realistic</option><option value="painterly">Painterly</option><option value="flat">Flat / Minimal</option></select></div>
               <div className="settings-row"><label>Resolution</label><select value={vxResolution} onChange={e => setVxResolution(parseInt(e.target.value))}><option value="8">8×8</option><option value="16">16×16</option><option value="32">32×32</option><option value="64">64×64</option><option value="128">128×128</option><option value="256">256×256</option><option value="512">512×512</option><option value="1024">1024×1024</option></select></div>
               <SliderControl label="Seed" value={vxSeed} min={1} max={1000} step={1} onChange={setVxSeed} extra={<button type="button" onClick={() => setVxSeed(Math.floor(Math.random() * 999) + 1)} title="Randomize seed" className="btn-icon">&#x1F3B2;</button>} />
