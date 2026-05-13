@@ -1992,6 +1992,32 @@ input[type='range'] {
   font-weight: 600;
 }
 
+/* A button rendered inline inside a hint paragraph — visually behaves
+   like a link so it doesn't look like an action button on its own. */
+.wb-inline-link {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.wb-inline-link:hover {
+  color: var(--accent-hover);
+}
+
+.wb-inline-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 /* Highlight ring + soft pulse on the "Generate All Faces" button when
    the user is in voxel mode but their preview is texture-sourced —
    helps them notice that their slider tweaks need an explicit click

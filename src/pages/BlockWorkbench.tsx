@@ -51,6 +51,14 @@ interface VoxelPreset {
   sideMode: VoxelBlockSideMode;
   sideSplitPos: number;
   sideTopFace: VoxelBlockFace;
+  /* Optional block-level settings. Anything left undefined keeps the
+     value the user currently has dialed in, so picking a preset doesn't
+     wipe out unrelated tweaks. */
+  renderStyle?: VoxelRenderStyle;
+  resolution?: number;
+  seed?: number;
+  transitionPattern?: SideTransitionPattern;
+  transitionNoise?: number;
 }
 
 const DEFAULT_VOXEL_FACE = (base: VoxelBaseType, ores: VoxelOreLayer[] = []): VoxelBlockFace => ({
@@ -286,6 +294,7 @@ const VOXEL_PRESETS: Record<string, VoxelPreset> = {
     bottom: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#9b7653', baseColor2: '#7a5c3a', baseColor3: '#5c4028' },
     sideMode: 'split', sideSplitPos: 0.2,
     sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#4a8c2a', baseColor2: '#3d7522', baseColor3: '#2d5a18', grainStrength: 0.4 },
+    transitionPattern: 'mossy', transitionNoise: 0.5,
   },
   stone_ore: { label: 'Iron Ore',
     top: { ...DEFAULT_VOXEL_FACE('stone'), oreLayers: [{ color: '#888899', highlightColor: '#ccccdd', density: 5, clusterSize: 2, name: 'Iron', style: 'metal', oreScale: 1.5 }] },
@@ -323,6 +332,7 @@ const VOXEL_PRESETS: Record<string, VoxelPreset> = {
     bottom: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#9b7653', baseColor2: '#7a5c3a', baseColor3: '#5c4028' },
     sideMode: 'split', sideSplitPos: 0.2,
     sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#4a8c2a', baseColor2: '#3d7522', baseColor3: '#2d5a18', grainStrength: 0.3 },
+    transitionPattern: 'mossy', transitionNoise: 0.6,
   },
   leaves: { label: 'Leaves',
     top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#2d8c2a', baseColor2: '#1f6b1e', baseColor3: '#145514', grainDirection: 'both', grainStrength: 0.6, depthShading: 0.3 },
@@ -1482,6 +1492,14 @@ export default function BlockWorkbench() {
     setVxSideMode(p.sideMode);
     setVxSideSplitPos(p.sideSplitPos);
     setVxSideTopFace(p.sideTopFace);
+    // Apply block-level settings if the preset specifies them, so the
+    // Voxel Block Settings panel mirrors the preset and the user can
+    // adjust from a known starting point.
+    if (p.renderStyle !== undefined) setVxRenderStyle(p.renderStyle);
+    if (p.resolution !== undefined) setVxResolution(p.resolution);
+    if (p.seed !== undefined) setVxSeed(p.seed);
+    if (p.transitionPattern !== undefined) setVxTransitionPattern(p.transitionPattern);
+    if (p.transitionNoise !== undefined) setVxTransitionNoise(p.transitionNoise);
     setActiveVxPresetKey(name);
     // Picking a voxel preset from the library should drop the user into
     // voxel mode automatically — otherwise the selection appears to do nothing.
@@ -2164,7 +2182,14 @@ export default function BlockWorkbench() {
                 </button>
                 {previewSource === 'texture' && (
                   <p className="wb-inspector-hint">
-                    Your preview came from a texture preset. Voxel settings won't apply until you click <strong>Generate All Faces</strong>.
+                    Your preview came from a texture preset, so the voxel
+                    settings below don't match what's on screen. Switch to the{' '}
+                    <button
+                      type="button"
+                      className="wb-inline-link"
+                      onClick={() => setEditorMode('texture')}
+                    >Texture tab</button>{' '}
+                    to tweak the preset, or click <strong>Generate All Faces</strong> to replace the preview with a voxel-rendered block.
                   </p>
                 )}
               </>
