@@ -16,7 +16,7 @@ import {
   type SideTransitionPattern,
   type VoxelRenderStyle,
 } from '../utils/textureGenerators';
-import { renderFaceTexture, applySnowOverlay, applyBlockStylePostProcess, compositeTextureSide, type FaceTextureConfig, type SnowOverlayOptions, type BlockRenderStyle } from '../utils/renderTexture';
+import { renderFaceTexture, applySnowOverlay, applyBlockStylePostProcess, compositeTextureSide, applyGlow, type FaceTextureConfig, type SnowOverlayOptions, type GlowOptions, type BlockRenderStyle } from '../utils/renderTexture';
 import {
   generateNormalMap, generateDisplacementMap, generateAOMap, generateSpecularMap,
   DEFAULT_NORMAL, DEFAULT_DISPLACEMENT, DEFAULT_AO, DEFAULT_SPECULAR,
@@ -1502,6 +1502,16 @@ export default function BlockWorkbench() {
   const [snowColor2, setSnowColor2] = useLocalState('bw_snowC2', '#d8e4f0');
   const [snowSeed, setSnowSeed] = useLocalState('bw_snowSeed', 42);
 
+  // Block-level glow / emission. Applied as a bloom post-process to each
+  // face before iso compositing, so the glow stays per-face (a glowing
+  // ore on the top face doesn't leak onto the sides).
+  const [glowEnabled, setGlowEnabled] = useLocalState('bw_glow', false);
+  const [glowIntensity, setGlowIntensity] = useLocalState('bw_glowI', 0.9);
+  const [glowRadius, setGlowRadius] = useLocalState('bw_glowR', 10);
+  const [glowThreshold, setGlowThreshold] = useLocalState('bw_glowT', 0.55);
+  const [glowColorMode, setGlowColorMode] = useLocalState<'auto' | 'custom'>('bw_glowCM', 'auto');
+  const [glowColor, setGlowColor] = useLocalState('bw_glowC', '#ffcc44');
+
   const [exportSize, setExportSize] = useLocalState<number>('bw_exportSize', 256);
   const [tilingPreview, setTilingPreview] = useLocalState('bw_tiling', false);
   const [zipIncludeDiffuse, setZipIncludeDiffuse] = useLocalState('bw_zipDiff', true);
@@ -1658,6 +1668,20 @@ export default function BlockWorkbench() {
       if (sideRef.current && sideImg) applySnowOverlay(sideRef.current, snowOpts, 'side');
     }
 
+    // Glow runs AFTER snow so a snowy-but-glowing block (e.g. molten
+    // rock with frosty edges) still gets its bloom over the snow layer.
+    if (glowEnabled) {
+      const glowOpts: GlowOptions = {
+        intensity: glowIntensity,
+        radius: glowRadius,
+        threshold: glowThreshold,
+        color: glowColorMode === 'custom' ? glowColor : 'auto',
+      };
+      if (topRef.current && topImg) applyGlow(topRef.current, glowOpts);
+      if (sideRef.current && sideImg) applyGlow(sideRef.current, glowOpts);
+      if (bottomRef.current && bottomImg) applyGlow(bottomRef.current, glowOpts);
+    }
+
     if (isoRef.current && topRef.current && sideRef.current && bottomRef.current) {
       // Draw background
       const isoCtx = isoRef.current.getContext('2d')!;
@@ -1714,7 +1738,7 @@ export default function BlockWorkbench() {
     }
 
     setRenderCount(c => c + 1);
-  }, [topImg, sideImg, bottomImg, drawImg, applyLighting, litPreview, normalSettings, bgMode, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed, tilingPreview, activeFace, previewSource, vxResolution]);
+  }, [topImg, sideImg, bottomImg, drawImg, applyLighting, litPreview, normalSettings, bgMode, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed, tilingPreview, activeFace, previewSource, vxResolution, glowEnabled, glowIntensity, glowRadius, glowThreshold, glowColorMode, glowColor]);
 
   useEffect(() => { updatePreview(); }, [updatePreview]);
 
@@ -2606,6 +2630,10 @@ export default function BlockWorkbench() {
               {' '}Snow Layer
             </label>
             <label>
+              <input type="checkbox" checked={glowEnabled} onChange={e => setGlowEnabled(e.target.checked)} />
+              {' '}Glow / Emission
+            </label>
+            <label>
               <input type="checkbox" checked={tilingPreview} onChange={e => setTilingPreview(e.target.checked)} />
               {' '}Tiling (3x3)
             </label>
@@ -2674,6 +2702,73 @@ export default function BlockWorkbench() {
                   aria-label="Snow noise seed"
                 />
               </label>
+            </div>
+          )}
+
+          {glowEnabled && (
+            <div className="wb-snow-controls" role="group" aria-label="Glow / emission settings">
+              <label>
+                <span>Intensity:</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={2}
+                  step={0.05}
+                  value={glowIntensity}
+                  onChange={e => setGlowIntensity(+e.target.value)}
+                  aria-label="Glow intensity"
+                  aria-valuetext={glowIntensity.toFixed(2)}
+                />
+                <em aria-hidden="true">{glowIntensity.toFixed(2)}</em>
+              </label>
+              <label>
+                <span>Radius:</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={32}
+                  step={1}
+                  value={glowRadius}
+                  onChange={e => setGlowRadius(+e.target.value)}
+                  aria-label="Glow blur radius"
+                  aria-valuetext={`${glowRadius} pixels`}
+                />
+                <em aria-hidden="true">{glowRadius}px</em>
+              </label>
+              <label>
+                <span>Threshold:</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.02}
+                  value={glowThreshold}
+                  onChange={e => setGlowThreshold(+e.target.value)}
+                  aria-label="Glow brightness threshold"
+                  aria-valuetext={`${Math.round(glowThreshold * 100)} percent`}
+                  title="Pixels brighter than this contribute to the glow"
+                />
+                <em aria-hidden="true">{Math.round(glowThreshold * 100)}%</em>
+              </label>
+              <span className="wb-snow-color-group">
+                <span>Color:</span>
+                <select
+                  value={glowColorMode}
+                  onChange={e => setGlowColorMode(e.target.value as 'auto' | 'custom')}
+                  aria-label="Glow color mode"
+                >
+                  <option value="auto">From texture</option>
+                  <option value="custom">Custom</option>
+                </select>
+                {glowColorMode === 'custom' && (
+                  <input
+                    type="color"
+                    value={glowColor}
+                    onChange={e => setGlowColor(e.target.value)}
+                    aria-label="Custom glow color"
+                  />
+                )}
+              </span>
             </div>
           )}
 

@@ -433,6 +433,84 @@ export function compositeTextureSide(
   sideCtx.putImageData(sideData, 0, 0);
 }
 
+// ─── Block-level glow / emission ─────────────────────────────────────────
+// Adds a bloom-style halo around bright pixels of a face image, then
+// additively composites it back onto the source. The result is a soft
+// emissive look on hot ores (lava, glowstone, hellstone, etc.) without
+// any real shader pipeline.
+export interface GlowOptions {
+  intensity: number;   // 0–2: multiplier on the additive blend
+  radius: number;      // 1–32: blur radius in source pixels
+  threshold: number;   // 0–1: luma above which a pixel contributes to glow
+  color?: string;      // 'auto' or hex — when set, all glow takes this colour
+}
+
+export function applyGlow(canvas: HTMLCanvasElement, opts: GlowOptions) {
+  const { intensity, radius, threshold } = opts;
+  if (intensity <= 0 || radius <= 0) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  const ctx = canvas.getContext('2d')!;
+  const baseImg = ctx.getImageData(0, 0, w, h);
+  const bd = baseImg.data;
+
+  // Parse the optional override colour once.
+  const useAuto = !opts.color || opts.color === 'auto';
+  let cr = 255, cg = 255, cb = 255;
+  if (!useAuto && opts.color && opts.color.startsWith('#') && opts.color.length === 7) {
+    const n = parseInt(opts.color.slice(1), 16);
+    cr = (n >> 16) & 0xff; cg = (n >> 8) & 0xff; cb = n & 0xff;
+  }
+
+  // Build the glow source: bright pixels keep their colour (or the
+  // override), everything below threshold is fully transparent so it
+  // can't leak into the blur halo.
+  const glowSrc = new Uint8ClampedArray(bd.length);
+  for (let i = 0; i < bd.length; i += 4) {
+    if (bd[i + 3] === 0) { glowSrc[i + 3] = 0; continue; }
+    const luma = (bd[i] * 0.299 + bd[i + 1] * 0.587 + bd[i + 2] * 0.114) / 255;
+    if (luma < threshold) { glowSrc[i + 3] = 0; continue; }
+    const t = (luma - threshold) / Math.max(0.001, 1 - threshold);
+    if (useAuto) {
+      glowSrc[i]     = bd[i] * t;
+      glowSrc[i + 1] = bd[i + 1] * t;
+      glowSrc[i + 2] = bd[i + 2] * t;
+    } else {
+      glowSrc[i]     = cr * t;
+      glowSrc[i + 1] = cg * t;
+      glowSrc[i + 2] = cb * t;
+    }
+    glowSrc[i + 3] = 255;
+  }
+
+  const glowCanvas = document.createElement('canvas');
+  glowCanvas.width = w;
+  glowCanvas.height = h;
+  const glowCtx = glowCanvas.getContext('2d')!;
+  glowCtx.putImageData(new ImageData(glowSrc, w, h), 0, 0);
+
+  // Blur the glow layer with the native canvas filter — gives a smooth
+  // Gaussian halo without us shipping a separable-blur loop. Falls back
+  // to no-op blur if the browser somehow doesn't support it (so the
+  // additive composite at least adds the un-blurred bright pixels).
+  const blurred = document.createElement('canvas');
+  blurred.width = w;
+  blurred.height = h;
+  const blurCtx = blurred.getContext('2d')!;
+  blurCtx.filter = `blur(${radius}px)`;
+  blurCtx.drawImage(glowCanvas, 0, 0);
+  blurCtx.filter = 'none';
+
+  // Additive composite back over the source. globalAlpha scales the
+  // contribution so intensity > 1 visibly brightens up to white, while
+  // < 1 leaves a subtle halo.
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = Math.max(0, Math.min(2, intensity));
+  ctx.drawImage(blurred, 0, 0);
+  ctx.restore();
+}
+
 export interface SnowOverlayOptions {
   color1: string;
   color2: string;
