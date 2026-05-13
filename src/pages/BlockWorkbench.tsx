@@ -327,11 +327,11 @@ const ORE_DESCRIPTORS: OreDescriptor[] = [
   // ── Honey & bee ─────────────────────────────────────────────────────
   // Honey reads great with a soft warm glow — bees not so much, but
   // the comb shapes still come through nicely with hexagonal flecks.
-  { key: 'honey_block',        label: 'Honey Block',       bgColors: ['#f0c850', '#d8a830', '#b08818'], oreColor: '#ffe070', highlightColor: '#fff0a0', shape: 'round',    count: 8,  minSize: 14, maxSize: 26, oreName: 'Drip',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 630,
+  { key: 'honey_block',        label: 'Honey Block',       bgColors: ['#f0c850', '#d8a830', '#b08818'], oreColor: '#ffe070', highlightColor: '#fff0a0', shape: 'hexagon',  count: 7,  minSize: 18, maxSize: 30, oreName: 'Cell',     useGradient: true,  voxelStyle: 'crystal', seedBase: 630,
     glow: { intensity: 0.5, radius: 14, threshold: 0.65, color: '#ffd060' } },
   { key: 'honeycomb',          label: 'Honeycomb',         bgColors: ['#e8b840', '#c89820', '#a87810'], oreColor: '#ffd860', highlightColor: '#fff0a0', shape: 'hexagon',  count: 9,  minSize: 18, maxSize: 32, oreName: 'Comb',     useGradient: true,  voxelStyle: 'crystal', seedBase: 633 },
   { key: 'waxed_honeycomb',    label: 'Waxed Honeycomb',   bgColors: ['#a07820', '#806010', '#604810'], oreColor: '#c89840', highlightColor: '#e0b860', shape: 'hexagon',  count: 8,  minSize: 16, maxSize: 28, oreName: 'Wax',      useGradient: true,  voxelStyle: 'crystal', seedBase: 636 },
-  { key: 'bee_hive',           label: 'Bee Hive',          bgColors: ['#c8a040', '#a88020', '#886018'], oreColor: '#583810', highlightColor: '#785820', shape: 'round',    count: 14, minSize: 6,  maxSize: 12, oreName: 'Stripe',   useGradient: false, voxelStyle: 'metal',   seedBase: 639 },
+  { key: 'bee_hive',           label: 'Bee Hive',          bgColors: ['#c8a040', '#a88020', '#886018'], oreColor: '#583810', highlightColor: '#785820', shape: 'hexagon',  count: 10, minSize: 14, maxSize: 24, oreName: 'Cell',     useGradient: true,  voxelStyle: 'crystal', seedBase: 639 },
 
   // ── Alien ───────────────────────────────────────────────────────────
   { key: 'alien_flesh',        label: 'Alien Flesh',       bgColors: ['#5a3868', '#4a2858', '#381848'], oreColor: '#aa50aa', highlightColor: '#dd88dd', shape: 'round',    count: 14, minSize: 10, maxSize: 22, oreName: 'Vein',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 642 },
