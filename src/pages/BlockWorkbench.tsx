@@ -136,7 +136,7 @@ function makeOreTexturePreset(d: OreDescriptor): BlockPreset {
   }];
   const mkParams = (count: number, bg: [string, string, string]) => ({
     color1: bg[0], color2: bg[1], color3: bg[2],
-    bgNoise: 0.5, bgPatch: 30, outline: 1.2, shadow: 0.5,
+    bgNoise: 0.5, bgPatch: 30, outline: 0.8, shadow: 0.5,
     ores: oreLayer(count),
   });
   return {
@@ -184,7 +184,7 @@ const ORE_DESCRIPTORS: OreDescriptor[] = [
   { key: 'lapis_ore',          label: 'Lapis Lazuli Ore', oreColor: '#2244aa', highlightColor: '#5577dd', shape: 'round',    count: 12, minSize: 10, maxSize: 22, oreName: 'Lapis',          useGradient: true,  voxelStyle: 'crystal', seedBase: 400 },
   { key: 'nether_quartz_ore',  label: 'Nether Quartz',    bg: 'netherrack', oreColor: '#f0e8e0', highlightColor: '#ffffff', shape: 'diamond',  count: 14, minSize: 8,  maxSize: 20, oreName: 'Quartz',         useGradient: true,  voxelStyle: 'crystal', seedBase: 403 },
   { key: 'amethyst_ore',       label: 'Amethyst',         oreColor: '#aa66cc', highlightColor: '#dd99ee', shape: 'hexagon',  count: 8,  minSize: 12, maxSize: 26, oreName: 'Amethyst',       useGradient: true,  voxelStyle: 'crystal', seedBase: 406 },
-  { key: 'ancient_debris',     label: 'Ancient Debris',   bg: 'netherrack', oreColor: '#5a4030', highlightColor: '#8a6040', shape: 'round',    count: 5,  minSize: 18, maxSize: 40, oreName: 'Debris',         useGradient: false, voxelStyle: 'metal',   seedBase: 409 },
+  { key: 'ancient_debris',     label: 'Ancient Debris',   bg: 'netherrack', oreColor: '#5a4030', highlightColor: '#8a6040', shape: 'round',    count: 5,  minSize: 12, maxSize: 26, oreName: 'Debris',         useGradient: false, voxelStyle: 'metal',   seedBase: 409 },
   { key: 'glowstone',          label: 'Glowstone',        oreColor: '#ffcc44', highlightColor: '#ffee88', shape: 'round',    count: 22, minSize: 8,  maxSize: 18, oreName: 'Glowstone',      useGradient: true,  voxelStyle: 'jewel',   seedBase: 412,
     glow: { intensity: 0.9, radius: 12, threshold: 0.55, color: 'auto' } },
 
@@ -197,12 +197,12 @@ const ORE_DESCRIPTORS: OreDescriptor[] = [
   { key: 'obsidian_shards', label: 'Obsidian Shards', bg: 'basalt', oreColor: '#1a0822', highlightColor: '#5a3a66', shape: 'triangle', count: 12, minSize: 10, maxSize: 22, oreName: 'Obsidian', useGradient: true,  voxelStyle: 'crystal', seedBase: 430 },
 
   // ── Terraria / RPG metals ──
-  { key: 'silver_ore',     label: 'Silver Ore',    oreColor: '#d0d0d8', highlightColor: '#f0f0f8', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Silver',     useGradient: false, voxelStyle: 'metal',   seedBase: 433 },
-  { key: 'tin_ore',        label: 'Tin Ore',       oreColor: '#a8a8b0', highlightColor: '#c8c8d0', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Tin',        useGradient: false, voxelStyle: 'metal',   seedBase: 436 },
+  { key: 'silver_ore',     label: 'Silver Ore',    oreColor: '#d0d0d8', highlightColor: '#f0f0f8', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Silver',     useGradient: true,  voxelStyle: 'metal',   seedBase: 433 },
+  { key: 'tin_ore',        label: 'Tin Ore',       oreColor: '#a8a8b0', highlightColor: '#c8c8d0', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Tin',        useGradient: true,  voxelStyle: 'metal',   seedBase: 436 },
   { key: 'lead_ore',       label: 'Lead Ore',      oreColor: '#4a4a55', highlightColor: '#6a6a75', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Lead',       useGradient: false, voxelStyle: 'metal',   seedBase: 439 },
-  { key: 'platinum_ore',   label: 'Platinum Ore',  oreColor: '#d8e0e8', highlightColor: '#ffffff', shape: 'hexagon', count: 5,  minSize: 14, maxSize: 30, oreName: 'Platinum',   useGradient: true,  voxelStyle: 'metal',   seedBase: 442 },
+  { key: 'platinum_ore',   label: 'Platinum Ore',  oreColor: '#d8e0e8', highlightColor: '#ffffff', shape: 'round',   count: 8,  minSize: 10, maxSize: 22, oreName: 'Platinum',   useGradient: true,  voxelStyle: 'metal',   seedBase: 442 },
   { key: 'tungsten_ore',   label: 'Tungsten Ore',  oreColor: '#6a6a72', highlightColor: '#8a8a92', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Tungsten',   useGradient: false, voxelStyle: 'metal',   seedBase: 445 },
-  { key: 'mithril_ore',    label: 'Mithril',       oreColor: '#88aabb', highlightColor: '#bbddee', shape: 'hexagon', count: 5,  minSize: 14, maxSize: 30, oreName: 'Mithril',    useGradient: true,  voxelStyle: 'crystal', seedBase: 448 },
+  { key: 'mithril_ore',    label: 'Mithril',       oreColor: '#88aabb', highlightColor: '#bbddee', shape: 'round',   count: 8,  minSize: 10, maxSize: 22, oreName: 'Mithril',    useGradient: true,  voxelStyle: 'crystal', seedBase: 448 },
   { key: 'cobalt_ore',     label: 'Cobalt',        oreColor: '#2266dd', highlightColor: '#4488ff', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Cobalt',     useGradient: true,  voxelStyle: 'metal',   seedBase: 451 },
   { key: 'adamantite_ore', label: 'Adamantite',    oreColor: '#dd2266', highlightColor: '#ff5588', shape: 'hexagon', count: 7,  minSize: 12, maxSize: 26, oreName: 'Adamantite', useGradient: true,  voxelStyle: 'crystal', seedBase: 454 },
   { key: 'chlorophyte_ore', label: 'Chlorophyte',  oreColor: '#44dd44', highlightColor: '#88ff88', shape: 'round',   count: 12, minSize: 8,  maxSize: 20, oreName: 'Chlorophyte', useGradient: true, voxelStyle: 'jewel',   seedBase: 457 },
@@ -216,7 +216,7 @@ const ORE_DESCRIPTORS: OreDescriptor[] = [
   { key: 'cinnabar_ore',   label: 'Cinnabar',      oreColor: '#cc2222', highlightColor: '#ee4444', shape: 'round',   count: 12, minSize: 8,  maxSize: 20, oreName: 'Cinnabar',   useGradient: true,  voxelStyle: 'crystal', seedBase: 472 },
   { key: 'uranium_ore',    label: 'Uranium',       oreColor: '#ccdd44', highlightColor: '#eeff88', shape: 'round',   count: 9,  minSize: 10, maxSize: 22, oreName: 'Uranium',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 475,
     glow: { intensity: 0.7, radius: 14, threshold: 0.55, color: '#ccdd44' } },
-  { key: 'bismuth_ore',    label: 'Bismuth',       oreColor: '#aa66cc', highlightColor: '#66ddcc', shape: 'square',  count: 8,  minSize: 12, maxSize: 26, oreName: 'Bismuth',    useGradient: true,  voxelStyle: 'crystal', seedBase: 478 },
+  { key: 'bismuth_ore',    label: 'Bismuth',       oreColor: '#aa66cc', highlightColor: '#66ddcc', shape: 'diamond', count: 8,  minSize: 10, maxSize: 22, oreName: 'Bismuth',    useGradient: true,  voxelStyle: 'crystal', seedBase: 478 },
 
   // ── Fantasy / magic ──
   { key: 'aether_crystal', label: 'Aether Crystal', bg: 'dark_stone', oreColor: '#aaeeff', highlightColor: '#ffffff', shape: 'diamond', count: 8, minSize: 14, maxSize: 28, oreName: 'Aether', useGradient: true, voxelStyle: 'crystal', seedBase: 481,
@@ -444,15 +444,15 @@ const CUSTOM_TEXTURE_PRESETS: Record<string, BlockPreset> = {
   //    Turbulence variant gives that "many grains of sand" look the
   //    ore factory can't approximate.
   beach_sand: _texPreset('Beach Sand', 'PerlinNoise',
-    { color1: '#fff0c8', color2: '#c8a868', noiseType: 'Turbulence', octaves: 5, persistence: 0.5, scale: 40 }, 1040),
+    { color1: '#f2e0a8', color2: '#c8a050', noiseType: 'FractalNoise', octaves: 7, persistence: 0.4, scale: 9 }, 1040),
   wet_sand: _texPreset('Wet Sand', 'PerlinNoise',
-    { color1: '#d8c098', color2: '#6a5838', noiseType: 'Turbulence', octaves: 5, persistence: 0.5, scale: 35 }, 1043),
+    { color1: '#9e8e68', color2: '#4e3e28', noiseType: 'FractalNoise', octaves: 7, persistence: 0.42, scale: 11 }, 1043),
 
   // ── Stone wall / pebble beach: Voronoi-based StoneWall gives true
   //    rounded stones with mortar, far more convincing than ore
   //    flecks.
   cobblestone_path: _texPreset('Cobblestone Path', 'StoneWall',
-    { color1: '#a89880', color2: '#786858', mortarColor: '#383028', columns: 6, rows: 6, mortarWidth: 4, jitter: 0.9, shading: 0.6, textureNoise: 0.5 }, 1050),
+    { color1: '#a89880', color2: '#786858', mortarColor: '#383028', columns: 12, rows: 10, mortarWidth: 3, jitter: 0.85, shading: 0.5, textureNoise: 0.5 }, 1050),
   pebble_beach: _texPreset('Pebble Beach', 'StoneWall',
     { color1: '#d0c8b8', color2: '#a09888', mortarColor: '#686048', columns: 10, rows: 10, mortarWidth: 2, jitter: 0.7, shading: 0.5, textureNoise: 0.5 }, 1053),
 
@@ -460,7 +460,7 @@ const CUSTOM_TEXTURE_PRESETS: Record<string, BlockPreset> = {
   //    few octaves keep it close to a solid surface with just a hint
   //    of variation.
   concrete_smooth: _texPreset('Concrete (smooth)', 'PerlinNoise',
-    { color1: '#cccac4', color2: '#989488', noiseType: 'FractalNoise', octaves: 4, persistence: 0.4, scale: 30 }, 1060),
+    { color1: '#c8c6c0', color2: '#a0a09a', noiseType: 'FractalNoise', octaves: 5, persistence: 0.35, scale: 11 }, 1060),
 
   // ── Chrome plate: multi-stop linear Gradient for the classic
   //    chrome highlight band.
@@ -484,7 +484,7 @@ const CUSTOM_TEXTURE_PRESETS: Record<string, BlockPreset> = {
   // ── Desserts: PerlinNoise and Gradient give smoother, more
   //    appetizing surfaces than the ore factory could.
   chocolate: _texPreset('Chocolate', 'PerlinNoise',
-    { color1: '#6a3818', color2: '#2a1408', noiseType: 'FractalNoise', octaves: 5, persistence: 0.6, scale: 40 }, 1090),
+    { color1: '#5a3010', color2: '#200c04', noiseType: 'FractalNoise', octaves: 6, persistence: 0.55, scale: 12 }, 1090),
   caramel: _texPreset('Caramel', 'Gradient',
     {
       colors: [
@@ -514,6 +514,49 @@ const CUSTOM_TEXTURE_PRESETS: Record<string, BlockPreset> = {
       gradType: 'radial',
     }, 1110,
     { intensity: 0.4, radius: 18, threshold: 0.75, color: 'auto' }),
+
+  // ── Surfaces overrides: CartoonOre round/flower blobs read poorly
+  //    for these non-ore materials — swap to generators that match
+  //    the actual physical structure of the surface.
+
+  // Gravel: StoneWall with many tiny highly-jittered stones reads as
+  // actual gravel rather than a scatter of round blobs.
+  gravel_path: _texPreset('Gravel Path', 'StoneWall',
+    { color1: '#b0afa8', color2: '#7a7870', mortarColor: '#484840', columns: 20, rows: 17, mortarWidth: 2, jitter: 1.0, shading: 0.35, textureNoise: 0.6 }, 1132),
+
+  // Weathered concrete: Turbulence FractalNoise gives organic staining
+  // (water marks, grime streaks) far better than round "stain" blobs.
+  concrete_weathered: _texPreset('Concrete (weathered)', 'PerlinNoise',
+    { color1: '#a8a8a4', color2: '#6e6e6a', noiseType: 'Turbulence', octaves: 6, persistence: 0.5, scale: 16 }, 1135),
+
+  // Pink Frosting: smooth swirled pastel. CartoonOre tiny white dots
+  // look like polka dots not frosting — FractalNoise at medium scale
+  // gives the swirled cream texture.
+  frosting: _texPreset('Pink Frosting', 'PerlinNoise',
+    { color1: '#ffbbdd', color2: '#dd6699', noiseType: 'FractalNoise', octaves: 5, persistence: 0.48, scale: 22 }, 1138),
+
+  // Ocean Rock: PerlinNoise blends the dark basalt base with mossy
+  // green patches far more naturally than random round "Moss" blobs.
+  ocean_rock: _texPreset('Ocean Rock', 'PerlinNoise',
+    { color1: '#4a6060', color2: '#283838', noiseType: 'FractalNoise', octaves: 6, persistence: 0.5, scale: 14 }, 1141),
+
+  // Kelp Bed: Turbulence with a tall scale gives loose vertical
+  // streaks that suggest swaying fronds better than flower blobs.
+  kelp_bed: _texPreset('Kelp Bed', 'PerlinNoise',
+    { color1: '#6aaa40', color2: '#1a3818', noiseType: 'Turbulence', octaves: 5, persistence: 0.55, scale: 10 }, 1144),
+
+  // ── Honey & Bee: Hexagon tile generator produces proper comb grids.
+  //    CartoonOre scattered blobs (the fallback) look like round bubbles
+  //    and don't read as cells at all, so these override the ore entries.
+  honey_block: _texPreset('Honey Block', 'Hexagon',
+    { color1: '#f0c040', color2: '#d89820', groutColor: '#7a4008', columns: 5, groutSize: 3, shade: 0.1, gradient: true }, 1120,
+    { intensity: 0.5, radius: 14, threshold: 0.65, color: '#ffd060' }),
+  honeycomb: _texPreset('Honeycomb', 'Hexagon',
+    { color1: '#f0b828', color2: '#c88808', groutColor: '#4a2804', columns: 6, groutSize: 5, shade: 0.18, gradient: true }, 1123),
+  waxed_honeycomb: _texPreset('Waxed Honeycomb', 'Hexagon',
+    { color1: '#c89028', color2: '#a07010', groutColor: '#5a3408', columns: 6, groutSize: 6, shade: 0.12, gradient: true }, 1126),
+  bee_hive: _texPreset('Bee Hive', 'Hexagon',
+    { color1: '#b87828', color2: '#906010', groutColor: '#180e04', columns: 7, groutSize: 8, shade: 0.28, gradient: true }, 1129),
 };
 
 const CUSTOM_VOXEL_PRESETS: Record<string, VoxelPreset> = {
@@ -530,8 +573,8 @@ const CUSTOM_VOXEL_PRESETS: Record<string, VoxelPreset> = {
   swamp_water: _voxPreset('Swamp Water', _voxFace('#4a5838', '#3a4828', '#2a3818', _voxOre('#7a8848', '#aab868', 'Algae', 0.8, 2, 'metal', 0.6))),
 
   // Sand voxels: warm earthy bg, very subtle shell/grit accent.
-  beach_sand: _voxPreset('Beach Sand', _voxFace('#e8d8a0', '#d8c890', '#b8a878', _voxOre('#fff8d8', '#ffffff', 'Shell', 0.5, 1.2, 'jewel', 0.4))),
-  wet_sand:   _voxPreset('Wet Sand',   _voxFace('#a89878', '#887858', '#686048', _voxOre('#d0c0a0', '#f0e0c0', 'Shell', 0.5, 1.2, 'metal', 0.4))),
+  beach_sand: _voxPreset('Beach Sand', _voxFace('#e8d090', '#ceb870', '#a89050', _voxOre('#f8f0d0', '#ffffff', 'Shell', 0.3, 1.0, 'jewel', 0.3))),
+  wet_sand:   _voxPreset('Wet Sand',   _voxFace('#8a7a58', '#6a5c3c', '#4e4028', _voxOre('#9e9080', '#b8aa98', 'Grit', 0.5, 1.0, 'metal', 0.35))),
 
   // Stone wall voxels: chunky pebble ore on rocky bg.
   cobblestone_path: _voxPreset('Cobblestone Path', _voxFace('#a89880', '#786858', '#383028', _voxOre('#c0b8a8', '#e0d8c8', 'Cobble', 1.6, 2.5, 'metal', 0.9))),
@@ -558,6 +601,13 @@ const CUSTOM_VOXEL_PRESETS: Record<string, VoxelPreset> = {
   // Moonstone voxels: pearly bg with glowing highlight.
   moonstone: _voxPreset('Moonstone', _voxFace('#e0e8f0', '#c8d0e0', '#889098', _voxOre('#ffffff', '#e0e8ff', 'Glow', 0.6, 2.5, 'crystal', 0.9)),
     { intensity: 0.4, radius: 18, threshold: 0.75, color: 'auto' }),
+
+  // Honey & bee voxels: flat warm amber bg; no ore clutter on these,
+  // the cell structure lives in the texture, not the voxel flecks.
+  honey_block:     _voxPreset('Honey Block',      _voxFace('#e8a820', '#c88010', '#9a6008')),
+  honeycomb:       _voxPreset('Honeycomb',         _voxFace('#e0a010', '#c07808', '#905806')),
+  waxed_honeycomb: _voxPreset('Waxed Honeycomb',   _voxFace('#b88820', '#906010', '#684808')),
+  bee_hive:        _voxPreset('Bee Hive',          _voxFace('#a07028', '#785018', '#503410')),
 };
 
 // Final preset maps: ore-factory entries first, custom-generator
@@ -1159,7 +1209,7 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   },
   grass_block: {
     label: 'Grass Block',
-    top: { type: 'PerlinNoise', size: 256, seed: 1, params: { color1: '#4a8c2a', color2: '#2d5a18', noiseType: 'FractalNoise', scale: 40, octaves: 5, persistence: 0.5 } },
+    top: { type: 'PerlinNoise', size: 256, seed: 1, params: { color1: '#4a8c2a', color2: '#2d5a18', noiseType: 'FractalNoise', scale: 14, octaves: 6, persistence: 0.45 } },
     side: { type: 'PerlinNoise', size: 256, seed: 2, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.6, grassOverlay: { color1: '#4a8c2a', color2: '#2d5a18', height: 0.15, seed: 1 } } },
     bottom: { type: 'PerlinNoise', size: 256, seed: 3, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.6 } },
   },
@@ -1177,20 +1227,20 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   },
   sand_block: {
     label: 'Sand Block',
-    top: { type: 'PerlinNoise', size: 256, seed: 5, params: { color1: '#f0e0a0', color2: '#d4c080', noiseType: 'FractalNoise', scale: 25, octaves: 4, persistence: 0.4 } },
-    side: { type: 'PerlinNoise', size: 256, seed: 6, params: { color1: '#e0d090', color2: '#c4b070', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.4 } },
-    bottom: { type: 'PerlinNoise', size: 256, seed: 7, params: { color1: '#d4c080', color2: '#b4a060', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.5 } },
+    top: { type: 'PerlinNoise', size: 256, seed: 5, params: { color1: '#f0e0a0', color2: '#d4c080', noiseType: 'FractalNoise', scale: 10, octaves: 6, persistence: 0.4 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 6, params: { color1: '#e0d090', color2: '#c4b070', noiseType: 'FractalNoise', scale: 11, octaves: 6, persistence: 0.4 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 7, params: { color1: '#d4c080', color2: '#b4a060', noiseType: 'FractalNoise', scale: 11, octaves: 6, persistence: 0.4 } },
   },
   cobblestone: {
     label: 'Cobblestone',
-    top: { type: 'CartoonOre', size: 256, seed: 1, params: { color1: '#7a7a7a', color2: '#6a6a6a', color3: '#5a5a5a', bgNoise: 0.5, bgPatch: 40, outline: 1.2, shadow: 0.5, ores: [{ color: '#999999', highlightColor: '#bbbbbb', shape: 'round', count: 15, minSize: 25, maxSize: 55, name: 'Stone', useGradient: false }] } },
-    side: { type: 'CartoonOre', size: 256, seed: 2, params: { color1: '#7a7a7a', color2: '#6a6a6a', color3: '#5a5a5a', bgNoise: 0.5, bgPatch: 40, outline: 1.2, shadow: 0.5, ores: [{ color: '#999999', highlightColor: '#bbbbbb', shape: 'round', count: 15, minSize: 25, maxSize: 55, name: 'Stone', useGradient: false }] } },
-    bottom: { type: 'CartoonOre', size: 256, seed: 3, params: { color1: '#6a6a6a', color2: '#5a5a5a', color3: '#4a4a4a', bgNoise: 0.5, bgPatch: 40, outline: 1.2, shadow: 0.5, ores: [{ color: '#888888', highlightColor: '#aaaaaa', shape: 'round', count: 12, minSize: 25, maxSize: 55, name: 'Stone', useGradient: false }] } },
+    top:    { type: 'StoneWall', size: 256, seed: 1, params: { color1: '#909090', color2: '#6a6a6a', mortarColor: '#2a2a2a', columns: 9, rows: 8, mortarWidth: 4, jitter: 0.8, shading: 0.5, textureNoise: 0.4 } },
+    side:   { type: 'StoneWall', size: 256, seed: 2, params: { color1: '#888888', color2: '#686868', mortarColor: '#282828', columns: 9, rows: 8, mortarWidth: 4, jitter: 0.8, shading: 0.5, textureNoise: 0.4 } },
+    bottom: { type: 'StoneWall', size: 256, seed: 3, params: { color1: '#787878', color2: '#585858', mortarColor: '#202020', columns: 9, rows: 8, mortarWidth: 4, jitter: 0.8, shading: 0.5, textureNoise: 0.4 } },
   },
   tiled_floor: {
     label: 'Tiled Floor',
     top: { type: 'Tiles', size: 256, seed: 1, params: { x: 3, y: 3, color1: '#ddd8d0', groutColor: '#999999', gradientColor: '#cccccc', groutGradientColor: '#777777', xGrout: 12, yGrout: 12, xGradient: 20, yGradient: 20, gradientEnabled: true, groutGradientEnabled: true, color2: '#c8c0b8', colorMode: 'single', shadeRange: 0.05, texture: 0 } },
-    side: { type: 'PerlinNoise', size: 256, seed: 2, params: { color1: '#c8c0b8', color2: '#a8a098', noiseType: 'FractalNoise', scale: 30, octaves: 3, persistence: 0.4 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 2, params: { color1: '#c8c0b8', color2: '#a8a098', noiseType: 'FractalNoise', scale: 11, octaves: 5, persistence: 0.35 } },
     bottom: { type: 'Tiles', size: 256, seed: 3, params: { x: 3, y: 3, color1: '#c8c0b8', groutColor: '#888888', gradientColor: '#b0a8a0', groutGradientColor: '#666666', xGrout: 12, yGrout: 12, xGradient: 20, yGradient: 20, gradientEnabled: true, groutGradientEnabled: true, color2: '#b8b0a8', colorMode: 'single', shadeRange: 0.05, texture: 0 } },
   },
   hex_stone: {
@@ -1219,21 +1269,21 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   },
   iron_ore: {
     label: 'Iron Ore',
-    top: { type: 'CartoonOre', size: 256, seed: 20, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 1.2, shadow: 0.5, ores: [{ color: '#d4a574', highlightColor: '#f0c8a0', shape: 'round', count: 8, minSize: 10, maxSize: 28, name: 'Iron', useGradient: false }] } },
-    side: { type: 'CartoonOre', size: 256, seed: 21, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 1.2, shadow: 0.5, ores: [{ color: '#d4a574', highlightColor: '#f0c8a0', shape: 'round', count: 7, minSize: 10, maxSize: 28, name: 'Iron', useGradient: false }] } },
-    bottom: { type: 'CartoonOre', size: 256, seed: 22, params: { color1: '#7a7a7a', color2: '#5e5e5e', color3: '#454545', bgNoise: 0.5, bgPatch: 30, outline: 1.2, shadow: 0.5, ores: [{ color: '#d4a574', highlightColor: '#f0c8a0', shape: 'round', count: 6, minSize: 10, maxSize: 28, name: 'Iron', useGradient: false }] } },
+    top: { type: 'CartoonOre', size: 256, seed: 20, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 0.9, shadow: 0.5, ores: [{ color: '#d4a574', highlightColor: '#f0c8a0', shape: 'round', count: 8, minSize: 10, maxSize: 24, name: 'Iron', useGradient: true }] } },
+    side: { type: 'CartoonOre', size: 256, seed: 21, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 0.9, shadow: 0.5, ores: [{ color: '#d4a574', highlightColor: '#f0c8a0', shape: 'round', count: 7, minSize: 10, maxSize: 24, name: 'Iron', useGradient: true }] } },
+    bottom: { type: 'CartoonOre', size: 256, seed: 22, params: { color1: '#7a7a7a', color2: '#5e5e5e', color3: '#454545', bgNoise: 0.5, bgPatch: 30, outline: 0.9, shadow: 0.5, ores: [{ color: '#d4a574', highlightColor: '#f0c8a0', shape: 'round', count: 6, minSize: 10, maxSize: 24, name: 'Iron', useGradient: true }] } },
   },
   gold_ore: {
     label: 'Gold Ore',
-    top: { type: 'CartoonOre', size: 256, seed: 30, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 1.3, shadow: 0.5, ores: [{ color: '#ffd700', highlightColor: '#ffee88', shape: 'square', count: 6, minSize: 12, maxSize: 30, name: 'Gold', useGradient: true }] } },
-    side: { type: 'CartoonOre', size: 256, seed: 31, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 1.3, shadow: 0.5, ores: [{ color: '#ffd700', highlightColor: '#ffee88', shape: 'square', count: 5, minSize: 12, maxSize: 30, name: 'Gold', useGradient: true }] } },
-    bottom: { type: 'CartoonOre', size: 256, seed: 32, params: { color1: '#7a7a7a', color2: '#5e5e5e', color3: '#454545', bgNoise: 0.5, bgPatch: 30, outline: 1.3, shadow: 0.5, ores: [{ color: '#ffd700', highlightColor: '#ffee88', shape: 'square', count: 4, minSize: 12, maxSize: 30, name: 'Gold', useGradient: true }] } },
+    top: { type: 'CartoonOre', size: 256, seed: 30, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 0.9, shadow: 0.5, ores: [{ color: '#ffd700', highlightColor: '#ffee88', shape: 'round', count: 8, minSize: 10, maxSize: 22, name: 'Gold', useGradient: true }] } },
+    side: { type: 'CartoonOre', size: 256, seed: 31, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 0.9, shadow: 0.5, ores: [{ color: '#ffd700', highlightColor: '#ffee88', shape: 'round', count: 7, minSize: 10, maxSize: 22, name: 'Gold', useGradient: true }] } },
+    bottom: { type: 'CartoonOre', size: 256, seed: 32, params: { color1: '#7a7a7a', color2: '#5e5e5e', color3: '#454545', bgNoise: 0.5, bgPatch: 30, outline: 0.9, shadow: 0.5, ores: [{ color: '#ffd700', highlightColor: '#ffee88', shape: 'round', count: 6, minSize: 10, maxSize: 22, name: 'Gold', useGradient: true }] } },
   },
   emerald_ore: {
     label: 'Emerald Ore',
-    top: { type: 'CartoonOre', size: 256, seed: 40, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 1.4, shadow: 0.6, ores: [{ color: '#22cc44', highlightColor: '#66ff88', shape: 'hexagon', count: 4, minSize: 14, maxSize: 32, name: 'Emerald', useGradient: true }] } },
-    side: { type: 'CartoonOre', size: 256, seed: 41, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 1.4, shadow: 0.6, ores: [{ color: '#22cc44', highlightColor: '#66ff88', shape: 'hexagon', count: 3, minSize: 14, maxSize: 32, name: 'Emerald', useGradient: true }] } },
-    bottom: { type: 'CartoonOre', size: 256, seed: 42, params: { color1: '#7a7a7a', color2: '#5e5e5e', color3: '#454545', bgNoise: 0.5, bgPatch: 30, outline: 1.4, shadow: 0.6, ores: [{ color: '#22cc44', highlightColor: '#66ff88', shape: 'hexagon', count: 3, minSize: 14, maxSize: 32, name: 'Emerald', useGradient: true }] } },
+    top: { type: 'CartoonOre', size: 256, seed: 40, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 1.0, shadow: 0.6, ores: [{ color: '#22cc44', highlightColor: '#66ff88', shape: 'hexagon', count: 7, minSize: 10, maxSize: 22, name: 'Emerald', useGradient: true }] } },
+    side: { type: 'CartoonOre', size: 256, seed: 41, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 1.0, shadow: 0.6, ores: [{ color: '#22cc44', highlightColor: '#66ff88', shape: 'hexagon', count: 6, minSize: 10, maxSize: 22, name: 'Emerald', useGradient: true }] } },
+    bottom: { type: 'CartoonOre', size: 256, seed: 42, params: { color1: '#7a7a7a', color2: '#5e5e5e', color3: '#454545', bgNoise: 0.5, bgPatch: 30, outline: 1.0, shadow: 0.6, ores: [{ color: '#22cc44', highlightColor: '#66ff88', shape: 'hexagon', count: 6, minSize: 10, maxSize: 22, name: 'Emerald', useGradient: true }] } },
   },
   redstone_ore: {
     label: 'Redstone Ore',
@@ -1243,15 +1293,15 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   },
   coal_ore: {
     label: 'Coal Ore',
-    top: { type: 'CartoonOre', size: 256, seed: 60, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.4, bgPatch: 35, outline: 1.0, shadow: 0.4, ores: [{ color: '#1a1a1a', highlightColor: '#333333', shape: 'round', count: 7, minSize: 18, maxSize: 45, name: 'Coal', useGradient: false }] } },
-    side: { type: 'CartoonOre', size: 256, seed: 61, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.4, bgPatch: 35, outline: 1.0, shadow: 0.4, ores: [{ color: '#1a1a1a', highlightColor: '#333333', shape: 'round', count: 6, minSize: 18, maxSize: 45, name: 'Coal', useGradient: false }] } },
-    bottom: { type: 'CartoonOre', size: 256, seed: 62, params: { color1: '#7a7a7a', color2: '#5e5e5e', color3: '#454545', bgNoise: 0.4, bgPatch: 35, outline: 1.0, shadow: 0.4, ores: [{ color: '#1a1a1a', highlightColor: '#333333', shape: 'round', count: 5, minSize: 18, maxSize: 45, name: 'Coal', useGradient: false }] } },
+    top: { type: 'CartoonOre', size: 256, seed: 60, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.4, bgPatch: 35, outline: 0.9, shadow: 0.4, ores: [{ color: '#1a1a1a', highlightColor: '#383838', shape: 'round', count: 10, minSize: 10, maxSize: 26, name: 'Coal', useGradient: true }] } },
+    side: { type: 'CartoonOre', size: 256, seed: 61, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.4, bgPatch: 35, outline: 0.9, shadow: 0.4, ores: [{ color: '#1a1a1a', highlightColor: '#383838', shape: 'round', count: 9, minSize: 10, maxSize: 26, name: 'Coal', useGradient: true }] } },
+    bottom: { type: 'CartoonOre', size: 256, seed: 62, params: { color1: '#7a7a7a', color2: '#5e5e5e', color3: '#454545', bgNoise: 0.4, bgPatch: 35, outline: 0.9, shadow: 0.4, ores: [{ color: '#1a1a1a', highlightColor: '#383838', shape: 'round', count: 8, minSize: 10, maxSize: 26, name: 'Coal', useGradient: true }] } },
   },
   copper_ore: {
     label: 'Copper Ore',
-    top: { type: 'CartoonOre', size: 256, seed: 70, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 1.3, shadow: 0.5, ores: [{ color: '#cc7744', highlightColor: '#ee9966', shape: 'round', count: 9, minSize: 10, maxSize: 26, name: 'Copper', useGradient: false }] } },
-    side: { type: 'CartoonOre', size: 256, seed: 71, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 1.3, shadow: 0.5, ores: [{ color: '#cc7744', highlightColor: '#ee9966', shape: 'round', count: 8, minSize: 10, maxSize: 26, name: 'Copper', useGradient: false }] } },
-    bottom: { type: 'CartoonOre', size: 256, seed: 72, params: { color1: '#7a7a7a', color2: '#5e5e5e', color3: '#454545', bgNoise: 0.5, bgPatch: 30, outline: 1.3, shadow: 0.5, ores: [{ color: '#cc7744', highlightColor: '#ee9966', shape: 'round', count: 7, minSize: 10, maxSize: 26, name: 'Copper', useGradient: false }] } },
+    top: { type: 'CartoonOre', size: 256, seed: 70, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 0.9, shadow: 0.5, ores: [{ color: '#cc7744', highlightColor: '#ee9966', shape: 'round', count: 9, minSize: 10, maxSize: 22, name: 'Copper', useGradient: true }] } },
+    side: { type: 'CartoonOre', size: 256, seed: 71, params: { color1: '#8a8a8a', color2: '#6e6e6e', color3: '#555555', bgNoise: 0.5, bgPatch: 30, outline: 0.9, shadow: 0.5, ores: [{ color: '#cc7744', highlightColor: '#ee9966', shape: 'round', count: 8, minSize: 10, maxSize: 22, name: 'Copper', useGradient: true }] } },
+    bottom: { type: 'CartoonOre', size: 256, seed: 72, params: { color1: '#7a7a7a', color2: '#5e5e5e', color3: '#454545', bgNoise: 0.5, bgPatch: 30, outline: 0.9, shadow: 0.5, ores: [{ color: '#cc7744', highlightColor: '#ee9966', shape: 'round', count: 7, minSize: 10, maxSize: 22, name: 'Copper', useGradient: true }] } },
   },
   spruce_trunk: {
     label: 'Spruce Trunk',
@@ -1291,21 +1341,21 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   },
   dry_grass: {
     label: 'Dry Grass',
-    top: { type: 'PerlinNoise', size: 256, seed: 90, params: { color1: '#b8a848', color2: '#8a7830', noiseType: 'FractalNoise', scale: 35, octaves: 5, persistence: 0.5 } },
+    top: { type: 'PerlinNoise', size: 256, seed: 90, params: { color1: '#b8a848', color2: '#8a7830', noiseType: 'FractalNoise', scale: 15, octaves: 6, persistence: 0.45 } },
     side: { type: 'PerlinNoise', size: 256, seed: 91, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.5, grassOverlay: { color1: '#b8a848', color2: '#8a7830', height: 0.12, seed: 90 } } },
     bottom: { type: 'PerlinNoise', size: 256, seed: 92, params: { color1: '#9b7653', color2: '#5c4028', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.6 } },
   },
   red_sand: {
     label: 'Red Sand',
-    top: { type: 'PerlinNoise', size: 256, seed: 95, params: { color1: '#d4884a', color2: '#b06830', noiseType: 'FractalNoise', scale: 25, octaves: 4, persistence: 0.4 } },
-    side: { type: 'PerlinNoise', size: 256, seed: 96, params: { color1: '#c47840', color2: '#a05828', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.4 } },
-    bottom: { type: 'PerlinNoise', size: 256, seed: 97, params: { color1: '#b06830', color2: '#8a4820', noiseType: 'FractalNoise', scale: 30, octaves: 4, persistence: 0.5 } },
+    top: { type: 'PerlinNoise', size: 256, seed: 95, params: { color1: '#d4884a', color2: '#b06830', noiseType: 'FractalNoise', scale: 11, octaves: 6, persistence: 0.4 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 96, params: { color1: '#c47840', color2: '#a05828', noiseType: 'FractalNoise', scale: 12, octaves: 6, persistence: 0.4 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 97, params: { color1: '#b06830', color2: '#8a4820', noiseType: 'FractalNoise', scale: 12, octaves: 6, persistence: 0.42 } },
   },
   gravel: {
     label: 'Gravel',
-    top: { type: 'CartoonOre', size: 256, seed: 100, params: { color1: '#8a8a88', color2: '#6e6e6c', color3: '#555553', bgNoise: 0.6, bgPatch: 20, outline: 0.8, shadow: 0.3, ores: [{ color: '#aaaaaa', highlightColor: '#cccccc', shape: 'round', count: 20, minSize: 12, maxSize: 35, name: 'Pebble', useGradient: false }, { color: '#666666', highlightColor: '#888888', shape: 'round', count: 15, minSize: 10, maxSize: 28, name: 'Dark Pebble', useGradient: false }] } },
-    side: { type: 'CartoonOre', size: 256, seed: 101, params: { color1: '#8a8a88', color2: '#6e6e6c', color3: '#555553', bgNoise: 0.6, bgPatch: 20, outline: 0.8, shadow: 0.3, ores: [{ color: '#aaaaaa', highlightColor: '#cccccc', shape: 'round', count: 18, minSize: 12, maxSize: 35, name: 'Pebble', useGradient: false }, { color: '#666666', highlightColor: '#888888', shape: 'round', count: 12, minSize: 10, maxSize: 28, name: 'Dark Pebble', useGradient: false }] } },
-    bottom: { type: 'CartoonOre', size: 256, seed: 102, params: { color1: '#7a7a78', color2: '#5e5e5c', color3: '#454543', bgNoise: 0.6, bgPatch: 20, outline: 0.8, shadow: 0.3, ores: [{ color: '#999999', highlightColor: '#bbbbbb', shape: 'round', count: 18, minSize: 12, maxSize: 35, name: 'Pebble', useGradient: false }] } },
+    top: { type: 'StoneWall', size: 256, seed: 100, params: { color1: '#9a9a98', color2: '#6e6e6c', mortarColor: '#3a3a38', columns: 22, rows: 18, mortarWidth: 2, jitter: 1.0, shading: 0.4, textureNoise: 0.55 } },
+    side: { type: 'StoneWall', size: 256, seed: 101, params: { color1: '#929290', color2: '#686866', mortarColor: '#323230', columns: 22, rows: 18, mortarWidth: 2, jitter: 1.0, shading: 0.4, textureNoise: 0.55 } },
+    bottom: { type: 'StoneWall', size: 256, seed: 102, params: { color1: '#828280', color2: '#585856', mortarColor: '#282826', columns: 22, rows: 18, mortarWidth: 2, jitter: 1.0, shading: 0.4, textureNoise: 0.55 } },
   },
   mud: {
     label: 'Mud',
@@ -1441,9 +1491,9 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   },
   frosted_glass: {
     label: 'Frosted Glass',
-    top: { type: 'PerlinNoise', size: 256, seed: 280, params: { color1: '#e8f0f8', color2: '#c0d8e8', noiseType: 'FractalNoise', scale: 40, octaves: 4, persistence: 0.4, alpha: 0.4 } },
-    side: { type: 'PerlinNoise', size: 256, seed: 281, params: { color1: '#d8e8f0', color2: '#b0c8d8', noiseType: 'FractalNoise', scale: 40, octaves: 4, persistence: 0.4, alpha: 0.4 } },
-    bottom: { type: 'PerlinNoise', size: 256, seed: 282, params: { color1: '#c8d8e8', color2: '#a0b8c8', noiseType: 'FractalNoise', scale: 40, octaves: 4, persistence: 0.4, alpha: 0.4 } },
+    top: { type: 'PerlinNoise', size: 256, seed: 280, params: { color1: '#e8f0f8', color2: '#c0d8e8', noiseType: 'FractalNoise', scale: 16, octaves: 5, persistence: 0.4, alpha: 0.4 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 281, params: { color1: '#d8e8f0', color2: '#b0c8d8', noiseType: 'FractalNoise', scale: 16, octaves: 5, persistence: 0.4, alpha: 0.4 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 282, params: { color1: '#c8d8e8', color2: '#a0b8c8', noiseType: 'FractalNoise', scale: 16, octaves: 5, persistence: 0.4, alpha: 0.4 } },
   },
 
   // ── Stone wall presets ─────────────────────────────────
@@ -1481,9 +1531,9 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   // ── Snow & Ice presets ─────────────────────────────────
   snow_block: {
     label: 'Snow Block',
-    top: { type: 'PerlinNoise', size: 256, seed: 330, params: { color1: '#f0f4fa', color2: '#dce6f0', noiseType: 'FractalNoise', scale: 35, octaves: 4, persistence: 0.35 } },
-    side: { type: 'PerlinNoise', size: 256, seed: 331, params: { color1: '#e4ecf4', color2: '#d0dce8', noiseType: 'FractalNoise', scale: 35, octaves: 4, persistence: 0.35 } },
-    bottom: { type: 'PerlinNoise', size: 256, seed: 332, params: { color1: '#d8e2ec', color2: '#c4d0dc', noiseType: 'FractalNoise', scale: 35, octaves: 4, persistence: 0.35 } },
+    top: { type: 'PerlinNoise', size: 256, seed: 330, params: { color1: '#f0f4fa', color2: '#dce6f0', noiseType: 'FractalNoise', scale: 12, octaves: 6, persistence: 0.35 } },
+    side: { type: 'PerlinNoise', size: 256, seed: 331, params: { color1: '#e4ecf4', color2: '#d0dce8', noiseType: 'FractalNoise', scale: 12, octaves: 6, persistence: 0.35 } },
+    bottom: { type: 'PerlinNoise', size: 256, seed: 332, params: { color1: '#d8e2ec', color2: '#c4d0dc', noiseType: 'FractalNoise', scale: 12, octaves: 6, persistence: 0.35 } },
   },
   packed_ice: {
     label: 'Packed Ice',
