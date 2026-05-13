@@ -16,7 +16,7 @@ import {
   type SideTransitionPattern,
   type VoxelRenderStyle,
 } from '../utils/textureGenerators';
-import { renderFaceTexture, applySnowOverlay, type FaceTextureConfig, type SnowOverlayOptions } from '../utils/renderTexture';
+import { renderFaceTexture, applySnowOverlay, applyBlockStylePostProcess, compositeTextureSide, type FaceTextureConfig, type SnowOverlayOptions, type BlockRenderStyle } from '../utils/renderTexture';
 import {
   generateNormalMap, generateDisplacementMap, generateAOMap, generateSpecularMap,
   DEFAULT_NORMAL, DEFAULT_DISPLACEMENT, DEFAULT_AO, DEFAULT_SPECULAR,
@@ -1514,6 +1514,72 @@ export default function BlockWorkbench() {
       vxTransitionPattern, vxTransitionNoise, vxRenderStyle,
       renderVoxelToAllFaces]);
 
+  // ─────────────────────────────────────────────────────────────────────
+  //   Shared block-level settings re-render path (texture rendering)
+  // ─────────────────────────────────────────────────────────────────────
+  // Mirrors the voxel auto-render above. Whenever a block-level setting
+  // shared between texture + voxel rendering changes while the preview
+  // is texture-sourced, re-render the texture face images so the change
+  // shows up live.
+  const suppressTextureRenderRef = useRef(false);
+
+  useEffect(() => {
+    if (previewSource !== 'texture') return;
+    if (suppressTextureRenderRef.current) {
+      suppressTextureRenderRef.current = false;
+      return;
+    }
+    if (!topConfig && !sideConfig && !bottomConfig) return;
+
+    const faceCanvases: Record<FaceName, HTMLCanvasElement | null> = { top: null, side: null, bottom: null };
+
+    const renderOne = (face: FaceName, cfg: FaceTextureConfig | null, faceIdx: number) => {
+      if (!cfg) return;
+      // Block Seed drives per-face seeds with a prime offset so adjacent
+      // slider values produce visibly different textures on each face.
+      // We render with the derived seed but DON'T write it back to the
+      // face config — that lets the Texture tab keep showing the user's
+      // captured (or preset-chosen) seed, and lets undo / preset re-load
+      // restore the original look without us silently mutating configs.
+      const derivedSeed = vxSeed * 37 + faceIdx + 1;
+      const derivedCfg: FaceTextureConfig = { ...cfg, seed: derivedSeed };
+      const c = document.createElement('canvas');
+      c.width = derivedCfg.size;
+      c.height = derivedCfg.size;
+      renderFaceTexture(c, derivedCfg);
+      applyBlockStylePostProcess(c, vxRenderStyle as BlockRenderStyle);
+      faceCanvases[face] = c;
+    };
+
+    renderOne('top', topConfig, 0);
+    renderOne('side', sideConfig, 1);
+    renderOne('bottom', bottomConfig, 2);
+
+    // Side Blend composes the top texture onto the upper portion of
+    // the side face, using the same split / transition semantics as
+    // the voxel renderer's `generateVoxelBlockSide`.
+    if (faceCanvases.side && faceCanvases.top && vxSideMode !== 'uniform') {
+      compositeTextureSide(faceCanvases.side, faceCanvases.top, {
+        sideMode: vxSideMode,
+        sideSplitPos: vxSideSplitPos,
+        transitionPattern: vxTransitionPattern,
+        transitionNoise: vxTransitionNoise,
+        seed: vxSeed,
+      });
+    }
+
+    if (faceCanvases.top) setTopImg(faceCanvases.top.toDataURL('image/png'));
+    if (faceCanvases.side) setSideImg(faceCanvases.side.toDataURL('image/png'));
+    if (faceCanvases.bottom) setBottomImg(faceCanvases.bottom.toDataURL('image/png'));
+    // Deliberately exclude topConfig/sideConfig/bottomConfig and their
+    // setters from deps — the closure picks up their latest values at
+    // every fire because the deps below DO change when this effect
+    // should run, and capturing a new face from the Texture tab is
+    // handled by its own setter call so it doesn't need to re-trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewSource, vxSeed, vxRenderStyle, vxSideMode, vxSideSplitPos,
+      vxTransitionPattern, vxTransitionNoise]);
+
   const applyVoxelPreset = (name: string) => {
     const p = VOXEL_PRESETS[name];
     if (!p) return;
@@ -1562,11 +1628,14 @@ export default function BlockWorkbench() {
     setPreviewSource('texture');
 
     // Sync the voxel state to match this preset so the Voxel Block
-    // inspector reflects what's on screen. We suppress the next
-    // voxel auto-render so the texture-rendered faces we just set
-    // aren't immediately overwritten — the user has to actually
-    // tweak something in voxel mode to opt into voxel rendering.
+    // inspector reflects what's on screen. We suppress both auto-
+    // renders so the texture-rendered faces we just set aren't
+    // immediately overwritten — the texture re-render would fire
+    // because we're setting voxel state (shared block settings), and
+    // we want the preset's per-face seeds to stick until the user
+    // explicitly touches a block-level slider.
     suppressVoxelRenderRef.current = true;
+    suppressTextureRenderRef.current = true;
     const voxelMatch = VOXEL_PRESETS[presetKey];
     if (voxelMatch) {
       setVxTopFace(voxelMatch.top);
@@ -1615,38 +1684,12 @@ export default function BlockWorkbench() {
     for (const f of ['top', 'side', 'bottom'] as FaceName[]) copyFaceTo(f);
   };
 
-  // Block-level shuffle for texture-rendered blocks: bump each face
-  // config's seed and re-render so the user gets a new variation of
-  // the same preset without leaving the Block inspector.
+  // Block-level shuffle for texture-rendered blocks. Now driven by the
+  // shared Block Seed so the Randomize button and the Seed slider share
+  // a single source of truth — the texture re-render effect picks up the
+  // change and recomputes each face's derived seed.
   const randomizeFaceTextureSeeds = () => {
-    const tempCanvas = document.createElement('canvas');
-    for (const face of ['top', 'side', 'bottom'] as FaceName[]) {
-      const cfg = faceConfigs[face];
-      if (!cfg) continue;
-      const nextSeed = Math.floor(Math.random() * 9999) + 1;
-      const nextCfg: FaceTextureConfig = { ...cfg, seed: nextSeed };
-      tempCanvas.width = nextCfg.size;
-      tempCanvas.height = nextCfg.size;
-      renderFaceTexture(tempCanvas, nextCfg);
-      setImgs[face](tempCanvas.toDataURL('image/png'));
-      setFaceConfigs[face](nextCfg);
-    }
-  };
-
-  // Re-render every loaded texture face with its current config. Useful
-  // after the user changed something the Block inspector exposes that
-  // affects the underlying face configs (currently only seeds; future
-  // unified settings would slot in here).
-  const regenerateTextureFaces = () => {
-    const tempCanvas = document.createElement('canvas');
-    for (const face of ['top', 'side', 'bottom'] as FaceName[]) {
-      const cfg = faceConfigs[face];
-      if (!cfg) continue;
-      tempCanvas.width = cfg.size;
-      tempCanvas.height = cfg.size;
-      renderFaceTexture(tempCanvas, cfg);
-      setImgs[face](tempCanvas.toDataURL('image/png'));
-    }
+    setVxSeed(Math.floor(Math.random() * 9999) + 1);
   };
 
   const anyTextureConfig = !!(topConfig || sideConfig || bottomConfig);
@@ -1697,9 +1740,10 @@ export default function BlockWorkbench() {
   const loadProject = useCallback((proj: VoxelCraftProject) => {
     suppressDirtyRef.current = true;
     // The face images we're about to restore are authoritative — don't
-    // let the voxel auto-render effect overwrite them when it sees the
-    // new voxel config arrive in this same state batch.
+    // let either auto-render effect overwrite them when it sees the
+    // new voxel/shared config arrive in this same state batch.
     suppressVoxelRenderRef.current = true;
+    suppressTextureRenderRef.current = true;
     setPreviewSource(proj.editorMode === 'voxel' ? 'voxel' : 'texture');
     setEditorMode(proj.editorMode);
     setTopImg(proj.faces.top);
@@ -1920,6 +1964,7 @@ export default function BlockWorkbench() {
   const applySnapshot = useCallback((snap: Snapshot) => {
     suppressHistoryRef.current = true;
     suppressVoxelRenderRef.current = true;
+    suppressTextureRenderRef.current = true;
     setProjectName(snap.projectName);
     setTopImg(snap.topImg); setSideImg(snap.sideImg); setBottomImg(snap.bottomImg);
     setTopConfig(snap.topConfig); setSideConfig(snap.sideConfig); setBottomConfig(snap.bottomConfig);
@@ -2439,113 +2484,178 @@ export default function BlockWorkbench() {
           </div>
         )}
 
-        {editorMode === 'voxel' && previewSource === 'texture' && (
+        {editorMode === 'voxel' && (
           <div className="voxel-editor">
+            {/* SHARED block-level settings — they affect both texture-
+                rendered and voxel-rendered previews. The texture-mode
+                auto-render effect mirrors what `renderVoxelToAllFaces`
+                does for voxel mode, so every slider here is live in
+                both pipelines. */}
             <div className="settings-panel">
-              <h3>Block Settings — Texture</h3>
+              <h3>
+                Block Settings{previewSource === 'texture' ? ' — Texture' : ' — Voxel'}
+              </h3>
               <p className="wb-inspector-note">
-                The preview is rendered from a texture preset. The
-                voxel-only block controls (resolution, render style,
-                side blend, transition) only take effect once you
-                convert this block to voxel rendering.
+                {previewSource === 'texture' ? (
+                  <>
+                    These controls apply to the current texture preset
+                    live. Style filters every face, Seed reshuffles all
+                    faces, and Side Blend composes the top texture onto
+                    the upper portion of the side face.
+                  </>
+                ) : (
+                  <>
+                    Voxel rendering is active and updates live as you
+                    tweak any of these settings.
+                  </>
+                )}
               </p>
-              {anyTextureConfig ? (
-                <div className="wb-block-actions">
-                  <button
-                    type="button"
-                    className="btn-small"
-                    onClick={randomizeFaceTextureSeeds}
-                    title="Pick new random seeds for every face and re-render with the same preset"
-                  >Randomize face seeds</button>
-                  <button
-                    type="button"
-                    className="btn-small"
-                    onClick={regenerateTextureFaces}
-                    title="Re-render every face with its current texture config"
-                  >Re-render faces</button>
-                </div>
-              ) : (
-                <p className="wb-inspector-note">
-                  Tip: pick a block preset from the library or capture a
-                  face in the Texture tab to enable these actions.
-                </p>
-              )}
-              <button
-                type="button"
-                className="btn-small wb-render-voxel-btn"
-                onClick={renderVoxelToAllFaces}
-                title="Switch the preview to voxel rendering using the current voxel state"
-              >Convert to voxel rendering</button>
-            </div>
-          </div>
-        )}
-
-        {editorMode === 'voxel' && previewSource === 'voxel' && (
-          <div className="voxel-editor">
-            <div className="settings-panel">
-              <h3>Block Settings — Voxel</h3>
-              <div className="settings-row"><label>Style</label><select value={vxRenderStyle} onChange={e => setVxRenderStyle(e.target.value as VoxelRenderStyle)}><option value="pixelated">Pixelated</option><option value="cartoon">Cartoon</option><option value="realistic">Realistic</option><option value="painterly">Painterly</option><option value="flat">Flat / Minimal</option></select></div>
-              <div className="settings-row"><label>Resolution</label><select value={vxResolution} onChange={e => setVxResolution(parseInt(e.target.value))}><option value="8">8×8</option><option value="16">16×16</option><option value="32">32×32</option><option value="64">64×64</option><option value="128">128×128</option><option value="256">256×256</option><option value="512">512×512</option><option value="1024">1024×1024</option></select></div>
-              <SliderControl label="Seed" value={vxSeed} min={1} max={1000} step={1} onChange={setVxSeed} extra={<button type="button" onClick={() => setVxSeed(Math.floor(Math.random() * 999) + 1)} title="Randomize seed" className="btn-icon">&#x1F3B2;</button>} />
-              <div className="settings-row"><label>Side Blend</label><select value={vxSideMode} onChange={e => setVxSideMode(e.target.value as VoxelBlockSideMode)}><option value="uniform">Uniform (side only)</option><option value="split">Split (top/bottom)</option><option value="gradient_top">Gradient from top</option><option value="gradient_bottom">Gradient from bottom</option></select></div>
+              <div className="settings-row">
+                <label>Style</label>
+                <select value={vxRenderStyle} onChange={e => setVxRenderStyle(e.target.value as VoxelRenderStyle)}>
+                  <option value="pixelated">Pixelated</option>
+                  <option value="cartoon">Cartoon</option>
+                  <option value="realistic">Realistic</option>
+                  <option value="painterly">Painterly</option>
+                  <option value="flat">Flat / Minimal</option>
+                </select>
+              </div>
+              <SliderControl
+                label="Seed"
+                value={vxSeed}
+                min={1}
+                max={1000}
+                step={1}
+                onChange={setVxSeed}
+                extra={<button type="button" onClick={() => setVxSeed(Math.floor(Math.random() * 999) + 1)} title="Randomize seed" className="btn-icon">&#x1F3B2;</button>}
+              />
+              <div className="settings-row">
+                <label>Side Blend</label>
+                <select value={vxSideMode} onChange={e => setVxSideMode(e.target.value as VoxelBlockSideMode)}>
+                  <option value="uniform">Uniform (side only)</option>
+                  <option value="split">Split (top/bottom)</option>
+                  <option value="gradient_top">Gradient from top</option>
+                  <option value="gradient_bottom">Gradient from bottom</option>
+                </select>
+              </div>
               {vxSideMode !== 'uniform' && <>
                 <SliderControl label="Split Position" value={vxSideSplitPos} min={0.05} max={0.95} step={0.01} onChange={setVxSideSplitPos} />
-                <div className="settings-row"><label>Transition</label><select value={vxTransitionPattern} onChange={e => setVxTransitionPattern(e.target.value as SideTransitionPattern)}><option value="straight">Straight</option><option value="jagged">Jagged</option><option value="mossy">Mossy</option><option value="layered">Layered</option><option value="drip">Drip</option><option value="rounded">Rounded</option></select></div>
+                <div className="settings-row">
+                  <label>Transition</label>
+                  <select value={vxTransitionPattern} onChange={e => setVxTransitionPattern(e.target.value as SideTransitionPattern)}>
+                    <option value="straight">Straight</option>
+                    <option value="jagged">Jagged</option>
+                    <option value="mossy">Mossy</option>
+                    <option value="layered">Layered</option>
+                    <option value="drip">Drip</option>
+                    <option value="rounded">Rounded</option>
+                  </select>
+                </div>
                 {vxTransitionPattern !== 'straight' && <SliderControl label="Transition Strength" value={vxTransitionNoise} min={0} max={1} step={0.01} onChange={setVxTransitionNoise} />}
               </>}
             </div>
 
-            <div className="face-tabs" role="tablist" aria-label="Voxel face">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={vxActiveFace === 'top'}
-                className={`type-btn ${vxActiveFace === 'top' ? 'active' : ''}`}
-                onClick={() => setVxActiveFace('top')}
-              >Top Face</button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={vxActiveFace === 'side'}
-                className={`type-btn ${vxActiveFace === 'side' ? 'active' : ''}`}
-                onClick={() => setVxActiveFace('side')}
-              >Side Face</button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={vxActiveFace === 'bottom'}
-                className={`type-btn ${vxActiveFace === 'bottom' ? 'active' : ''}`}
-                onClick={() => setVxActiveFace('bottom')}
-              >Bottom Face</button>
-            </div>
-
-            <div className="settings-panel" style={{ padding: '10px 16px' }}>
-              <div className="settings-row" style={{ gap: 8 }}>
-                <label style={{ fontSize: '0.85em' }}>Load image for {vxActiveFace} face:</label>
-                <input type="file" accept="image/*" style={{ fontSize: '0.8em' }} onChange={e => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const reader = new FileReader();
-                  reader.onload = () => setImgs[activeFace](reader.result as string);
-                  reader.readAsDataURL(file);
-                  e.target.value = '';
-                }} />
-              </div>
-            </div>
-
-            {vxActiveFace === 'top' && <VoxelFaceSettings face={vxTopFace} setFace={setVxTopFace} />}
-            {vxActiveFace === 'side' && (
-              <>
-                <VoxelFaceSettings face={vxSideFace} setFace={setVxSideFace} />
-                {vxSideMode !== 'uniform' && (
-                  <div style={{ marginTop: 8 }}>
-                    <h4 style={{ margin: '0 0 8px', fontSize: '14px', color: 'var(--text-primary)' }}>Side — Top Layer (blended)</h4>
-                    <VoxelFaceSettings face={vxSideTopFace} setFace={setVxSideTopFace} />
+            {/* Mode-specific extras: texture mode gets action buttons,
+                voxel mode gets the voxel grid resolution + per-face
+                controls + per-face image upload. */}
+            {previewSource === 'texture' && (
+              <div className="settings-panel">
+                {anyTextureConfig ? (
+                  <div className="wb-block-actions">
+                    <button
+                      type="button"
+                      className="btn-small"
+                      onClick={randomizeFaceTextureSeeds}
+                      title="Pick a new random Block Seed — every face re-renders with the same preset"
+                    >Randomize</button>
+                    <button
+                      type="button"
+                      className="btn-small wb-render-voxel-btn"
+                      onClick={renderVoxelToAllFaces}
+                      title="Switch the preview to voxel rendering using the current voxel state"
+                    >Convert to voxel rendering</button>
                   </div>
+                ) : (
+                  <p className="wb-inspector-note">
+                    Tip: pick a block preset from the library or capture a
+                    face in the Texture tab to start editing block-level
+                    settings live.
+                  </p>
                 )}
+              </div>
+            )}
+
+            {previewSource === 'voxel' && (
+              <>
+                <div className="settings-panel">
+                  <div className="settings-row">
+                    <label>Voxel Grid</label>
+                    <select value={vxResolution} onChange={e => setVxResolution(parseInt(e.target.value))}>
+                      <option value="8">8×8</option>
+                      <option value="16">16×16</option>
+                      <option value="32">32×32</option>
+                      <option value="64">64×64</option>
+                      <option value="128">128×128</option>
+                      <option value="256">256×256</option>
+                      <option value="512">512×512</option>
+                      <option value="1024">1024×1024</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="face-tabs" role="tablist" aria-label="Voxel face">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={vxActiveFace === 'top'}
+                    className={`type-btn ${vxActiveFace === 'top' ? 'active' : ''}`}
+                    onClick={() => setVxActiveFace('top')}
+                  >Top Face</button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={vxActiveFace === 'side'}
+                    className={`type-btn ${vxActiveFace === 'side' ? 'active' : ''}`}
+                    onClick={() => setVxActiveFace('side')}
+                  >Side Face</button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={vxActiveFace === 'bottom'}
+                    className={`type-btn ${vxActiveFace === 'bottom' ? 'active' : ''}`}
+                    onClick={() => setVxActiveFace('bottom')}
+                  >Bottom Face</button>
+                </div>
+
+                <div className="settings-panel" style={{ padding: '10px 16px' }}>
+                  <div className="settings-row" style={{ gap: 8 }}>
+                    <label style={{ fontSize: '0.85em' }}>Load image for {vxActiveFace} face:</label>
+                    <input type="file" accept="image/*" style={{ fontSize: '0.8em' }} onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setImgs[activeFace](reader.result as string);
+                      reader.readAsDataURL(file);
+                      e.target.value = '';
+                    }} />
+                  </div>
+                </div>
+
+                {vxActiveFace === 'top' && <VoxelFaceSettings face={vxTopFace} setFace={setVxTopFace} />}
+                {vxActiveFace === 'side' && (
+                  <>
+                    <VoxelFaceSettings face={vxSideFace} setFace={setVxSideFace} />
+                    {vxSideMode !== 'uniform' && (
+                      <div style={{ marginTop: 8 }}>
+                        <h4 style={{ margin: '0 0 8px', fontSize: '14px', color: 'var(--text-primary)' }}>Side — Top Layer (blended)</h4>
+                        <VoxelFaceSettings face={vxSideTopFace} setFace={setVxSideTopFace} />
+                      </div>
+                    )}
+                  </>
+                )}
+                {vxActiveFace === 'bottom' && <VoxelFaceSettings face={vxBottomFace} setFace={setVxBottomFace} />}
               </>
             )}
-            {vxActiveFace === 'bottom' && <VoxelFaceSettings face={vxBottomFace} setFace={setVxBottomFace} />}
           </div>
         )}
 
