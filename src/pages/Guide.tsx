@@ -1,8 +1,11 @@
+import BrandLogo from '../components/BrandLogo';
+
 export default function Guide() {
   return (
     <div className="guide-page">
       <div className="guide-content">
         <header className="guide-header">
+          <BrandLogo size={56} className="guide-header-logo" title="VoxelCraft" />
           <h1>VoxelCraft</h1>
           <p className="guide-subtitle">
             Procedural texture generation, 3D voxel block creation, and material map generation.

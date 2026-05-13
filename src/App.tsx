@@ -4,6 +4,7 @@ import NormalMapGenerator from './pages/NormalMapGenerator'
 import VoxelBlock from './pages/VoxelBlock'
 import BlockWorkbench from './pages/BlockWorkbench'
 import Guide from './pages/Guide'
+import BrandLogo from './components/BrandLogo'
 
 type Page = 'texture' | 'normalmap' | 'voxelblock' | 'workbench' | 'guide'
 
@@ -40,7 +41,10 @@ export default function App() {
   return (
     <div className="app">
       <nav className="app-nav">
-        <div className="nav-brand">VoxelCraft</div>
+        <div className="nav-brand">
+          <BrandLogo size={22} className="nav-brand-logo" title="VoxelCraft" />
+          <span>VoxelCraft</span>
+        </div>
         <div className="nav-links">
           <button
             className={`nav-link ${page === 'workbench' ? 'active' : ''}`}

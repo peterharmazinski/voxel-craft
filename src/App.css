@@ -120,10 +120,23 @@ input[type='range'] {
 }
 
 .nav-brand {
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 17px;
   font-weight: 700;
-  color: var(--accent);
-  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.nav-brand .nav-brand-logo {
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+  transition: transform 0.2s ease;
+}
+
+.nav-brand:hover .nav-brand-logo {
+  transform: rotate(-6deg) scale(1.06);
 }
 
 .nav-links {
@@ -1758,6 +1771,14 @@ input[type='range'] {
   text-align: center;
   padding-bottom: 24px;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-header-logo {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
 }
 
 .guide-header h1 {
@@ -1765,7 +1786,7 @@ input[type='range'] {
   font-weight: 700;
   color: var(--accent);
   letter-spacing: -0.03em;
-  margin-bottom: 8px;
+  margin: 4px 0 0;
 }
 
 .guide-subtitle {
