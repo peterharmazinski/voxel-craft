@@ -249,6 +249,106 @@ const ORE_DESCRIPTORS: OreDescriptor[] = [
     glow: { intensity: 0.7, radius: 20, threshold: 0.7, color: 'auto' } },
   { key: 'lit_glowstone',      label: 'Glowstone (lit)',   bgColors: ['#5a4820', '#4a3818', '#382810'], oreColor: '#ffdd44', highlightColor: '#ffee88', shape: 'round',    count: 22, minSize: 8,  maxSize: 18, oreName: 'Glowstone', useGradient: true,  voxelStyle: 'jewel',   seedBase: 517,
     glow: { intensity: 1.1, radius: 14, threshold: 0.45, color: 'auto' } },
+
+  // ── Surfaces: paths, roads, concrete, asphalt ───────────────────────
+  // Worn / paved ground covers. Most use a muted bg with sparse darker
+  // grit so they read as textured but not noisy at a distance.
+  { key: 'dirt_path',          label: 'Dirt Path',         bgColors: ['#8a6438', '#6a4a28', '#4a3018'], oreColor: '#a07848', highlightColor: '#c0905c', shape: 'round',    count: 12, minSize: 8,  maxSize: 18, oreName: 'Earth',    useGradient: false, voxelStyle: 'metal',   seedBase: 540 },
+  { key: 'gravel_path',        label: 'Gravel Path',       bgColors: ['#888880', '#707068', '#585850'], oreColor: '#bcbcb4', highlightColor: '#dddddd', shape: 'round',    count: 22, minSize: 6,  maxSize: 14, oreName: 'Gravel',   useGradient: true,  voxelStyle: 'metal',   seedBase: 543 },
+  { key: 'cobblestone_path',   label: 'Cobblestone Path',  bgColors: ['#787068', '#585048', '#383028'], oreColor: '#a09888', highlightColor: '#c0b8a8', shape: 'round',    count: 14, minSize: 14, maxSize: 26, oreName: 'Cobble',   useGradient: true,  voxelStyle: 'metal',   seedBase: 546 },
+  { key: 'concrete_smooth',    label: 'Concrete (smooth)', bgColors: ['#c0c0bc', '#aaaaa6', '#909088'], oreColor: '#b8b8b4', highlightColor: '#ccc8c0', shape: 'round',    count: 6,  minSize: 8,  maxSize: 18, oreName: 'Grit',     useGradient: false, voxelStyle: 'metal',   seedBase: 549 },
+  { key: 'concrete_weathered', label: 'Concrete (weathered)', bgColors: ['#a8a8a4', '#888884', '#686864'], oreColor: '#7a7a76', highlightColor: '#9a9a94', shape: 'round',    count: 14, minSize: 10, maxSize: 22, oreName: 'Stain',    useGradient: false, voxelStyle: 'metal',   seedBase: 552 },
+  { key: 'asphalt_road',       label: 'Asphalt Road',      bgColors: ['#383838', '#282828', '#181818'], oreColor: '#5a5a5a', highlightColor: '#787878', shape: 'round',    count: 22, minSize: 6,  maxSize: 12, oreName: 'Aggregate',useGradient: false, voxelStyle: 'metal',   seedBase: 555 },
+
+  // ── Beach & shell ───────────────────────────────────────────────────
+  { key: 'beach_sand',         label: 'Beach Sand',        bgColors: ['#e8d8a0', '#d8c890', '#b8a878'], oreColor: '#fff8d8', highlightColor: '#ffffff', shape: 'round',    count: 8,  minSize: 10, maxSize: 20, oreName: 'Shell',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 558 },
+  { key: 'wet_sand',           label: 'Wet Sand',          bgColors: ['#a89878', '#887858', '#686048'], oreColor: '#f0e0c0', highlightColor: '#ffffff', shape: 'round',    count: 10, minSize: 8,  maxSize: 18, oreName: 'Shell',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 561 },
+  { key: 'pebble_beach',       label: 'Pebble Beach',      bgColors: ['#a0a098', '#888880', '#686860'], oreColor: '#d0c8b8', highlightColor: '#ffffff', shape: 'round',    count: 18, minSize: 12, maxSize: 22, oreName: 'Pebble',   useGradient: true,  voxelStyle: 'metal',   seedBase: 564 },
+  { key: 'coral_sand',         label: 'Coral Sand',        bgColors: ['#f8d8c8', '#e8c8b8', '#d8b8a8'], oreColor: '#ffeae8', highlightColor: '#ffffff', shape: 'round',    count: 14, minSize: 8,  maxSize: 16, oreName: 'Coral',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 567 },
+  { key: 'seashell_bed',       label: 'Seashell Bed',      bgColors: ['#f8e8c8', '#e8d8b8', '#d8c8a8'], oreColor: '#ff88aa', highlightColor: '#ffccdd', shape: 'round',    count: 18, minSize: 10, maxSize: 20, oreName: 'Conch',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 570 },
+
+  // ── Water ───────────────────────────────────────────────────────────
+  // Single-layer ore approximation: blue/green bg with bright flecks
+  // for ripples and whitecaps. Good enough at distance, especially in
+  // voxel form where the blocky upscale reads as water already.
+  { key: 'water_calm',         label: 'Calm Water',        bgColors: ['#5588cc', '#4477bb', '#3366aa'], oreColor: '#cce4ff', highlightColor: '#ffffff', shape: 'round',    count: 18, minSize: 4,  maxSize: 10, oreName: 'Ripple',   useGradient: true,  voxelStyle: 'jewel',   seedBase: 573 },
+  { key: 'water_deep',         label: 'Deep Water',        bgColors: ['#1a3866', '#122a4a', '#0a1c34'], oreColor: '#3a6cb0', highlightColor: '#88aae0', shape: 'round',    count: 10, minSize: 6,  maxSize: 12, oreName: 'Sparkle',  useGradient: true,  voxelStyle: 'jewel',   seedBase: 576 },
+  { key: 'river_water',        label: 'River Water',       bgColors: ['#3a8888', '#2a6868', '#1a4848'], oreColor: '#a8e8d8', highlightColor: '#ffffff', shape: 'round',    count: 16, minSize: 6,  maxSize: 14, oreName: 'Foam',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 579 },
+  { key: 'swamp_water',        label: 'Swamp Water',       bgColors: ['#4a5838', '#3a4828', '#2a3818'], oreColor: '#7a8848', highlightColor: '#aab868', shape: 'round',    count: 14, minSize: 6,  maxSize: 14, oreName: 'Algae',    useGradient: false, voxelStyle: 'metal',   seedBase: 582 },
+
+  // ── Underwater biome ────────────────────────────────────────────────
+  { key: 'coral_reef',         label: 'Coral Reef',        bgColors: ['#d0b0a8', '#b09088', '#806858'], oreColor: '#ff5588', highlightColor: '#ffaaaa', shape: 'round',    count: 18, minSize: 10, maxSize: 22, oreName: 'Coral',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 585 },
+  { key: 'kelp_bed',           label: 'Kelp Bed',          bgColors: ['#384838', '#283828', '#182818'], oreColor: '#5a8a3a', highlightColor: '#88ba66', shape: 'flower',   count: 14, minSize: 12, maxSize: 22, oreName: 'Kelp',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 588 },
+  { key: 'sea_floor',          label: 'Sea Floor',         bgColors: ['#88806c', '#686048', '#484028'], oreColor: '#c8c0a8', highlightColor: '#ffffff', shape: 'round',    count: 12, minSize: 6,  maxSize: 14, oreName: 'Shell',    useGradient: false, voxelStyle: 'metal',   seedBase: 591 },
+  { key: 'prismarine',         label: 'Prismarine',        bgColors: ['#3a8888', '#2a7878', '#1a6868'], oreColor: '#5aaaa0', highlightColor: '#88dde0', shape: 'diamond',  count: 10, minSize: 12, maxSize: 22, oreName: 'Prism',    useGradient: true,  voxelStyle: 'crystal', seedBase: 594 },
+  { key: 'ocean_rock',         label: 'Ocean Rock',        bgColors: ['#384848', '#283838', '#182828'], oreColor: '#3a6a4a', highlightColor: '#5a8a6a', shape: 'round',    count: 12, minSize: 10, maxSize: 22, oreName: 'Moss',     useGradient: true,  voxelStyle: 'metal',   seedBase: 597 },
+
+  // ── Clouds ──────────────────────────────────────────────────────────
+  { key: 'cloud_soft',         label: 'Cloud (soft)',      bgColors: ['#e8eef8', '#d0d8e8', '#b8c0d8'], oreColor: '#ffffff', highlightColor: '#ffffff', shape: 'round',    count: 10, minSize: 16, maxSize: 32, oreName: 'Puff',     useGradient: false, voxelStyle: 'metal',   seedBase: 600 },
+  { key: 'cloud_dense',        label: 'Cloud (dense)',     bgColors: ['#ffffff', '#f0f0f8', '#d8d8e0'], oreColor: '#ffffff', highlightColor: '#ffffff', shape: 'round',    count: 6,  minSize: 18, maxSize: 36, oreName: 'Puff',     useGradient: false, voxelStyle: 'metal',   seedBase: 603 },
+  { key: 'cloud_storm',        label: 'Storm Cloud',       bgColors: ['#585868', '#404858', '#283848'], oreColor: '#787888', highlightColor: '#a0a0b0', shape: 'round',    count: 12, minSize: 14, maxSize: 26, oreName: 'Bolt',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 606 },
+  { key: 'cloud_sunset',       label: 'Sunset Cloud',      bgColors: ['#ffaa88', '#ee8866', '#cc6644'], oreColor: '#ffffff', highlightColor: '#ffd8c8', shape: 'round',    count: 10, minSize: 14, maxSize: 30, oreName: 'Glow',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 609,
+    glow: { intensity: 0.4, radius: 18, threshold: 0.8, color: '#ffaa66' } },
+
+  // ── Rusted / mechanical / cybernetic ───────────────────────────────
+  { key: 'rusted_iron',        label: 'Rusted Iron',       bgColors: ['#9a6840', '#7a5028', '#5a3818'], oreColor: '#c08858', highlightColor: '#e8a878', shape: 'round',    count: 16, minSize: 8,  maxSize: 18, oreName: 'Rust',     useGradient: true,  voxelStyle: 'metal',   seedBase: 612 },
+  { key: 'rusted_steel',       label: 'Rusted Steel',      bgColors: ['#785838', '#583820', '#382818'], oreColor: '#a07050', highlightColor: '#c89070', shape: 'round',    count: 14, minSize: 8,  maxSize: 16, oreName: 'Rust',     useGradient: true,  voxelStyle: 'metal',   seedBase: 615 },
+  { key: 'mechanical_plate',   label: 'Mechanical Plate',  bgColors: ['#5a5a5a', '#484848', '#383838'], oreColor: '#888888', highlightColor: '#bbbbbb', shape: 'round',    count: 14, minSize: 12, maxSize: 22, oreName: 'Rivet',    useGradient: true,  voxelStyle: 'metal',   seedBase: 618 },
+  { key: 'chrome_plate',       label: 'Chrome Plate',      bgColors: ['#b0b8c8', '#909aa8', '#707888'], oreColor: '#dcdde6', highlightColor: '#ffffff', shape: 'round',    count: 6,  minSize: 10, maxSize: 20, oreName: 'Buff',     useGradient: true,  voxelStyle: 'metal',   seedBase: 621 },
+  { key: 'cyber_grid',         label: 'Cyber Grid',        bgColors: ['#0a1a2a', '#061222', '#020a1a'], oreColor: '#00ddff', highlightColor: '#aaffff', shape: 'square',   count: 14, minSize: 12, maxSize: 24, oreName: 'Trace',    useGradient: true,  voxelStyle: 'crystal', seedBase: 624,
+    glow: { intensity: 0.9, radius: 12, threshold: 0.55, color: '#00ddff' } },
+  { key: 'circuit_board',      label: 'Circuit Board',     bgColors: ['#1a4828', '#143820', '#0a2818'], oreColor: '#88dd88', highlightColor: '#c0ffc0', shape: 'square',   count: 18, minSize: 10, maxSize: 22, oreName: 'Trace',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 627,
+    glow: { intensity: 0.7, radius: 12, threshold: 0.55, color: '#88ff88' } },
+
+  // ── Honey & bee ─────────────────────────────────────────────────────
+  // Honey reads great with a soft warm glow — bees not so much, but
+  // the comb shapes still come through nicely with hexagonal flecks.
+  { key: 'honey_block',        label: 'Honey Block',       bgColors: ['#f0c850', '#d8a830', '#b08818'], oreColor: '#ffe070', highlightColor: '#fff0a0', shape: 'round',    count: 8,  minSize: 14, maxSize: 26, oreName: 'Drip',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 630,
+    glow: { intensity: 0.5, radius: 14, threshold: 0.65, color: '#ffd060' } },
+  { key: 'honeycomb',          label: 'Honeycomb',         bgColors: ['#e8b840', '#c89820', '#a87810'], oreColor: '#ffd860', highlightColor: '#fff0a0', shape: 'hexagon',  count: 9,  minSize: 18, maxSize: 32, oreName: 'Comb',     useGradient: true,  voxelStyle: 'crystal', seedBase: 633 },
+  { key: 'waxed_honeycomb',    label: 'Waxed Honeycomb',   bgColors: ['#a07820', '#806010', '#604810'], oreColor: '#c89840', highlightColor: '#e0b860', shape: 'hexagon',  count: 8,  minSize: 16, maxSize: 28, oreName: 'Wax',      useGradient: true,  voxelStyle: 'crystal', seedBase: 636 },
+  { key: 'bee_hive',           label: 'Bee Hive',          bgColors: ['#c8a040', '#a88020', '#886018'], oreColor: '#583810', highlightColor: '#785820', shape: 'round',    count: 14, minSize: 6,  maxSize: 12, oreName: 'Stripe',   useGradient: false, voxelStyle: 'metal',   seedBase: 639 },
+
+  // ── Alien ───────────────────────────────────────────────────────────
+  { key: 'alien_flesh',        label: 'Alien Flesh',       bgColors: ['#5a3868', '#4a2858', '#381848'], oreColor: '#aa50aa', highlightColor: '#dd88dd', shape: 'round',    count: 14, minSize: 10, maxSize: 22, oreName: 'Vein',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 642 },
+  { key: 'alien_skin',         label: 'Alien Skin',        bgColors: ['#385838', '#284828', '#183828'], oreColor: '#5a8848', highlightColor: '#88bb66', shape: 'round',    count: 14, minSize: 10, maxSize: 22, oreName: 'Pore',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 645 },
+  { key: 'xenocrystal',        label: 'Xenocrystal',       bgColors: ['#1a2818', '#102010', '#081808'], oreColor: '#00ff66', highlightColor: '#88ffaa', shape: 'diamond',  count: 10, minSize: 14, maxSize: 28, oreName: 'Crystal',  useGradient: true,  voxelStyle: 'crystal', seedBase: 648,
+    glow: { intensity: 1.0, radius: 14, threshold: 0.45, color: '#00ff66' } },
+  { key: 'alien_metal',        label: 'Alien Metal',       bgColors: ['#28384a', '#182838', '#081828'], oreColor: '#5a8aaa', highlightColor: '#88c0dd', shape: 'hexagon',  count: 8,  minSize: 12, maxSize: 22, oreName: 'Filigree', useGradient: true,  voxelStyle: 'metal',   seedBase: 651 },
+  { key: 'alien_egg',          label: 'Alien Egg',         bgColors: ['#383848', '#282838', '#181828'], oreColor: '#cc66ff', highlightColor: '#ffaaff', shape: 'round',    count: 18, minSize: 8,  maxSize: 16, oreName: 'Spot',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 654,
+    glow: { intensity: 0.5, radius: 12, threshold: 0.6, color: '#cc66ff' } },
+
+  // ── Poison & corruption ────────────────────────────────────────────
+  { key: 'poison_moss',        label: 'Poison Moss',       bgColors: ['#386838', '#285028', '#183818'], oreColor: '#88dd44', highlightColor: '#bbff88', shape: 'flower',   count: 16, minSize: 10, maxSize: 20, oreName: 'Spore',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 657,
+    glow: { intensity: 0.4, radius: 12, threshold: 0.6, color: '#88ff44' } },
+  { key: 'toxic_sludge',       label: 'Toxic Sludge',      bgColors: ['#2a4818', '#1a3810', '#0a2008'], oreColor: '#88ee22', highlightColor: '#bbff66', shape: 'round',    count: 18, minSize: 8,  maxSize: 18, oreName: 'Ooze',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 660,
+    glow: { intensity: 1.1, radius: 14, threshold: 0.4, color: '#88ee22' } },
+  { key: 'venom_crystal',      label: 'Venom Crystal',     bgColors: ['#281838', '#181028', '#080818'], oreColor: '#aa44dd', highlightColor: '#dd88ee', shape: 'diamond',  count: 10, minSize: 12, maxSize: 26, oreName: 'Venom',    useGradient: true,  voxelStyle: 'crystal', seedBase: 663,
+    glow: { intensity: 0.7, radius: 14, threshold: 0.5, color: '#aa44dd' } },
+  { key: 'corrupted_stone',    label: 'Corrupted Stone',   bgColors: ['#3a2848', '#281838', '#180828'], oreColor: '#6a3878', highlightColor: '#9a58aa', shape: 'triangle', count: 14, minSize: 10, maxSize: 22, oreName: 'Rot',      useGradient: false, voxelStyle: 'metal',   seedBase: 666 },
+
+  // ── Candy & dessert ────────────────────────────────────────────────
+  { key: 'chocolate',          label: 'Chocolate',         bgColors: ['#5a3018', '#4a2810', '#381808'], oreColor: '#785838', highlightColor: '#9a7858', shape: 'round',    count: 8,  minSize: 12, maxSize: 24, oreName: 'Swirl',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 669 },
+  { key: 'choc_chip_cookie',   label: 'Choc-Chip Cookie',  bgColors: ['#d8b078', '#b08858', '#886038'], oreColor: '#3a1808', highlightColor: '#5a2818', shape: 'round',    count: 14, minSize: 8,  maxSize: 18, oreName: 'Chip',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 672 },
+  { key: 'gumdrop',            label: 'Gumdrop',           bgColors: ['#ff8888', '#ee6666', '#cc4444'], oreColor: '#ffccaa', highlightColor: '#ffffff', shape: 'round',    count: 12, minSize: 12, maxSize: 22, oreName: 'Sugar',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 675 },
+  { key: 'frosting',           label: 'Pink Frosting',     bgColors: ['#ffaacc', '#ee88bb', '#cc6699'], oreColor: '#ffffff', highlightColor: '#ffddee', shape: 'round',    count: 20, minSize: 4,  maxSize: 10, oreName: 'Sprinkle', useGradient: true,  voxelStyle: 'jewel',   seedBase: 678 },
+  { key: 'gingerbread',        label: 'Gingerbread',       bgColors: ['#b07840', '#905828', '#704818'], oreColor: '#ffffff', highlightColor: '#fff0d8', shape: 'round',    count: 12, minSize: 6,  maxSize: 14, oreName: 'Icing',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 681 },
+  { key: 'waffle',             label: 'Waffle',            bgColors: ['#d8a050', '#b88030', '#a06018'], oreColor: '#a06820', highlightColor: '#c08840', shape: 'square',   count: 16, minSize: 14, maxSize: 22, oreName: 'Grid',     useGradient: false, voxelStyle: 'metal',   seedBase: 684 },
+  { key: 'licorice',           label: 'Licorice',          bgColors: ['#1a1010', '#100808', '#060404'], oreColor: '#dd2244', highlightColor: '#ff6688', shape: 'round',    count: 10, minSize: 10, maxSize: 18, oreName: 'Drop',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 687 },
+  { key: 'caramel',            label: 'Caramel',           bgColors: ['#b87038', '#985828', '#784818'], oreColor: '#d89048', highlightColor: '#f0b070', shape: 'round',    count: 6,  minSize: 14, maxSize: 26, oreName: 'Swirl',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 690 },
+  { key: 'marshmallow',        label: 'Marshmallow',       bgColors: ['#ffe8e8', '#f0d0d0', '#d8b8b8'], oreColor: '#ffd0d8', highlightColor: '#ffffff', shape: 'round',    count: 8,  minSize: 16, maxSize: 30, oreName: 'Fluff',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 693 },
+
+  // ── Mystical / arcane ──────────────────────────────────────────────
+  { key: 'mystic_runes',       label: 'Mystic Runes',      bgColors: ['#1a1828', '#0e0c20', '#040414'], oreColor: '#88aaff', highlightColor: '#cce0ff', shape: 'square',   count: 8,  minSize: 12, maxSize: 22, oreName: 'Rune',     useGradient: true,  voxelStyle: 'crystal', seedBase: 696,
+    glow: { intensity: 0.9, radius: 14, threshold: 0.5, color: '#88aaff' } },
+  { key: 'enchanted_stone',    label: 'Enchanted Stone',   bgColors: ['#484868', '#383858', '#282848'], oreColor: '#66aaff', highlightColor: '#aaccff', shape: 'triangle', count: 12, minSize: 10, maxSize: 22, oreName: 'Vein',     useGradient: true,  voxelStyle: 'crystal', seedBase: 699,
+    glow: { intensity: 0.5, radius: 14, threshold: 0.6, color: '#66aaff' } },
+  { key: 'moonstone',          label: 'Moonstone',         bgColors: ['#c8d0e0', '#a8b0c8', '#889098'], oreColor: '#ffffff', highlightColor: '#e0e8ff', shape: 'round',    count: 10, minSize: 14, maxSize: 26, oreName: 'Glow',     useGradient: true,  voxelStyle: 'crystal', seedBase: 702,
+    glow: { intensity: 0.4, radius: 18, threshold: 0.75, color: 'auto' } },
+  { key: 'starcloth',          label: 'Starcloth',         bgColors: ['#0c1a4a', '#061238', '#020824'], oreColor: '#ffffaa', highlightColor: '#ffffff', shape: 'square',   count: 22, minSize: 4,  maxSize: 12, oreName: 'Star',     useGradient: false, voxelStyle: 'crystal', seedBase: 705,
+    glow: { intensity: 0.8, radius: 16, threshold: 0.5, color: '#ffffaa' } },
+  { key: 'shrine_stone',       label: 'Shrine Stone',      bgColors: ['#383830', '#282820', '#181810'], oreColor: '#ffcc44', highlightColor: '#ffe888', shape: 'diamond',  count: 8,  minSize: 12, maxSize: 24, oreName: 'Sigil',    useGradient: true,  voxelStyle: 'crystal', seedBase: 708,
+    glow: { intensity: 0.6, radius: 14, threshold: 0.6, color: '#ffcc44' } },
 ];
 
 const NEW_ORE_TEXTURE_PRESETS: Record<string, BlockPreset> = Object.fromEntries(
@@ -268,6 +368,31 @@ const NEW_ORE_CATEGORIES: { label: string; keys: string[] }[] = [
   // of these turns on bloom with a recipe tuned to that block, so they
   // emit straight away in the preview.
   { label: 'Light Sources',       keys: ['lit_glowstone', 'sea_lantern', 'shroomlight', 'magma_block', 'jack_o_lantern', 'lit_redstone_lamp', 'end_rod', 'crying_obsidian', 'soul_lantern', 'beacon'] },
+  // Worn / paved ground covers — dirt, gravel, cobble, concrete, asphalt.
+  { label: 'Surfaces & Roads',    keys: ['dirt_path', 'gravel_path', 'cobblestone_path', 'concrete_smooth', 'concrete_weathered', 'asphalt_road'] },
+  // Sandy beaches and shell beds.
+  { label: 'Beach & Shell',       keys: ['beach_sand', 'wet_sand', 'pebble_beach', 'coral_sand', 'seashell_bed'] },
+  // Water surfaces in different moods.
+  { label: 'Water',               keys: ['water_calm', 'water_deep', 'river_water', 'swamp_water'] },
+  // Submerged biome blocks — corals, kelp, prismarine, sea floor.
+  { label: 'Underwater',          keys: ['coral_reef', 'kelp_bed', 'sea_floor', 'prismarine', 'ocean_rock'] },
+  // Sky blocks: fluffy, dense, storm, sunset glow.
+  { label: 'Clouds',              keys: ['cloud_soft', 'cloud_dense', 'cloud_storm', 'cloud_sunset'] },
+  // Rusted / chromed / cybernetic surfaces. Cyber Grid and Circuit
+  // Board carry glow recipes for sci-fi neon trace looks.
+  { label: 'Mechanical & Cyber',  keys: ['rusted_iron', 'rusted_steel', 'mechanical_plate', 'chrome_plate', 'cyber_grid', 'circuit_board'] },
+  // Honey, comb, hive — Honey Block gets a subtle warm glow.
+  { label: 'Honey & Bee',         keys: ['honey_block', 'honeycomb', 'waxed_honeycomb', 'bee_hive'] },
+  // Alien biome and tech — Xenocrystal and Alien Egg glow.
+  { label: 'Alien',               keys: ['alien_flesh', 'alien_skin', 'xenocrystal', 'alien_metal', 'alien_egg'] },
+  // Poison & corruption. Sludge and Venom glow brightly; moss has a
+  // subtle sickly emission.
+  { label: 'Poison & Corruption', keys: ['poison_moss', 'toxic_sludge', 'venom_crystal', 'corrupted_stone'] },
+  // Candyland blocks for sweet-themed builds.
+  { label: 'Candy & Dessert',     keys: ['chocolate', 'choc_chip_cookie', 'gumdrop', 'frosting', 'gingerbread', 'waffle', 'licorice', 'caramel', 'marshmallow'] },
+  // Arcane / mystical blocks — most carry a subtle glow recipe so they
+  // emit out of the box.
+  { label: 'Mystical',            keys: ['mystic_runes', 'enchanted_stone', 'moonstone', 'starcloth', 'shrine_stone'] },
 ];
 
 function VoxelFaceSettings({ face, setFace }: { face: VoxelBlockFace; setFace: (f: VoxelBlockFace) => void }) {
