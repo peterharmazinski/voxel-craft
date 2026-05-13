@@ -250,6 +250,30 @@ const ORE_DESCRIPTORS: OreDescriptor[] = [
   { key: 'lit_glowstone',      label: 'Glowstone (lit)',   bgColors: ['#5a4820', '#4a3818', '#382810'], oreColor: '#ffdd44', highlightColor: '#ffee88', shape: 'round',    count: 22, minSize: 8,  maxSize: 18, oreName: 'Glowstone', useGradient: true,  voxelStyle: 'jewel',   seedBase: 517,
     glow: { intensity: 1.1, radius: 14, threshold: 0.45, color: 'auto' } },
 
+  // ── Lanterns & Bulbs ───────────────────────────────────────────────
+  // Specific lighting fixtures: classic incandescent + LED bulbs and
+  // a small family of lanterns (iron, gas, paper, Chinese, fairy
+  // string). Each carries a tuned glow recipe so they look properly
+  // "on" the moment the preset is selected.
+  { key: 'bulb_incandescent',  label: 'Incandescent Bulb', bgColors: ['#f8d870', '#d8b850', '#b89830'], oreColor: '#ffaa44', highlightColor: '#ffdd88', shape: 'round',    count: 6,  minSize: 14, maxSize: 26, oreName: 'Filament', useGradient: true,  voxelStyle: 'jewel',   seedBase: 720,
+    glow: { intensity: 1.0, radius: 14, threshold: 0.55, color: '#ffcc66' } },
+  { key: 'bulb_led',           label: 'LED Bulb',          bgColors: ['#e8f0ff', '#c8d8f0', '#a8b8d8'], oreColor: '#ffffff', highlightColor: '#ccddff', shape: 'square',   count: 8,  minSize: 14, maxSize: 28, oreName: 'Diode',    useGradient: true,  voxelStyle: 'crystal', seedBase: 723,
+    glow: { intensity: 0.9, radius: 16, threshold: 0.65, color: '#cce4ff' } },
+  { key: 'edison_bulb',        label: 'Edison Bulb',       bgColors: ['#a86a18', '#884e10', '#683808'], oreColor: '#ffbb44', highlightColor: '#ffe088', shape: 'triangle', count: 6,  minSize: 12, maxSize: 24, oreName: 'Filament', useGradient: true,  voxelStyle: 'jewel',   seedBase: 726,
+    glow: { intensity: 1.1, radius: 14, threshold: 0.5, color: '#ffaa44' } },
+  { key: 'iron_lantern',       label: 'Iron Lantern',      bgColors: ['#3a3838', '#282828', '#181818'], oreColor: '#ffcc44', highlightColor: '#ffe888', shape: 'round',    count: 10, minSize: 12, maxSize: 22, oreName: 'Flame',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 729,
+    glow: { intensity: 1.0, radius: 14, threshold: 0.5, color: '#ffcc44' } },
+  { key: 'gas_lantern',        label: 'Gas Lantern',       bgColors: ['#2a2828', '#1a1818', '#0a0808'], oreColor: '#aaeeff', highlightColor: '#ffffff', shape: 'diamond',  count: 6,  minSize: 14, maxSize: 28, oreName: 'Mantle',   useGradient: true,  voxelStyle: 'crystal', seedBase: 732,
+    glow: { intensity: 0.95, radius: 14, threshold: 0.5, color: '#88eeff' } },
+  { key: 'hanging_lantern',    label: 'Hanging Lantern',   bgColors: ['#3a2818', '#281808', '#180808'], oreColor: '#ffcc44', highlightColor: '#ffe888', shape: 'square',   count: 8,  minSize: 12, maxSize: 22, oreName: 'Pane',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 735,
+    glow: { intensity: 0.9, radius: 14, threshold: 0.55, color: '#ffcc44' } },
+  { key: 'paper_lantern',      label: 'Paper Lantern',     bgColors: ['#cc3333', '#aa2222', '#881818'], oreColor: '#ff8866', highlightColor: '#ffd0a8', shape: 'square',   count: 8,  minSize: 12, maxSize: 22, oreName: 'Ribbing',  useGradient: true,  voxelStyle: 'jewel',   seedBase: 738,
+    glow: { intensity: 0.85, radius: 14, threshold: 0.55, color: '#ff6644' } },
+  { key: 'chinese_lantern',    label: 'Chinese Lantern',   bgColors: ['#bb1818', '#991010', '#771010'], oreColor: '#ffd700', highlightColor: '#ffe888', shape: 'round',    count: 10, minSize: 10, maxSize: 18, oreName: 'Tassel',   useGradient: true,  voxelStyle: 'jewel',   seedBase: 741,
+    glow: { intensity: 0.85, radius: 14, threshold: 0.55, color: '#ffaa44' } },
+  { key: 'fairy_lights',       label: 'Fairy Lights',      bgColors: ['#0a0c14', '#060818', '#02040a'], oreColor: '#ffeebb', highlightColor: '#ffffff', shape: 'round',    count: 24, minSize: 4,  maxSize: 8,  oreName: 'Bulb',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 744,
+    glow: { intensity: 1.0, radius: 12, threshold: 0.4, color: '#ffeebb' } },
+
   // ── Surfaces: paths, roads, concrete, asphalt ───────────────────────
   // Worn / paved ground covers. Most use a muted bg with sparse darker
   // grit so they read as textured but not noisy at a distance.
@@ -368,6 +392,10 @@ const NEW_ORE_CATEGORIES: { label: string; keys: string[] }[] = [
   // of these turns on bloom with a recipe tuned to that block, so they
   // emit straight away in the preview.
   { label: 'Light Sources',       keys: ['lit_glowstone', 'sea_lantern', 'shroomlight', 'magma_block', 'jack_o_lantern', 'lit_redstone_lamp', 'end_rod', 'crying_obsidian', 'soul_lantern', 'beacon'] },
+  // Specific lit fixtures — bulbs and lanterns. Same glow auto-enable
+  // behaviour as Light Sources; this group is split out so the
+  // category stays browsable.
+  { label: 'Lanterns & Bulbs',    keys: ['bulb_incandescent', 'bulb_led', 'edison_bulb', 'iron_lantern', 'gas_lantern', 'hanging_lantern', 'paper_lantern', 'chinese_lantern', 'fairy_lights'] },
   // Worn / paved ground covers — dirt, gravel, cobble, concrete, asphalt.
   { label: 'Surfaces & Roads',    keys: ['dirt_path', 'gravel_path', 'cobblestone_path', 'concrete_smooth', 'concrete_weathered', 'asphalt_road'] },
   // Sandy beaches and shell beds.
