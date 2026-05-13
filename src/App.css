@@ -813,6 +813,175 @@ body {
 
 /* ── Block Workbench — Three Column Layout (Dark Pro Studio) ────────── */
 
+.workbench-page {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Workbench Toolbar ──────────────────────────────────────────────── */
+
+.workbench-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 24px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.workbench-toolbar-left,
+.workbench-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.workbench-toolbar-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+}
+
+.workbench-toolbar-divider {
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+.workbench-toolbar-preset {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.workbench-toolbar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  user-select: none;
+}
+
+.workbench-toolbar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.workbench-toolbar-status.dirty {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.workbench-toolbar-status.dirty .workbench-toolbar-dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.workbench-toolbar-status.saved {
+  color: var(--text-secondary);
+}
+
+.workbench-toolbar-status.saved .workbench-toolbar-dot {
+  background: #4ade80;
+}
+
+.workbench-toolbar-help-wrap {
+  position: relative;
+}
+
+.workbench-toolbar-help {
+  font-weight: 600;
+}
+
+.workbench-toolbar-popover-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.workbench-toolbar-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 50;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  min-width: 320px;
+  box-shadow: var(--shadow-md);
+}
+
+.workbench-toolbar-popover h4 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+}
+
+.workbench-toolbar-popover dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.workbench-toolbar-popover dt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.workbench-toolbar-popover dd {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  align-self: center;
+}
+
+.workbench-toolbar-popover kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.workbench-toolbar-popover-note {
+  margin: 12px 0 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 .workbench-layout {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) 440px;
@@ -829,8 +998,8 @@ body {
   flex-direction: column;
   gap: 12px;
   position: sticky;
-  top: 16px;
-  max-height: calc(100vh - 88px);
+  top: 56px;
+  max-height: calc(100vh - 130px);
   overflow-y: auto;
   min-width: 0;
 }

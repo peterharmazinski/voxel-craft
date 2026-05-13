@@ -1023,6 +1023,12 @@ export default function BlockWorkbench() {
   const [showProjectBrowser, setShowProjectBrowser] = useState(false);
   const [projectName, setProjectName] = useLocalState<string>('bw_projName', '');
 
+  // Toolbar / save-state tracking
+  const [dirty, setDirty] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const mountedRef = useRef(false);
+  const suppressDirtyRef = useRef(false);
+
   const downloadAtSize = useCallback((source: HTMLCanvasElement, filename: string) => {
     if (exportSize === source.width) {
       downloadCanvas(source, filename, 'png');
@@ -1309,6 +1315,7 @@ export default function BlockWorkbench() {
       snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed]);
 
   const loadProject = useCallback((proj: VoxelCraftProject) => {
+    suppressDirtyRef.current = true;
     setEditorMode(proj.editorMode);
     setTopImg(proj.faces.top);
     setSideImg(proj.faces.side);
@@ -1343,6 +1350,7 @@ export default function BlockWorkbench() {
     setProjectName(proj.name);
     setActivePresetKey('');
     setActiveVxPresetKey('');
+    setDirty(false);
   }, [setEditorMode, setTopImg, setSideImg, setBottomImg, setTopConfig, setSideConfig, setBottomConfig,
       setVxResolution, setVxSeed, setVxRenderStyle, setVxSideMode, setVxSideSplitPos,
       setVxTransitionPattern, setVxTransitionNoise, setVxTopFace, setVxSideFace, setVxBottomFace, setVxSideTopFace,
@@ -1358,6 +1366,7 @@ export default function BlockWorkbench() {
     } else {
       downloadProject(proj);
     }
+    setDirty(false);
   }, [projectName, buildProject]);
 
   const handleOpenFolder = useCallback(async () => {
@@ -1446,6 +1455,18 @@ export default function BlockWorkbench() {
 
   const activeCanvasRef = activeFace === 'top' ? topRef : activeFace === 'side' ? sideRef : bottomRef;
 
+  // Mark the project as dirty whenever output state changes. Skipped on the
+  // very first render (so an unedited workbench starts as "saved") and
+  // suppressed for a single update right after loadProject() runs.
+  useEffect(() => {
+    if (!mountedRef.current) { mountedRef.current = true; return; }
+    if (suppressDirtyRef.current) { suppressDirtyRef.current = false; return; }
+    setDirty(true);
+  }, [topImg, sideImg, bottomImg, projectName, editorMode,
+      vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace, vxResolution, vxSeed,
+      vxRenderStyle, vxSideMode, vxSideSplitPos, vxTransitionPattern, vxTransitionNoise,
+      snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
@@ -1462,7 +1483,58 @@ export default function BlockWorkbench() {
     return () => window.removeEventListener('keydown', handler);
   }, [setActiveFace, setVxSeed, setTilingPreview, setSnowEnabled, handleSaveProject]);
 
+  const activePresetLabel =
+    editorMode === 'voxel'
+      ? (activeVxPresetKey ? VOXEL_PRESETS[activeVxPresetKey]?.label : null)
+      : (activePresetKey ? WORKBENCH_PRESETS[activePresetKey]?.label : null);
+
   return (
+    <div className="workbench-page">
+      <div className="workbench-toolbar">
+        <div className="workbench-toolbar-left">
+          <span className="workbench-toolbar-title">Block Workbench</span>
+          {activePresetLabel && (
+            <span className="workbench-toolbar-preset" title="Active preset">
+              <span className="workbench-toolbar-divider">·</span> {activePresetLabel}
+            </span>
+          )}
+        </div>
+        <div className="workbench-toolbar-right">
+          <span className={`workbench-toolbar-status ${dirty ? 'dirty' : 'saved'}`} title={dirty ? 'Unsaved changes — press Ctrl+S to save' : 'All changes saved'}>
+            <span className="workbench-toolbar-dot" />
+            {dirty ? 'Unsaved' : 'Saved'}
+          </span>
+          <div className="workbench-toolbar-help-wrap">
+            <button
+              className={`btn-small workbench-toolbar-help ${showShortcuts ? 'active' : ''}`}
+              onClick={() => setShowShortcuts(s => !s)}
+              title="Keyboard shortcuts"
+            >Shortcuts</button>
+            {showShortcuts && (
+              <>
+                <div className="workbench-toolbar-popover-backdrop" onClick={() => setShowShortcuts(false)} />
+                <div className="workbench-toolbar-popover" role="dialog" aria-label="Keyboard shortcuts">
+                  <h4>Keyboard Shortcuts</h4>
+                  <dl>
+                    <dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt>
+                    <dd>Switch active face (Top / Side / Bottom)</dd>
+                    <dt><kbd>R</kbd></dt>
+                    <dd>Randomize voxel seed</dd>
+                    <dt><kbd>T</kbd></dt>
+                    <dd>Toggle tiling preview (3×3)</dd>
+                    <dt><kbd>N</kbd></dt>
+                    <dd>Toggle snow layer</dd>
+                    <dt><kbd>Ctrl</kbd>+<kbd>S</kbd></dt>
+                    <dd>Save project</dd>
+                  </dl>
+                  <p className="workbench-toolbar-popover-note">Shortcuts are disabled while typing in inputs.</p>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
     <div className="workbench-layout">
       {/* ───────────────── Left: Library ───────────────── */}
       <aside className="workbench-library">
@@ -1752,6 +1824,7 @@ export default function BlockWorkbench() {
           hasSource={renderCount > 0 && !!imgs[activeFace]}
         />
       </aside>
+    </div>
     </div>
   );
 }
