@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import SliderControl from '../components/SliderControl';
 import MapPanel from '../components/MapPanel';
 import { downloadCanvas } from '../utils/helpers';
@@ -1092,6 +1092,52 @@ const renderVoxelPresetThumb = (canvas: HTMLCanvasElement, preset: VoxelPreset) 
   generateVoxelBlockFace(canvas, 128, preset.side, 16, 42);
 };
 
+/**
+ * A workbench section card whose body collapses behind its header on
+ * click. Persists collapse state in localStorage under `storageKey`
+ * so the user's layout choices survive reloads.
+ */
+function CollapsibleSection({
+  title,
+  storageKey,
+  defaultCollapsed = false,
+  headerExtra,
+  bodyClassName = '',
+  children,
+}: {
+  title: string;
+  storageKey: string;
+  defaultCollapsed?: boolean;
+  headerExtra?: ReactNode;
+  bodyClassName?: string;
+  children: ReactNode;
+}) {
+  const [collapsed, setCollapsed] = useLocalState<boolean>(storageKey, defaultCollapsed);
+  const bodyId = `${storageKey}-body`;
+  return (
+    <section className={`wb-section ${collapsed ? 'wb-section--collapsed' : ''}`}>
+      <header className="wb-section-header">
+        <button
+          type="button"
+          className="wb-section-toggle"
+          onClick={() => setCollapsed(c => !c)}
+          aria-expanded={!collapsed}
+          aria-controls={bodyId}
+        >
+          <span className="wb-section-chevron" aria-hidden>{collapsed ? '▸' : '▾'}</span>
+          <h3>{title}</h3>
+        </button>
+        {headerExtra}
+      </header>
+      {!collapsed && (
+        <div className={`wb-section-body ${bodyClassName}`.trim()} id={bodyId}>
+          {children}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function BlockWorkbench() {
   const topRef = useRef<HTMLCanvasElement>(null);
   const sideRef = useRef<HTMLCanvasElement>(null);
@@ -1729,95 +1775,80 @@ export default function BlockWorkbench() {
     <div className="workbench-layout">
       {/* ───────────────── Left: Library ───────────────── */}
       <aside className="workbench-library">
-        <section className="wb-section">
-          <header className="wb-section-header">
-            <h3>Project</h3>
-          </header>
-          <div className="wb-section-body">
-            <input
-              type="text" placeholder="Project name…" value={projectName}
-              onChange={e => setProjectName(e.target.value)}
-              className="wb-input"
-            />
-            <div className="wb-button-row">
-              <button className="btn-small" onClick={handleSaveProject} title="Save project (Ctrl+S)">Save</button>
-              <button className="btn-small" onClick={handleLoadFile} title="Load a .voxelcraft file">Load</button>
-              {supportsFileSystemAccess() && (
-                <button className="btn-small" onClick={handleOpenFolder} title="Open project folder">Folder</button>
-              )}
-              {showProjectBrowser && projectList.length > 0 && (
-                <button className="btn-small" onClick={() => setShowProjectBrowser(false)}>Close</button>
-              )}
-            </div>
-            {showProjectBrowser && (
-              <div className="wb-project-browser">
-                {projectList.length === 0 && <div className="wb-empty-state">No projects in this folder</div>}
-                {projectList.map(p => (
-                  <div
-                    key={p.filename}
-                    className="wb-project-row"
-                    onClick={() => handleLoadFromFolder(p.filename)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleLoadFromFolder(p.filename);
-                      }
-                    }}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Load project ${p.name}`}
-                  >
-                    {p.thumbnail && <img src={p.thumbnail} alt="" className="wb-project-thumb" />}
-                    <div className="wb-project-info">
-                      <div className="wb-project-name">{p.name}</div>
-                      <div className="wb-project-date">{new Date(p.createdAt).toLocaleDateString()}</div>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn-small wb-project-del"
-                      onClick={e => { e.stopPropagation(); handleDeleteFromFolder(p.filename); }}
-                      aria-label={`Delete project ${p.name}`}
-                    >Del</button>
-                  </div>
-                ))}
-              </div>
+        <CollapsibleSection title="Project" storageKey="bw_sec_project">
+          <input
+            type="text" placeholder="Project name…" value={projectName}
+            onChange={e => setProjectName(e.target.value)}
+            className="wb-input"
+          />
+          <div className="wb-button-row">
+            <button className="btn-small" onClick={handleSaveProject} title="Save project (Ctrl+S)">Save</button>
+            <button className="btn-small" onClick={handleLoadFile} title="Load a .voxelcraft file">Load</button>
+            {supportsFileSystemAccess() && (
+              <button className="btn-small" onClick={handleOpenFolder} title="Open project folder">Folder</button>
+            )}
+            {showProjectBrowser && projectList.length > 0 && (
+              <button className="btn-small" onClick={() => setShowProjectBrowser(false)}>Close</button>
             )}
           </div>
-        </section>
+          {showProjectBrowser && (
+            <div className="wb-project-browser">
+              {projectList.length === 0 && <div className="wb-empty-state">No projects in this folder</div>}
+              {projectList.map(p => (
+                <div
+                  key={p.filename}
+                  className="wb-project-row"
+                  onClick={() => handleLoadFromFolder(p.filename)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleLoadFromFolder(p.filename);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Load project ${p.name}`}
+                >
+                  {p.thumbnail && <img src={p.thumbnail} alt="" className="wb-project-thumb" />}
+                  <div className="wb-project-info">
+                    <div className="wb-project-name">{p.name}</div>
+                    <div className="wb-project-date">{new Date(p.createdAt).toLocaleDateString()}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-small wb-project-del"
+                    onClick={e => { e.stopPropagation(); handleDeleteFromFolder(p.filename); }}
+                    aria-label={`Delete project ${p.name}`}
+                  >Del</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CollapsibleSection>
 
-        <section className="wb-section">
-          <header className="wb-section-header">
-            <h3>Block Presets</h3>
-          </header>
-          <div className="wb-section-body wb-library-body">
-            <PresetGrid
-              presets={WORKBENCH_PRESETS}
-              categories={WORKBENCH_CATEGORIES}
-              activeKey={activePresetKey}
-              onPick={applyPreset}
-              renderThumb={renderBlockPresetThumb}
-              storageKey="bw_libCollapsed"
-              searchPlaceholder="Search block presets…"
-            />
-          </div>
-        </section>
+        <CollapsibleSection title="Block Presets" storageKey="bw_sec_blockPresets" bodyClassName="wb-library-body">
+          <PresetGrid
+            presets={WORKBENCH_PRESETS}
+            categories={WORKBENCH_CATEGORIES}
+            activeKey={activePresetKey}
+            onPick={applyPreset}
+            renderThumb={renderBlockPresetThumb}
+            storageKey="bw_libCollapsed"
+            searchPlaceholder="Search block presets…"
+          />
+        </CollapsibleSection>
 
-        <section className="wb-section">
-          <header className="wb-section-header">
-            <h3>Voxel Presets</h3>
-          </header>
-          <div className="wb-section-body wb-library-body">
-            <PresetGrid
-              presets={VOXEL_PRESETS}
-              categories={VOXEL_CATEGORIES}
-              activeKey={activeVxPresetKey}
-              onPick={applyVoxelPreset}
-              renderThumb={renderVoxelPresetThumb}
-              storageKey="bw_vxLibCollapsed"
-              searchPlaceholder="Search voxel presets…"
-            />
-          </div>
-        </section>
+        <CollapsibleSection title="Voxel Presets" storageKey="bw_sec_voxelPresets" bodyClassName="wb-library-body">
+          <PresetGrid
+            presets={VOXEL_PRESETS}
+            categories={VOXEL_CATEGORIES}
+            activeKey={activeVxPresetKey}
+            onPick={applyVoxelPreset}
+            renderThumb={renderVoxelPresetThumb}
+            storageKey="bw_vxLibCollapsed"
+            searchPlaceholder="Search voxel presets…"
+          />
+        </CollapsibleSection>
       </aside>
 
       {/* ───────────────── Center: Stage ───────────────── */}
@@ -1950,10 +1981,17 @@ export default function BlockWorkbench() {
           )}
         </section>
 
-        <section className="wb-section wb-download-section">
-          <header className="wb-section-header">
-            <h3>Export</h3>
-            <select value={exportSize} onChange={e => setExportSize(+e.target.value)} className="wb-section-header-select">
+        <CollapsibleSection
+          title="Export"
+          storageKey="bw_sec_export"
+          headerExtra={
+            <select
+              value={exportSize}
+              onChange={e => setExportSize(+e.target.value)}
+              onClick={e => e.stopPropagation()}
+              className="wb-section-header-select"
+              aria-label="Export size"
+            >
               <option value={16}>16 px</option>
               <option value={32}>32 px</option>
               <option value={64}>64 px</option>
@@ -1962,46 +2000,45 @@ export default function BlockWorkbench() {
               <option value={512}>512 px</option>
               <option value={1024}>1024 px</option>
             </select>
-          </header>
-          <div className="wb-section-body">
-            <div className="download-bar">
-              {(['top', 'side', 'bottom'] as const).map(f => (
-                <button key={f} className="btn-primary" onClick={() => {
-                  const ref = f === 'top' ? topRef : f === 'side' ? sideRef : bottomRef;
-                  if (ref.current) downloadAtSize(ref.current, `block_${f}`);
-                }}>{f.charAt(0).toUpperCase() + f.slice(1)}</button>
-              ))}
-              <button className="btn-primary" onClick={() => {
-                if (topRef.current) downloadAtSize(topRef.current, 'block_top');
-                if (sideRef.current) downloadAtSize(sideRef.current, 'block_side');
-                if (bottomRef.current) downloadAtSize(bottomRef.current, 'block_bottom');
-              }}>All</button>
-              <button className="btn-primary" onClick={() => {
-                if (isoRef.current) downloadAtSize(isoRef.current, 'block_iso');
-              }} title="Download assembled isometric 3D block as PNG">Iso 3D</button>
-              <div className="wb-zip-wrap">
-                <button className="btn-primary" onClick={handleZipExport} title="Download faces and selected maps as ZIP">ZIP</button>
-                <button
-                  className="btn-primary wb-zip-chevron"
-                  onClick={() => setZipOptionsOpen(o => !o)}
-                  title="Choose what to include in the ZIP"
-                >▾</button>
-                {zipOptionsOpen && (
-                  <div className="wb-zip-popover">
-                    <div className="wb-zip-popover-title">ZIP contents</div>
-                    <label><input type="checkbox" checked={zipIncludeDiffuse} onChange={e => setZipIncludeDiffuse(e.target.checked)} /> Diffuse (textures)</label>
-                    <label><input type="checkbox" checked={zipIncludeNormal} onChange={e => setZipIncludeNormal(e.target.checked)} /> Normal map</label>
-                    <label><input type="checkbox" checked={zipIncludeDisplacement} onChange={e => setZipIncludeDisplacement(e.target.checked)} /> Displacement</label>
-                    <label><input type="checkbox" checked={zipIncludeAO} onChange={e => setZipIncludeAO(e.target.checked)} /> Ambient occlusion</label>
-                    <label><input type="checkbox" checked={zipIncludeSpecular} onChange={e => setZipIncludeSpec(e.target.checked)} /> Specular</label>
-                    <label className="wb-zip-popover-divider"><input type="checkbox" checked={zipIncludeIso} onChange={e => setZipIncludeIso(e.target.checked)} /> Iso 3D block</label>
-                    <button className="btn-primary wb-zip-close" onClick={() => setZipOptionsOpen(false)}>Close</button>
-                  </div>
-                )}
-              </div>
+          }
+        >
+          <div className="download-bar">
+            {(['top', 'side', 'bottom'] as const).map(f => (
+              <button key={f} className="btn-primary" onClick={() => {
+                const ref = f === 'top' ? topRef : f === 'side' ? sideRef : bottomRef;
+                if (ref.current) downloadAtSize(ref.current, `block_${f}`);
+              }}>{f.charAt(0).toUpperCase() + f.slice(1)}</button>
+            ))}
+            <button className="btn-primary" onClick={() => {
+              if (topRef.current) downloadAtSize(topRef.current, 'block_top');
+              if (sideRef.current) downloadAtSize(sideRef.current, 'block_side');
+              if (bottomRef.current) downloadAtSize(bottomRef.current, 'block_bottom');
+            }}>All</button>
+            <button className="btn-primary" onClick={() => {
+              if (isoRef.current) downloadAtSize(isoRef.current, 'block_iso');
+            }} title="Download assembled isometric 3D block as PNG">Iso 3D</button>
+            <div className="wb-zip-wrap">
+              <button className="btn-primary" onClick={handleZipExport} title="Download faces and selected maps as ZIP">ZIP</button>
+              <button
+                className="btn-primary wb-zip-chevron"
+                onClick={() => setZipOptionsOpen(o => !o)}
+                title="Choose what to include in the ZIP"
+              >▾</button>
+              {zipOptionsOpen && (
+                <div className="wb-zip-popover">
+                  <div className="wb-zip-popover-title">ZIP contents</div>
+                  <label><input type="checkbox" checked={zipIncludeDiffuse} onChange={e => setZipIncludeDiffuse(e.target.checked)} /> Diffuse (textures)</label>
+                  <label><input type="checkbox" checked={zipIncludeNormal} onChange={e => setZipIncludeNormal(e.target.checked)} /> Normal map</label>
+                  <label><input type="checkbox" checked={zipIncludeDisplacement} onChange={e => setZipIncludeDisplacement(e.target.checked)} /> Displacement</label>
+                  <label><input type="checkbox" checked={zipIncludeAO} onChange={e => setZipIncludeAO(e.target.checked)} /> Ambient occlusion</label>
+                  <label><input type="checkbox" checked={zipIncludeSpecular} onChange={e => setZipIncludeSpec(e.target.checked)} /> Specular</label>
+                  <label className="wb-zip-popover-divider"><input type="checkbox" checked={zipIncludeIso} onChange={e => setZipIncludeIso(e.target.checked)} /> Iso 3D block</label>
+                  <button className="btn-primary wb-zip-close" onClick={() => setZipOptionsOpen(false)}>Close</button>
+                </div>
+              )}
             </div>
           </div>
-        </section>
+        </CollapsibleSection>
       </main>
 
       {/* ───────────────── Right: Inspector ───────────────── */}

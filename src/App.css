@@ -377,7 +377,20 @@ input[type='range'] {
 
 .app-main {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   overflow: auto;
+}
+
+/* When the workbench page owns the main area, defer all scrolling to
+   its inner columns so the outer page scrollbar never appears. The
+   workbench-page is itself height: 100% + overflow: hidden, so its
+   columns are the only scroll containers. Below 1080px the columns
+   stack and the outer area is allowed to scroll again. */
+@media (min-width: 1081px) {
+  .app-main:has(.workbench-page) {
+    overflow: hidden;
+  }
 }
 
 /* ── Guide Side Panel ────────────────────────────────────────────── */
@@ -1417,6 +1430,55 @@ input[type='range'] {
   letter-spacing: 0.06em;
   color: var(--text-secondary);
   margin: 0;
+}
+
+/* Collapsible toggle: the entire title row is one clickable button.
+   Visually it looks like plain text — the chevron sits in front of the
+   h3 and rotates between ▾ (expanded) and ▸ (collapsed). */
+.wb-section-toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  margin: -2px 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.wb-section-toggle:hover h3,
+.wb-section-toggle:hover .wb-section-chevron {
+  color: var(--text-primary);
+}
+
+.wb-section-toggle:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+.wb-section-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+/* When a section is collapsed, kill its bottom border so the card
+   reads as one compact row instead of a stub with a divider line. */
+.wb-section--collapsed .wb-section-header {
+  border-bottom: none;
 }
 
 .wb-section-header-select {
