@@ -445,6 +445,50 @@ export interface GlowOptions {
   color?: string;      // 'auto' or hex — when set, all glow takes this colour
 }
 
+// Generates an emission map from a source face for engine use (Unity
+// Standard/URP/HDRP, Godot, Three.js, etc). Same threshold + colour
+// logic as `applyGlow`'s glow-source buffer, but with no blur and a
+// solid-black background — engines apply their own bloom on top, so
+// the map only needs to identify *which* pixels emit light, not how
+// far the halo spreads.
+export function generateEmissionMap(source: HTMLCanvasElement, output: HTMLCanvasElement, opts: GlowOptions) {
+  const w = source.width;
+  const h = source.height;
+  output.width = w;
+  output.height = h;
+  const sCtx = source.getContext('2d')!;
+  const oCtx = output.getContext('2d')!;
+  const srcImg = sCtx.getImageData(0, 0, w, h);
+  const sd = srcImg.data;
+  const outImg = oCtx.createImageData(w, h);
+  const od = outImg.data;
+
+  const useAuto = !opts.color || opts.color === 'auto';
+  let cr = 255, cg = 255, cb = 255;
+  if (!useAuto && opts.color && opts.color.startsWith('#') && opts.color.length === 7) {
+    const n = parseInt(opts.color.slice(1), 16);
+    cr = (n >> 16) & 0xff; cg = (n >> 8) & 0xff; cb = n & 0xff;
+  }
+
+  for (let i = 0; i < sd.length; i += 4) {
+    od[i + 3] = 255; // solid black bg by default
+    if (sd[i + 3] === 0) { continue; }
+    const luma = (sd[i] * 0.299 + sd[i + 1] * 0.587 + sd[i + 2] * 0.114) / 255;
+    if (luma < opts.threshold) { continue; }
+    const t = (luma - opts.threshold) / Math.max(0.001, 1 - opts.threshold);
+    if (useAuto) {
+      od[i]     = sd[i] * t;
+      od[i + 1] = sd[i + 1] * t;
+      od[i + 2] = sd[i + 2] * t;
+    } else {
+      od[i]     = cr * t;
+      od[i + 1] = cg * t;
+      od[i + 2] = cb * t;
+    }
+  }
+  oCtx.putImageData(outImg, 0, 0);
+}
+
 export function applyGlow(canvas: HTMLCanvasElement, opts: GlowOptions) {
   const { intensity, radius, threshold } = opts;
   if (intensity <= 0 || radius <= 0) return;

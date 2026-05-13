@@ -2001,6 +2001,18 @@ input[type='range'] {
   font-size: 12px;
 }
 
+/* Engine-export hint inside the glow controls panel. Sits across the
+   full row above the sliders so the user notices the emission-map
+   workflow without us shouting at them. */
+.wb-glow-engine-hint {
+  flex-basis: 100%;
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+  margin-bottom: 2px;
+}
+
 /* Multi-size grid inside the ZIP popover. Each pixel size is a small
    chip-style checkbox so the user can pick several without the popover
    ballooning. */

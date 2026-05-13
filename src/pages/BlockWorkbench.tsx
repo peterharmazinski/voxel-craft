@@ -16,7 +16,7 @@ import {
   type SideTransitionPattern,
   type VoxelRenderStyle,
 } from '../utils/textureGenerators';
-import { renderFaceTexture, applySnowOverlay, applyBlockStylePostProcess, compositeTextureSide, applyGlow, type FaceTextureConfig, type SnowOverlayOptions, type GlowOptions, type BlockRenderStyle } from '../utils/renderTexture';
+import { renderFaceTexture, applySnowOverlay, applyBlockStylePostProcess, compositeTextureSide, applyGlow, generateEmissionMap, type FaceTextureConfig, type SnowOverlayOptions, type GlowOptions, type BlockRenderStyle } from '../utils/renderTexture';
 import {
   generateNormalMap, generateDisplacementMap, generateAOMap, generateSpecularMap,
   DEFAULT_NORMAL, DEFAULT_DISPLACEMENT, DEFAULT_AO, DEFAULT_SPECULAR,
@@ -1520,6 +1520,10 @@ export default function BlockWorkbench() {
   const [zipIncludeAO, setZipIncludeAO] = useLocalState('bw_zipAO', false);
   const [zipIncludeSpecular, setZipIncludeSpec] = useLocalState('bw_zipSpec', false);
   const [zipIncludeIso, setZipIncludeIso] = useLocalState('bw_zipIso', false);
+  // Emission map for engine workflows (Unity/Godot/etc). Cheap to
+  // compute from the same face source the diffuse uses, so we can
+  // always offer it as a ZIP entry alongside the other maps.
+  const [zipIncludeEmission, setZipIncludeEmission] = useLocalState('bw_zipEmission', false);
   const [zipOptionsOpen, setZipOptionsOpen] = useState(false);
   // Multi-size ZIP export — when more than one size is selected the ZIP
   // contains every face × every map × every size, with `_<px>` suffixed
@@ -2207,7 +2211,7 @@ export default function BlockWorkbench() {
     const names = ['block_top', 'block_side', 'block_bottom'] as const;
     const entries: { name: string; data: Uint8Array }[] = [];
 
-    const includeAny = zipIncludeDiffuse || zipIncludeNormal || zipIncludeDisplacement || zipIncludeAO || zipIncludeSpecular;
+    const includeAny = zipIncludeDiffuse || zipIncludeNormal || zipIncludeDisplacement || zipIncludeAO || zipIncludeSpecular || zipIncludeEmission;
     if (!includeAny && !zipIncludeIso) return;
 
     // De-dupe and sort the requested sizes; fall back to the single
@@ -2255,6 +2259,24 @@ export default function BlockWorkbench() {
           generateSpecularMap(tmp, c, DEFAULT_SPECULAR);
           entries.push({ name: nameFor(`${names[i]}_specular`, size), data: await canvasToPngBytes(c) });
         }
+        if (zipIncludeEmission) {
+          // Pull emission from the same `tmp` the diffuse uses, which
+          // already reflects the user's snow + glow choices. Letting it
+          // see post-glow bright pixels means the emission map honours
+          // whatever halo the user dialed in; users who want a "clean"
+          // emission for proper engine bloom should turn off the
+          // workbench glow toggle before exporting (the explainer in
+          // the glow panel calls this out).
+          const c = document.createElement('canvas');
+          const eopts: GlowOptions = {
+            intensity: glowIntensity,
+            radius: glowRadius,
+            threshold: glowThreshold,
+            color: glowColorMode === 'custom' ? glowColor : 'auto',
+          };
+          generateEmissionMap(tmp, c, eopts);
+          entries.push({ name: nameFor(`${names[i]}_emission`, size), data: await canvasToPngBytes(c) });
+        }
       }
 
       if (zipIncludeIso && isoRef.current) {
@@ -2280,7 +2302,7 @@ export default function BlockWorkbench() {
     a.download = multiSize ? 'block_textures_multi.zip' : 'block_textures.zip';
     a.click();
     URL.revokeObjectURL(url);
-  }, [exportSize, zipSizes, zipIncludeDiffuse, zipIncludeNormal, zipIncludeDisplacement, zipIncludeAO, zipIncludeSpecular, zipIncludeIso]);
+  }, [exportSize, zipSizes, zipIncludeDiffuse, zipIncludeNormal, zipIncludeDisplacement, zipIncludeAO, zipIncludeSpecular, zipIncludeEmission, zipIncludeIso, glowIntensity, glowRadius, glowThreshold, glowColorMode, glowColor]);
 
   const activeCanvasRef = activeFace === 'top' ? topRef : activeFace === 'side' ? sideRef : bottomRef;
 
@@ -2734,6 +2756,9 @@ export default function BlockWorkbench() {
 
           {glowEnabled && (
             <div className="wb-snow-controls" role="group" aria-label="Glow / emission settings">
+              <span className="wb-glow-engine-hint" title="The glow you see is baked into the diffuse PNG. For real-time emission in Unity/Godot/Three.js, enable 'Emission map' in the ZIP popover — that exports a clean engine-ready emission texture.">
+                ℹ︎ For Unity/Godot, also enable “Emission map” in the ZIP export.
+              </span>
               <label>
                 <span>Intensity:</span>
                 <input
@@ -2888,6 +2913,9 @@ export default function BlockWorkbench() {
                   <label><input type="checkbox" checked={zipIncludeDisplacement} onChange={e => setZipIncludeDisplacement(e.target.checked)} /> Displacement</label>
                   <label><input type="checkbox" checked={zipIncludeAO} onChange={e => setZipIncludeAO(e.target.checked)} /> Ambient occlusion</label>
                   <label><input type="checkbox" checked={zipIncludeSpecular} onChange={e => setZipIncludeSpec(e.target.checked)} /> Specular</label>
+                  <label title="Black PNG with only the glowing pixels coloured in — drop into Unity/Godot/Three.js emission slots. For a 'clean' emission map, disable the Glow toggle first so the halo bleed isn't baked in.">
+                    <input type="checkbox" checked={zipIncludeEmission} onChange={e => setZipIncludeEmission(e.target.checked)} /> Emission map
+                  </label>
                   <label className="wb-zip-popover-divider"><input type="checkbox" checked={zipIncludeIso} onChange={e => setZipIncludeIso(e.target.checked)} /> Iso 3D block</label>
 
                   <div className="wb-zip-popover-title wb-zip-popover-divider">Sizes (each face × map at every size)</div>
