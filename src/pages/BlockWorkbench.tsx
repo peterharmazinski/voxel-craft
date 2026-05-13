@@ -1464,214 +1464,221 @@ export default function BlockWorkbench() {
 
   return (
     <div className="workbench-layout">
-      <div className="workbench-preview-panel">
-        <canvas ref={isoRef} className="texture-canvas iso-canvas" width={300} height={300} />
-        {tilingPreview && <canvas ref={tilingRef} width={300} height={300} style={{ width: '100%', maxWidth: 300, imageRendering: 'pixelated', border: '1px solid #444', marginTop: 6 }} />}
-        <div className="settings-row" style={{ justifyContent: 'center', gap: '12px', margin: '6px 0', flexWrap: 'wrap' }}>
-          <label style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
-            <input type="checkbox" checked={litPreview} onChange={e => setLitPreview(e.target.checked)} />
-            {' '}Normal Map Lighting
-          </label>
-          <span style={{ fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            BG:
-            <select value={bgMode} onChange={e => setBgMode(e.target.value)} style={{ fontSize: '0.75rem', padding: '2px 4px' }}>
-              <option value="#2d2d2d">Dark</option>
-              <option value="#1a1a2e">Navy</option>
-              <option value="#000000">Black</option>
-              <option value="#ffffff">White</option>
-              <option value="#4a6741">Green</option>
-              <option value="#87ceeb">Sky</option>
-              <option value="checker">Transparency</option>
-            </select>
-          </span>
-          <label style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
-            <input type="checkbox" checked={snowEnabled} onChange={e => setSnowEnabled(e.target.checked)} />
-            {' '}Snow Layer
-          </label>
-          <label style={{ fontSize: '0.8rem', cursor: 'pointer' }}>
-            <input type="checkbox" checked={tilingPreview} onChange={e => setTilingPreview(e.target.checked)} />
-            {' '}Tiling (3x3)
-          </label>
-        </div>
-        {snowEnabled && (
-          <div className="settings-row" style={{ justifyContent: 'center', gap: '10px', margin: '0 0 6px', flexWrap: 'wrap', fontSize: '0.78rem' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              Depth:
-              <input type="range" min={0.05} max={0.8} step={0.01} value={snowDepth} onChange={e => setSnowDepth(+e.target.value)} style={{ width: '80px' }} />
-              <span style={{ minWidth: '28px' }}>{Math.round(snowDepth * 100)}%</span>
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              Color:
-              <input type="color" value={snowColor1} onChange={e => setSnowColor1(e.target.value)} style={{ width: '24px', height: '20px', padding: 0, border: 'none' }} />
-              <input type="color" value={snowColor2} onChange={e => setSnowColor2(e.target.value)} style={{ width: '24px', height: '20px', padding: 0, border: 'none' }} />
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              Seed:
-              <input type="number" value={snowSeed} onChange={e => setSnowSeed(+e.target.value)} style={{ width: '48px', fontSize: '0.75rem', padding: '2px 4px' }} />
-            </span>
-          </div>
-        )}
-        <div className="face-previews">
-          {(['top', 'side', 'bottom'] as const).map(face => (
-            <div key={face} className={`face-preview ${activeFace === face ? 'active' : ''}`} onClick={() => setActiveFace(face)}>
-              <canvas ref={face === 'top' ? topRef : face === 'side' ? sideRef : bottomRef} width={256} height={256} />
-              <span>{face.charAt(0).toUpperCase() + face.slice(1)}{imgs[face] ? '' : ' (empty)'}</span>
+      {/* ───────────────── Left: Library ───────────────── */}
+      <aside className="workbench-library">
+        <section className="wb-section">
+          <header className="wb-section-header">
+            <h3>Project</h3>
+          </header>
+          <div className="wb-section-body">
+            <input
+              type="text" placeholder="Project name…" value={projectName}
+              onChange={e => setProjectName(e.target.value)}
+              className="wb-input"
+            />
+            <div className="wb-button-row">
+              <button className="btn-small" onClick={handleSaveProject} title="Save project (Ctrl+S)">Save</button>
+              <button className="btn-small" onClick={handleLoadFile} title="Load a .voxelcraft file">Load</button>
+              {supportsFileSystemAccess() && (
+                <button className="btn-small" onClick={handleOpenFolder} title="Open project folder">Folder</button>
+              )}
+              {showProjectBrowser && projectList.length > 0 && (
+                <button className="btn-small" onClick={() => setShowProjectBrowser(false)}>Close</button>
+              )}
             </div>
-          ))}
-        </div>
-
-        {imgs[activeFace] && (
-          <div className="settings-row" style={{ justifyContent: 'center', gap: '6px', margin: '4px 0', fontSize: '0.75rem' }}>
-            <span style={{ opacity: 0.7 }}>Copy {activeFace} to:</span>
-            {(['top', 'side', 'bottom'] as FaceName[]).filter(f => f !== activeFace).map(f => (
-              <button key={f} className="btn-small" onClick={() => copyFaceTo(f)}>{f.charAt(0).toUpperCase() + f.slice(1)}</button>
-            ))}
-            <button className="btn-small" onClick={copyFaceToAll}>All</button>
-          </div>
-        )}
-
-        <div className="settings-row" style={{ gap: '6px', margin: '6px 0', flexWrap: 'wrap', alignItems: 'center', fontSize: '0.78rem' }}>
-          <input
-            type="text" placeholder="Project name…" value={projectName}
-            onChange={e => setProjectName(e.target.value)}
-            style={{ flex: 1, minWidth: '100px', fontSize: '0.78rem', padding: '3px 6px' }}
-          />
-          <button className="btn-small" onClick={handleSaveProject} title="Save project (Ctrl+S)">Save</button>
-          <button className="btn-small" onClick={handleLoadFile} title="Load a .voxelcraft file">Load</button>
-          {supportsFileSystemAccess() && (
-            <button className="btn-small" onClick={handleOpenFolder} title="Open project folder">Folder</button>
-          )}
-          {showProjectBrowser && projectList.length > 0 && (
-            <button className="btn-small" onClick={() => setShowProjectBrowser(false)}>Close</button>
-          )}
-        </div>
-
-        {showProjectBrowser && (
-          <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #444', borderRadius: '6px', padding: '6px', marginBottom: '6px', fontSize: '0.75rem' }}>
-            {projectList.length === 0 && <div style={{ opacity: 0.6, textAlign: 'center', padding: '12px 0' }}>No projects in this folder</div>}
-            {projectList.map(p => (
-              <div key={p.filename} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 2px', borderBottom: '1px solid #333', cursor: 'pointer' }}
-                onClick={() => handleLoadFromFolder(p.filename)}>
-                {p.thumbnail && <img src={p.thumbnail} alt="" style={{ width: 36, height: 36, imageRendering: 'pixelated', borderRadius: 3 }} />}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                  <div style={{ opacity: 0.5, fontSize: '0.7rem' }}>{new Date(p.createdAt).toLocaleDateString()}</div>
-                </div>
-                <button className="btn-small" style={{ fontSize: '0.65rem' }} onClick={e => { e.stopPropagation(); handleDeleteFromFolder(p.filename); }}>Del</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="workbench-presets">
-          <label>Block Presets:</label>
-          <select value={activePresetKey} onChange={e => { if (e.target.value) applyPreset(e.target.value); }}>
-            <option value="" disabled>Choose a preset…</option>
-            {renderGroupedOptions(WORKBENCH_PRESETS, WORKBENCH_CATEGORIES)}
-          </select>
-        </div>
-
-        <div className="download-bar">
-          <select value={exportSize} onChange={e => setExportSize(+e.target.value)} style={{ fontSize: '0.75rem', padding: '4px 6px' }}>
-            <option value={16}>16 px</option>
-            <option value={32}>32 px</option>
-            <option value={64}>64 px</option>
-            <option value={128}>128 px</option>
-            <option value={256}>256 px</option>
-            <option value={512}>512 px</option>
-            <option value={1024}>1024 px</option>
-          </select>
-          {(['top', 'side', 'bottom'] as const).map(f => (
-            <button key={f} className="btn-primary" onClick={() => {
-              const ref = f === 'top' ? topRef : f === 'side' ? sideRef : bottomRef;
-              if (ref.current) downloadAtSize(ref.current, `block_${f}`);
-            }}>{f.charAt(0).toUpperCase() + f.slice(1)}</button>
-          ))}
-          <button className="btn-primary" onClick={() => {
-            if (topRef.current) downloadAtSize(topRef.current, 'block_top');
-            if (sideRef.current) downloadAtSize(sideRef.current, 'block_side');
-            if (bottomRef.current) downloadAtSize(bottomRef.current, 'block_bottom');
-          }}>All</button>
-          <button className="btn-primary" onClick={() => {
-            if (isoRef.current) downloadAtSize(isoRef.current, 'block_iso');
-          }} title="Download assembled isometric 3D block as PNG">Iso 3D</button>
-          <div style={{ position: 'relative', display: 'inline-block' }}>
-            <button className="btn-primary" onClick={handleZipExport} title="Download faces and selected maps as ZIP">ZIP</button>
-            <button
-              className="btn-primary"
-              onClick={() => setZipOptionsOpen(o => !o)}
-              title="Choose what to include in the ZIP"
-              style={{ marginLeft: 2, padding: '2px 6px' }}
-            >▾</button>
-            {zipOptionsOpen && (
-              <div style={{
-                position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 10,
-                background: '#1f1f1f', border: '1px solid #444', borderRadius: 4,
-                padding: 8, minWidth: 180, fontSize: '0.75rem',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
-              }}>
-                <div style={{ fontWeight: 600, marginBottom: 6, opacity: 0.7 }}>ZIP contents</div>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={zipIncludeDiffuse} onChange={e => setZipIncludeDiffuse(e.target.checked)} /> Diffuse (textures)
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={zipIncludeNormal} onChange={e => setZipIncludeNormal(e.target.checked)} /> Normal map
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={zipIncludeDisplacement} onChange={e => setZipIncludeDisplacement(e.target.checked)} /> Displacement
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={zipIncludeAO} onChange={e => setZipIncludeAO(e.target.checked)} /> Ambient occlusion
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={zipIncludeSpecular} onChange={e => setZipIncludeSpec(e.target.checked)} /> Specular
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', cursor: 'pointer', borderTop: '1px solid #333', marginTop: 4, paddingTop: 6 }}>
-                  <input type="checkbox" checked={zipIncludeIso} onChange={e => setZipIncludeIso(e.target.checked)} /> Iso 3D block
-                </label>
-                <button
-                  className="btn-primary"
-                  onClick={() => setZipOptionsOpen(false)}
-                  style={{ marginTop: 8, width: '100%', padding: '4px 8px' }}
-                >Close</button>
+            {showProjectBrowser && (
+              <div className="wb-project-browser">
+                {projectList.length === 0 && <div className="wb-empty-state">No projects in this folder</div>}
+                {projectList.map(p => (
+                  <div key={p.filename} className="wb-project-row" onClick={() => handleLoadFromFolder(p.filename)}>
+                    {p.thumbnail && <img src={p.thumbnail} alt="" className="wb-project-thumb" />}
+                    <div className="wb-project-info">
+                      <div className="wb-project-name">{p.name}</div>
+                      <div className="wb-project-date">{new Date(p.createdAt).toLocaleDateString()}</div>
+                    </div>
+                    <button className="btn-small wb-project-del" onClick={e => { e.stopPropagation(); handleDeleteFromFolder(p.filename); }}>Del</button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        </div>
-        <MapPanel
-          sourceCanvas={activeCanvasRef.current}
-          filePrefix={`block_${activeFace}`}
-          version={renderCount}
-          onNormalSettingsChange={setNormalSettings}
-          hasSource={renderCount > 0 && !!imgs[activeFace]}
-        />
-      </div>
+        </section>
 
-      <div className="workbench-editor-panel">
-        <div className="workbench-capture-bar">
-          <div className="workbench-mode-toggle">
-            <button className={`type-btn ${editorMode === 'texture' ? 'active' : ''}`} onClick={() => setEditorMode('texture')}>Texture Generator</button>
-            <button className={`type-btn ${editorMode === 'voxel' ? 'active' : ''}`} onClick={() => setEditorMode('voxel')}>Voxel Block</button>
+        <section className="wb-section">
+          <header className="wb-section-header">
+            <h3>Block Presets</h3>
+          </header>
+          <div className="wb-section-body">
+            <select
+              className="wb-select"
+              value={activePresetKey}
+              onChange={e => { if (e.target.value) applyPreset(e.target.value); }}
+            >
+              <option value="" disabled>Choose a preset…</option>
+              {renderGroupedOptions(WORKBENCH_PRESETS, WORKBENCH_CATEGORIES)}
+            </select>
           </div>
-          {editorMode === 'texture' && (
-            <>
-              <span className="workbench-editing-label">
-                Editing: <strong>{activeFace.charAt(0).toUpperCase() + activeFace.slice(1)} Face</strong>
+        </section>
+      </aside>
+
+      {/* ───────────────── Center: Stage ───────────────── */}
+      <main className="workbench-stage">
+        <section className="wb-section wb-preview-section">
+          <canvas ref={isoRef} className="texture-canvas iso-canvas" width={300} height={300} />
+          {tilingPreview && <canvas ref={tilingRef} width={300} height={300} className="wb-tiling-canvas" />}
+
+          <div className="wb-preview-toggles">
+            <label>
+              <input type="checkbox" checked={litPreview} onChange={e => setLitPreview(e.target.checked)} />
+              {' '}Normal Map Lighting
+            </label>
+            <label>
+              <input type="checkbox" checked={snowEnabled} onChange={e => setSnowEnabled(e.target.checked)} />
+              {' '}Snow Layer
+            </label>
+            <label>
+              <input type="checkbox" checked={tilingPreview} onChange={e => setTilingPreview(e.target.checked)} />
+              {' '}Tiling (3x3)
+            </label>
+            <span className="wb-preview-bg">
+              BG:
+              <select value={bgMode} onChange={e => setBgMode(e.target.value)}>
+                <option value="#2d2d2d">Dark</option>
+                <option value="#1a1a2e">Navy</option>
+                <option value="#000000">Black</option>
+                <option value="#ffffff">White</option>
+                <option value="#4a6741">Green</option>
+                <option value="#87ceeb">Sky</option>
+                <option value="checker">Transparency</option>
+              </select>
+            </span>
+          </div>
+
+          {snowEnabled && (
+            <div className="wb-snow-controls">
+              <span>
+                Depth:
+                <input type="range" min={0.05} max={0.8} step={0.01} value={snowDepth} onChange={e => setSnowDepth(+e.target.value)} />
+                <em>{Math.round(snowDepth * 100)}%</em>
               </span>
-              <button className="btn-primary" onClick={captureFromGenerator}>
-                Capture to {activeFace.charAt(0).toUpperCase() + activeFace.slice(1)} Face
+              <span>
+                Color:
+                <input type="color" value={snowColor1} onChange={e => setSnowColor1(e.target.value)} />
+                <input type="color" value={snowColor2} onChange={e => setSnowColor2(e.target.value)} />
+              </span>
+              <span>
+                Seed:
+                <input type="number" value={snowSeed} onChange={e => setSnowSeed(+e.target.value)} />
+              </span>
+            </div>
+          )}
+
+          <div className="face-previews">
+            {(['top', 'side', 'bottom'] as const).map(face => (
+              <div key={face} className={`face-preview ${activeFace === face ? 'active' : ''}`} onClick={() => setActiveFace(face)}>
+                <canvas ref={face === 'top' ? topRef : face === 'side' ? sideRef : bottomRef} width={256} height={256} />
+                <span>{face.charAt(0).toUpperCase() + face.slice(1)}{imgs[face] ? '' : ' (empty)'}</span>
+              </div>
+            ))}
+          </div>
+
+          {imgs[activeFace] && (
+            <div className="wb-copy-row">
+              <span>Copy {activeFace} to:</span>
+              {(['top', 'side', 'bottom'] as FaceName[]).filter(f => f !== activeFace).map(f => (
+                <button key={f} className="btn-small" onClick={() => copyFaceTo(f)}>{f.charAt(0).toUpperCase() + f.slice(1)}</button>
+              ))}
+              <button className="btn-small" onClick={copyFaceToAll}>All</button>
+            </div>
+          )}
+        </section>
+
+        <section className="wb-section wb-download-section">
+          <header className="wb-section-header">
+            <h3>Export</h3>
+            <select value={exportSize} onChange={e => setExportSize(+e.target.value)} className="wb-section-header-select">
+              <option value={16}>16 px</option>
+              <option value={32}>32 px</option>
+              <option value={64}>64 px</option>
+              <option value={128}>128 px</option>
+              <option value={256}>256 px</option>
+              <option value={512}>512 px</option>
+              <option value={1024}>1024 px</option>
+            </select>
+          </header>
+          <div className="wb-section-body">
+            <div className="download-bar">
+              {(['top', 'side', 'bottom'] as const).map(f => (
+                <button key={f} className="btn-primary" onClick={() => {
+                  const ref = f === 'top' ? topRef : f === 'side' ? sideRef : bottomRef;
+                  if (ref.current) downloadAtSize(ref.current, `block_${f}`);
+                }}>{f.charAt(0).toUpperCase() + f.slice(1)}</button>
+              ))}
+              <button className="btn-primary" onClick={() => {
+                if (topRef.current) downloadAtSize(topRef.current, 'block_top');
+                if (sideRef.current) downloadAtSize(sideRef.current, 'block_side');
+                if (bottomRef.current) downloadAtSize(bottomRef.current, 'block_bottom');
+              }}>All</button>
+              <button className="btn-primary" onClick={() => {
+                if (isoRef.current) downloadAtSize(isoRef.current, 'block_iso');
+              }} title="Download assembled isometric 3D block as PNG">Iso 3D</button>
+              <div className="wb-zip-wrap">
+                <button className="btn-primary" onClick={handleZipExport} title="Download faces and selected maps as ZIP">ZIP</button>
+                <button
+                  className="btn-primary wb-zip-chevron"
+                  onClick={() => setZipOptionsOpen(o => !o)}
+                  title="Choose what to include in the ZIP"
+                >▾</button>
+                {zipOptionsOpen && (
+                  <div className="wb-zip-popover">
+                    <div className="wb-zip-popover-title">ZIP contents</div>
+                    <label><input type="checkbox" checked={zipIncludeDiffuse} onChange={e => setZipIncludeDiffuse(e.target.checked)} /> Diffuse (textures)</label>
+                    <label><input type="checkbox" checked={zipIncludeNormal} onChange={e => setZipIncludeNormal(e.target.checked)} /> Normal map</label>
+                    <label><input type="checkbox" checked={zipIncludeDisplacement} onChange={e => setZipIncludeDisplacement(e.target.checked)} /> Displacement</label>
+                    <label><input type="checkbox" checked={zipIncludeAO} onChange={e => setZipIncludeAO(e.target.checked)} /> Ambient occlusion</label>
+                    <label><input type="checkbox" checked={zipIncludeSpecular} onChange={e => setZipIncludeSpec(e.target.checked)} /> Specular</label>
+                    <label className="wb-zip-popover-divider"><input type="checkbox" checked={zipIncludeIso} onChange={e => setZipIncludeIso(e.target.checked)} /> Iso 3D block</label>
+                    <button className="btn-primary wb-zip-close" onClick={() => setZipOptionsOpen(false)}>Close</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* ───────────────── Right: Inspector ───────────────── */}
+      <aside className="workbench-inspector">
+        <section className="wb-section">
+          <header className="wb-section-header">
+            <div className="workbench-mode-toggle">
+              <button className={`type-btn ${editorMode === 'texture' ? 'active' : ''}`} onClick={() => setEditorMode('texture')}>Texture</button>
+              <button className={`type-btn ${editorMode === 'voxel' ? 'active' : ''}`} onClick={() => setEditorMode('voxel')}>Voxel Block</button>
+            </div>
+            {editorMode === 'texture' && (
+              <span className="workbench-editing-label">
+                Editing: <strong>{activeFace.charAt(0).toUpperCase() + activeFace.slice(1)}</strong>
+              </span>
+            )}
+          </header>
+          <div className="wb-section-body wb-inspector-actions">
+            {editorMode === 'texture' && (
+              <>
+                <button className="btn-primary wb-capture-btn" onClick={captureFromGenerator}>
+                  Capture to {activeFace.charAt(0).toUpperCase() + activeFace.slice(1)} Face
+                </button>
+                {imgs[activeFace] && (
+                  <button className="btn-small" onClick={() => setImgs[activeFace](null)}>Clear face</button>
+                )}
+              </>
+            )}
+            {editorMode === 'voxel' && (
+              <button className="btn-primary wb-capture-btn" onClick={renderVoxelToAllFaces}>
+                Generate All Faces
               </button>
-              {imgs[activeFace] && (
-                <button className="btn-small" onClick={() => setImgs[activeFace](null)}>Clear</button>
-              )}
-            </>
-          )}
-          {editorMode === 'voxel' && (
-            <button className="btn-primary" onClick={renderVoxelToAllFaces}>
-              Generate All Faces
-            </button>
-          )}
-        </div>
+            )}
+          </div>
+        </section>
 
         {editorMode === 'texture' && (
           <div className="workbench-generator">
@@ -1736,7 +1743,15 @@ export default function BlockWorkbench() {
             {vxActiveFace === 'bottom' && <VoxelFaceSettings face={vxBottomFace} setFace={setVxBottomFace} />}
           </div>
         )}
-      </div>
+
+        <MapPanel
+          sourceCanvas={activeCanvasRef.current}
+          filePrefix={`block_${activeFace}`}
+          version={renderCount}
+          onNormalSettingsChange={setNormalSettings}
+          hasSource={renderCount > 0 && !!imgs[activeFace]}
+        />
+      </aside>
     </div>
   );
 }
