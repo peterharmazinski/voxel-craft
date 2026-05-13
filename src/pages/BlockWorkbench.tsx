@@ -1157,6 +1157,7 @@ export default function BlockWorkbench() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const mountedRef = useRef(false);
   const suppressDirtyRef = useRef(false);
+  const toolbarThumbRef = useRef<HTMLCanvasElement>(null);
 
   const downloadAtSize = useCallback((source: HTMLCanvasElement, filename: string) => {
     if (exportSize === source.width) {
@@ -1322,6 +1323,19 @@ export default function BlockWorkbench() {
   }, [topImg, sideImg, bottomImg, drawImg, applyLighting, litPreview, normalSettings, bgMode, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed, tilingPreview, activeFace]);
 
   useEffect(() => { updatePreview(); }, [updatePreview]);
+
+  // Mirror the iso preview into the toolbar thumbnail whenever it re-renders.
+  useEffect(() => {
+    const thumb = toolbarThumbRef.current;
+    const iso = isoRef.current;
+    if (!thumb || !iso) return;
+    const ctx = thumb.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.clearRect(0, 0, thumb.width, thumb.height);
+    ctx.drawImage(iso, 0, 0, thumb.width, thumb.height);
+  }, [renderCount]);
 
   const captureFromGenerator = () => {
     const generatorCanvas = document.querySelector('.workbench-generator .texture-canvas') as HTMLCanvasElement | null;
@@ -1621,6 +1635,14 @@ export default function BlockWorkbench() {
     <div className="workbench-page">
       <div className="workbench-toolbar">
         <div className="workbench-toolbar-left">
+          <canvas
+            ref={toolbarThumbRef}
+            width={32}
+            height={32}
+            className="workbench-toolbar-thumb"
+            title="Live preview of the assembled block"
+            aria-label="Block preview"
+          />
           <span className="workbench-toolbar-title">Block Workbench</span>
           {activePresetLabel && (
             <span className="workbench-toolbar-preset" title="Active preset">

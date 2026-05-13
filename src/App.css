@@ -983,6 +983,22 @@ input[type='range'] {
   min-width: 0;
 }
 
+.workbench-toolbar-thumb {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--bg-canvas);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.workbench-toolbar-thumb:hover {
+  border-color: var(--accent);
+  transform: scale(1.05);
+}
+
 .workbench-toolbar-title {
   font-size: 13px;
   font-weight: 700;
