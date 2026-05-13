@@ -1987,6 +1987,31 @@ input[type='range'] {
   color: var(--text-secondary);
 }
 
+.wb-inspector-hint strong {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Highlight ring + soft pulse on the "Generate All Faces" button when
+   the user is in voxel mode but their preview is texture-sourced —
+   helps them notice that their slider tweaks need an explicit click
+   before they affect the preview. */
+.wb-capture-btn--needs-action {
+  box-shadow: 0 0 0 2px var(--accent-glow);
+  animation: wb-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes wb-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--accent-glow); }
+  50%      { box-shadow: 0 0 0 5px var(--accent-soft); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wb-capture-btn--needs-action {
+    animation: none;
+  }
+}
+
 .wb-capture-btn {
   flex: 1;
   min-width: 0;

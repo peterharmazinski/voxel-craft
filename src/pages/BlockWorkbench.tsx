@@ -1388,6 +1388,7 @@ export default function BlockWorkbench() {
     if (generatorCanvas) {
       setImgs[activeFace](generatorCanvas.toDataURL('image/png'));
       setActivePresetKey('');
+      setPreviewSource('texture');
     }
   };
 
@@ -1415,6 +1416,9 @@ export default function BlockWorkbench() {
     setTopImg(tmpTop.toDataURL('image/png'));
     setSideImg(tmpSide.toDataURL('image/png'));
     setBottomImg(tmpBottom.toDataURL('image/png'));
+    // After this render the preview faces are voxel-sourced, so voxel
+    // slider tweaks can safely auto-apply from here on.
+    setPreviewSource('voxel');
   }, [vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace, vxResolution, vxSeed, vxSideMode, vxSideSplitPos, vxTransitionPattern, vxTransitionNoise, vxRenderStyle, setTopImg, setSideImg, setBottomImg]);
 
   // Track which voxel configuration we last rendered so we can detect
@@ -1427,6 +1431,15 @@ export default function BlockWorkbench() {
     vxTransitionPattern, vxTransitionNoise, vxRenderStyle,
   }));
   const suppressVoxelRenderRef = useRef(false);
+
+  // What kind of rendering produced the current preview faces. Auto-
+  // applying voxel slider changes is only safe when the preview is
+  // already voxel-sourced — otherwise tweaking a voxel slider while a
+  // texture preset is on screen would clobber it with stale voxel
+  // defaults (ore on sides, no flowers on top, etc).
+  const [previewSource, setPreviewSource] = useState<'texture' | 'voxel'>(
+    editorMode === 'voxel' ? 'voxel' : 'texture'
+  );
 
   useEffect(() => {
     const key = JSON.stringify({
@@ -1444,11 +1457,14 @@ export default function BlockWorkbench() {
       suppressVoxelRenderRef.current = false;
       return;
     }
-    // Only auto-render while the user is actively in voxel mode.
-    // Picking a voxel preset from the library auto-switches to voxel
-    // mode in the same batch, so this fires correctly there too.
-    if (editorMode === 'voxel') renderVoxelToAllFaces();
-  }, [editorMode, vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
+    // Only auto-render while the user is actively editing voxel
+    // output. If the preview was sourced from a texture preset, leave
+    // it alone — the user has to explicitly click "Generate All Faces"
+    // to convert the preview to voxel-rendered output.
+    if (editorMode === 'voxel' && previewSource === 'voxel') {
+      renderVoxelToAllFaces();
+    }
+  }, [editorMode, previewSource, vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
       vxResolution, vxSeed, vxSideMode, vxSideSplitPos,
       vxTransitionPattern, vxTransitionNoise, vxRenderStyle,
       renderVoxelToAllFaces]);
@@ -1456,6 +1472,10 @@ export default function BlockWorkbench() {
   const applyVoxelPreset = (name: string) => {
     const p = VOXEL_PRESETS[name];
     if (!p) return;
+    // Mark the next render as voxel-sourced so the auto-render effect
+    // actually runs (it would otherwise skip if the preview was last
+    // sourced from a texture preset).
+    setPreviewSource('voxel');
     setVxTopFace(p.top);
     setVxSideFace(p.side);
     setVxBottomFace(p.bottom);
@@ -1486,6 +1506,10 @@ export default function BlockWorkbench() {
     applyConfigToGenerator(configs[activeFace]);
     setGeneratorKey(k => k + 1);
     setActivePresetKey(presetKey);
+    // Lock voxel auto-render until the user explicitly clicks
+    // "Generate All Faces", so wandering over to the voxel tab and
+    // tweaking a slider doesn't wipe the freshly applied texture preset.
+    setPreviewSource('texture');
   };
 
   const copyFaceTo = (target: FaceName) => {
@@ -1552,6 +1576,7 @@ export default function BlockWorkbench() {
     // let the voxel auto-render effect overwrite them when it sees the
     // new voxel config arrive in this same state batch.
     suppressVoxelRenderRef.current = true;
+    setPreviewSource(proj.editorMode === 'voxel' ? 'voxel' : 'texture');
     setEditorMode(proj.editorMode);
     setTopImg(proj.faces.top);
     setSideImg(proj.faces.side);
@@ -2130,9 +2155,19 @@ export default function BlockWorkbench() {
               </>
             )}
             {editorMode === 'voxel' && (
-              <button className="btn-primary wb-capture-btn" onClick={renderVoxelToAllFaces}>
-                Generate All Faces
-              </button>
+              <>
+                <button
+                  className={`btn-primary wb-capture-btn ${previewSource === 'texture' ? 'wb-capture-btn--needs-action' : ''}`}
+                  onClick={renderVoxelToAllFaces}
+                >
+                  Generate All Faces
+                </button>
+                {previewSource === 'texture' && (
+                  <p className="wb-inspector-hint">
+                    Your preview came from a texture preset. Voxel settings won't apply until you click <strong>Generate All Faces</strong>.
+                  </p>
+                )}
+              </>
             )}
             {editorMode === 'normal' && (
               <p className="wb-inspector-hint">
