@@ -227,6 +227,27 @@ export default function Guide() {
               architecture and extends them with additional features.
             </p>
           </div>
+          <div className="guide-license">
+            <h2>License</h2>
+            <p>
+              VoxelCraft is licensed under the{' '}
+              <a
+                href="https://polyformproject.org/licenses/noncommercial/1.0.0/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                PolyForm Noncommercial License 1.0.0
+              </a>.
+            </p>
+            <ul className="guide-license-list">
+              <li><strong>Free</strong> for personal, hobby, educational, academic, and charitable use.</li>
+              <li><strong>No commercial use</strong> — you may not sell, sublicense, embed in paid products, or use it as part of any for-profit operation, regardless of company size.</li>
+              <li>Christian Petry's upstream MIT-licensed projects remain under their original MIT terms.</li>
+            </ul>
+            <p className="guide-license-note">
+              Companies interested in a commercial license should open an issue on the project's GitHub repository.
+            </p>
+          </div>
           <div className="guide-tech">
             <p>Built with React + TypeScript + Vite. All rendering is CPU-based via Canvas 2D — no WebGL required.</p>
           </div>

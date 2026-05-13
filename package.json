@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "homepage": "https://peterharmazinski.github.io/voxel-craft/",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",

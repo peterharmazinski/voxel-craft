@@ -2503,6 +2503,54 @@ input[type='range'] {
   line-height: 1.6;
 }
 
+/* License block in Guide page — visually mirrors the credits block so
+   the two sit side-by-side as a coherent footer. */
+.guide-license {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+.guide-license h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+}
+.guide-license > p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+.guide-license a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.guide-license-list {
+  list-style: disc;
+  padding-left: 20px;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.guide-license-list li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.guide-license-list strong {
+  color: var(--text-primary);
+}
+.guide-license-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.85;
+  font-style: italic;
+}
+
 .guide-tech {
   text-align: center;
   font-size: 13px;
