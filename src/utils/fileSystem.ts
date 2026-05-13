@@ -60,7 +60,7 @@ export function supportsFileSystemAccess(): boolean {
 export async function openProjectFolder(): Promise<FileSystemDirectoryHandle | null> {
   if (!supportsFileSystemAccess()) return null;
   try {
-    return await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+    return await window.showDirectoryPicker({ mode: 'readwrite' });
   } catch {
     return null;
   }
@@ -68,7 +68,7 @@ export async function openProjectFolder(): Promise<FileSystemDirectoryHandle | n
 
 export async function listProjects(handle: FileSystemDirectoryHandle): Promise<ProjectListEntry[]> {
   const entries: ProjectListEntry[] = [];
-  for await (const [name, entry] of (handle as any).entries()) {
+  for await (const [name, entry] of handle.entries()) {
     if (entry.kind === 'file' && name.endsWith(FILE_EXT)) {
       try {
         const file: File = await entry.getFile();
@@ -94,10 +94,23 @@ export async function saveProjectToFolder(
   const safeName = project.name.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 60);
   const filename = `${safeName}${FILE_EXT}`;
   const fileHandle = await handle.getFileHandle(filename, { create: true });
-  const writable = await (fileHandle as any).createWritable();
+  const writable = await fileHandle.createWritable();
   await writable.write(JSON.stringify(project));
   await writable.close();
   return filename;
+}
+
+function migrateProject(raw: unknown): VoxelCraftProject {
+  if (typeof raw !== 'object' || raw === null) {
+    throw new Error('Invalid project file: not an object');
+  }
+  const obj = raw as Record<string, unknown>;
+  // Future versions: add migration steps here before the version check.
+  // e.g. if (!obj.version) { /* migrate v0 → v1 */ obj.version = 1; }
+  if (obj.version !== 1) {
+    throw new Error(`Unsupported project version: ${obj.version}`);
+  }
+  return obj as unknown as VoxelCraftProject;
 }
 
 export async function loadProjectFromFolder(
@@ -107,7 +120,7 @@ export async function loadProjectFromFolder(
   const fileHandle = await handle.getFileHandle(filename);
   const file = await fileHandle.getFile();
   const text = await file.text();
-  return JSON.parse(text);
+  return migrateProject(JSON.parse(text));
 }
 
 export async function deleteProjectFromFolder(
@@ -142,7 +155,7 @@ export function uploadProject(): Promise<VoxelCraftProject | null> {
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          resolve(JSON.parse(reader.result as string));
+          resolve(migrateProject(JSON.parse(reader.result as string)));
         } catch { resolve(null); }
       };
       reader.readAsText(file);

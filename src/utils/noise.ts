@@ -2,14 +2,11 @@
 // http://staffwww.itn.liu.se/~stegu/simplexnoise/simplexnoise.pdf
 // Original JS port by Christian Petry (MIT License)
 
+import { randomSeed } from './helpers';
+
 function fastfloor(x: number): number {
   const xi = Math.trunc(x);
   return x < xi ? xi - 1 : xi;
-}
-
-function randomSeed(seed: number): number {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
 }
 
 function fastmod(n: number, m: number): number {
