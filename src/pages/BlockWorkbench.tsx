@@ -41,7 +41,7 @@ function CS({ color, onChange }: { color: string; onChange: (c: string) => void 
   return <input type="color" value={color} onChange={e => onChange(e.target.value)} className="color-input" />;
 }
 
-type EditorMode = 'texture' | 'voxel';
+type EditorMode = 'texture' | 'voxel' | 'normal';
 
 interface VoxelPreset {
   label: string;
@@ -1417,9 +1417,41 @@ export default function BlockWorkbench() {
     setBottomImg(tmpBottom.toDataURL('image/png'));
   }, [vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace, vxResolution, vxSeed, vxSideMode, vxSideSplitPos, vxTransitionPattern, vxTransitionNoise, vxRenderStyle, setTopImg, setSideImg, setBottomImg]);
 
+  // Track which voxel configuration we last rendered so we can detect
+  // genuine voxel-config changes (preset picks, slider tweaks) and skip
+  // re-rendering when the user merely *switches into* voxel mode while
+  // their preview already shows custom textures or a loaded project.
+  const lastRenderedVoxelKeyRef = useRef<string>(JSON.stringify({
+    vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
+    vxResolution, vxSeed, vxSideMode, vxSideSplitPos,
+    vxTransitionPattern, vxTransitionNoise, vxRenderStyle,
+  }));
+  const suppressVoxelRenderRef = useRef(false);
+
   useEffect(() => {
+    const key = JSON.stringify({
+      vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
+      vxResolution, vxSeed, vxSideMode, vxSideSplitPos,
+      vxTransitionPattern, vxTransitionNoise, vxRenderStyle,
+    });
+    // No-op when the voxel config hasn't actually changed since the
+    // last render — this is the common path for plain mode switches.
+    if (key === lastRenderedVoxelKeyRef.current) return;
+    lastRenderedVoxelKeyRef.current = key;
+    if (suppressVoxelRenderRef.current) {
+      // loadProject just ran — it already restored the face images, so
+      // don't clobber them by re-rendering from the new voxel config.
+      suppressVoxelRenderRef.current = false;
+      return;
+    }
+    // Only auto-render while the user is actively in voxel mode.
+    // Picking a voxel preset from the library auto-switches to voxel
+    // mode in the same batch, so this fires correctly there too.
     if (editorMode === 'voxel') renderVoxelToAllFaces();
-  }, [editorMode, renderVoxelToAllFaces]);
+  }, [editorMode, vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
+      vxResolution, vxSeed, vxSideMode, vxSideSplitPos,
+      vxTransitionPattern, vxTransitionNoise, vxRenderStyle,
+      renderVoxelToAllFaces]);
 
   const applyVoxelPreset = (name: string) => {
     const p = VOXEL_PRESETS[name];
@@ -1479,15 +1511,23 @@ export default function BlockWorkbench() {
       tmp.getContext('2d')!.drawImage(isoRef.current, 0, 0, 100, 100);
       thumbnail = tmp.toDataURL('image/png');
     }
+    // The Normal Map tab is a UI view, not an underlying authoring mode
+    // — for saving purposes we treat it as whichever real mode the user
+    // last edited. If they have voxel configs but no texture configs,
+    // assume they were in voxel mode; otherwise fall back to texture.
+    const persistedMode: 'texture' | 'voxel' =
+      editorMode === 'normal'
+        ? (vxTopFace && !topConfig ? 'voxel' : 'texture')
+        : editorMode;
     const proj: VoxelCraftProject = {
       version: 1,
       name,
       createdAt: new Date().toISOString(),
       thumbnail,
-      editorMode,
+      editorMode: persistedMode,
       faces: { top: topImg, side: sideImg, bottom: bottomImg },
     };
-    if (editorMode === 'texture') {
+    if (persistedMode === 'texture') {
       proj.textureConfigs = { top: topConfig, side: sideConfig, bottom: bottomConfig };
     } else {
       proj.voxelConfigs = {
@@ -1508,6 +1548,10 @@ export default function BlockWorkbench() {
 
   const loadProject = useCallback((proj: VoxelCraftProject) => {
     suppressDirtyRef.current = true;
+    // The face images we're about to restore are authoritative — don't
+    // let the voxel auto-render effect overwrite them when it sees the
+    // new voxel config arrive in this same state batch.
+    suppressVoxelRenderRef.current = true;
     setEditorMode(proj.editorMode);
     setTopImg(proj.faces.top);
     setSideImg(proj.faces.side);
@@ -1672,11 +1716,14 @@ export default function BlockWorkbench() {
   // Mark the project as dirty whenever output state changes. Skipped on the
   // very first render (so an unedited workbench starts as "saved") and
   // suppressed for a single update right after loadProject() runs.
+  // Note: `editorMode` is intentionally excluded so switching tabs (e.g.
+  // texture ↔ voxel ↔ normal) doesn't dirty the project — only actual
+  // texture / voxel / snow content edits should mark it dirty.
   useEffect(() => {
     if (!mountedRef.current) { mountedRef.current = true; return; }
     if (suppressDirtyRef.current) { suppressDirtyRef.current = false; return; }
     setDirty(true);
-  }, [topImg, sideImg, bottomImg, projectName, editorMode,
+  }, [topImg, sideImg, bottomImg, projectName,
       vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace, vxResolution, vxSeed,
       vxRenderStyle, vxSideMode, vxSideSplitPos, vxTransitionPattern, vxTransitionNoise,
       snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed]);
@@ -2058,8 +2105,14 @@ export default function BlockWorkbench() {
                 onClick={() => setEditorMode('voxel')}
                 aria-pressed={editorMode === 'voxel'}
               >Voxel Block</button>
+              <button
+                type="button"
+                className={`type-btn ${editorMode === 'normal' ? 'active' : ''}`}
+                onClick={() => setEditorMode('normal')}
+                aria-pressed={editorMode === 'normal'}
+              >Normal Map</button>
             </div>
-            {editorMode === 'texture' && (
+            {(editorMode === 'texture' || editorMode === 'normal') && (
               <span className="workbench-editing-label">
                 Editing: <strong>{activeFace.charAt(0).toUpperCase() + activeFace.slice(1)}</strong>
               </span>
@@ -2080,6 +2133,11 @@ export default function BlockWorkbench() {
               <button className="btn-primary wb-capture-btn" onClick={renderVoxelToAllFaces}>
                 Generate All Faces
               </button>
+            )}
+            {editorMode === 'normal' && (
+              <p className="wb-inspector-hint">
+                Generate normal, displacement, AO, and specular maps from the active face's texture. Pick a face in the preview to switch which one you're editing.
+              </p>
             )}
           </div>
         </section>
@@ -2159,13 +2217,18 @@ export default function BlockWorkbench() {
           </div>
         )}
 
-        <MapPanel
-          sourceCanvas={activeCanvasRef.current}
-          filePrefix={`block_${activeFace}`}
-          version={renderCount}
-          onNormalSettingsChange={setNormalSettings}
-          hasSource={renderCount > 0 && !!imgs[activeFace]}
-        />
+        {/* The Normal Map panel is always mounted so the user's settings
+            and generated maps survive across tab switches; we just hide
+            it visually when another tab is active. */}
+        <div className="workbench-normal" hidden={editorMode !== 'normal'}>
+          <MapPanel
+            sourceCanvas={activeCanvasRef.current}
+            filePrefix={`block_${activeFace}`}
+            version={renderCount}
+            onNormalSettingsChange={setNormalSettings}
+            hasSource={renderCount > 0 && !!imgs[activeFace]}
+          />
+        </div>
       </aside>
     </div>
     </div>

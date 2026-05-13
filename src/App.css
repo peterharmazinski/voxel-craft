@@ -1960,7 +1960,13 @@ input[type='range'] {
 
 .workbench-mode-toggle {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
+}
+
+.workbench-mode-toggle .type-btn {
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
 .workbench-editing-label {
@@ -1972,6 +1978,13 @@ input[type='range'] {
   flex-direction: row !important;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.wb-inspector-hint {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
 
 .wb-capture-btn {
