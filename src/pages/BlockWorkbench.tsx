@@ -69,6 +69,157 @@ const DEFAULT_VOXEL_FACE = (base: VoxelBaseType, ores: VoxelOreLayer[] = []): Vo
   depthShading: 0.4, outlineStrength: 0.2, paletteSize: 12,
 });
 
+// ─── Ore preset factory ──────────────────────────────────────────────────
+// Both WORKBENCH_PRESETS (texture / CartoonOre) and VOXEL_PRESETS (voxel
+// ore layers) get a matched pair for every ore in ORE_DESCRIPTORS below,
+// so the unified library can switch a single ore between texture and
+// voxel rendering with a single click.
+type OreShape = 'pentagon' | 'hexagon' | 'octagon' | 'diamond' | 'triangle' | 'square' | 'round' | 'flower' | 'mixed';
+type OreBgVariant = 'stone' | 'dark_stone' | 'netherrack' | 'basalt';
+
+interface OreDescriptor {
+  key: string;
+  label: string;
+  bg?: OreBgVariant;       // stone if unset
+  voxelBase?: VoxelBaseType; // matches bg; defaults to 'stone'
+  oreColor: string;
+  highlightColor: string;
+  shape: OreShape;
+  count: number;
+  minSize: number;
+  maxSize: number;
+  oreName: string;
+  useGradient: boolean;
+  voxelStyle: OreStyle;
+  voxelDensity?: number;     // default 1.8
+  voxelClusterSize?: number; // default 2
+  voxelOreScale?: number;    // default 0.8
+  seedBase: number;
+}
+
+const ORE_BG: Record<OreBgVariant, [string, string, string]> = {
+  stone:       ['#7a7a7a', '#6e6e6e', '#555555'],
+  dark_stone:  ['#3a3a44', '#2a2a34', '#1a1a24'],
+  netherrack:  ['#6a2820', '#4a1810', '#3a0808'],
+  basalt:      ['#2a2030', '#1a1020', '#100818'],
+};
+
+function _darkenHex(color: string, amount = 0x10): string {
+  const n = parseInt(color.slice(1), 16);
+  const r = Math.max(0, ((n >> 16) & 0xff) - amount);
+  const g = Math.max(0, ((n >> 8) & 0xff) - amount);
+  const b = Math.max(0, (n & 0xff) - amount);
+  return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+
+function makeOreTexturePreset(d: OreDescriptor): BlockPreset {
+  const [c1, c2, c3] = ORE_BG[d.bg ?? 'stone'];
+  const [c1b, c2b, c3b] = [_darkenHex(c1), _darkenHex(c2), _darkenHex(c3)];
+  const oreLayer = (count: number) => [{
+    color: d.oreColor, highlightColor: d.highlightColor,
+    shape: d.shape, count, minSize: d.minSize, maxSize: d.maxSize,
+    name: d.oreName, useGradient: d.useGradient,
+  }];
+  const mkParams = (count: number, bg: [string, string, string]) => ({
+    color1: bg[0], color2: bg[1], color3: bg[2],
+    bgNoise: 0.5, bgPatch: 30, outline: 1.2, shadow: 0.5,
+    ores: oreLayer(count),
+  });
+  return {
+    label: d.label,
+    top:    { type: 'CartoonOre', size: 256, seed: d.seedBase,     params: mkParams(d.count,                 [c1, c2, c3]) },
+    side:   { type: 'CartoonOre', size: 256, seed: d.seedBase + 1, params: mkParams(Math.max(2, d.count - 1), [c1, c2, c3]) },
+    bottom: { type: 'CartoonOre', size: 256, seed: d.seedBase + 2, params: mkParams(Math.max(1, d.count - 2), [c1b, c2b, c3b]) },
+  };
+}
+
+function makeOreVoxelPreset(d: OreDescriptor): VoxelPreset {
+  const [c1, c2, c3] = ORE_BG[d.bg ?? 'stone'];
+  const [c1b, c2b, c3b] = [_darkenHex(c1), _darkenHex(c2), _darkenHex(c3)];
+  const base: VoxelBaseType = d.voxelBase ?? (d.bg === 'netherrack' ? 'netherrack' : 'stone');
+  const ore: VoxelOreLayer = {
+    color: d.oreColor, highlightColor: d.highlightColor,
+    density: d.voxelDensity ?? 1.8,
+    clusterSize: d.voxelClusterSize ?? 2,
+    name: d.oreName, style: d.voxelStyle,
+    oreScale: d.voxelOreScale ?? 0.8,
+  };
+  const faceBase = (b1: string, b2: string, b3: string): VoxelBlockFace => ({
+    ...DEFAULT_VOXEL_FACE(base),
+    baseColor1: b1, baseColor2: b2, baseColor3: b3,
+    oreLayers: [ore],
+  });
+  return {
+    label: d.label,
+    top:    faceBase(c1, c2, c3),
+    side:   faceBase(c1, c2, c3),
+    bottom: faceBase(c1b, c2b, c3b),
+    sideMode: 'uniform', sideSplitPos: 0.5,
+    sideTopFace: DEFAULT_VOXEL_FACE(base),
+  };
+}
+
+// Curated batch of ores spanning Minecraft staples, gem variety, Terraria
+// metals, industrial chemistry, and fantasy crystals. Counts/sizes are
+// tuned so the texture (CartoonOre) and voxel renderers produce visually
+// similar density at default settings.
+const ORE_DESCRIPTORS: OreDescriptor[] = [
+  // ── Minecraft fill-ins ──
+  { key: 'lapis_ore',          label: 'Lapis Lazuli Ore', oreColor: '#2244aa', highlightColor: '#5577dd', shape: 'round',    count: 12, minSize: 10, maxSize: 22, oreName: 'Lapis',          useGradient: true,  voxelStyle: 'crystal', seedBase: 400 },
+  { key: 'nether_quartz_ore',  label: 'Nether Quartz',    bg: 'netherrack', oreColor: '#f0e8e0', highlightColor: '#ffffff', shape: 'diamond',  count: 14, minSize: 8,  maxSize: 20, oreName: 'Quartz',         useGradient: true,  voxelStyle: 'crystal', seedBase: 403 },
+  { key: 'amethyst_ore',       label: 'Amethyst',         oreColor: '#aa66cc', highlightColor: '#dd99ee', shape: 'hexagon',  count: 8,  minSize: 12, maxSize: 26, oreName: 'Amethyst',       useGradient: true,  voxelStyle: 'crystal', seedBase: 406 },
+  { key: 'ancient_debris',     label: 'Ancient Debris',   bg: 'netherrack', oreColor: '#5a4030', highlightColor: '#8a6040', shape: 'round',    count: 5,  minSize: 18, maxSize: 40, oreName: 'Debris',         useGradient: false, voxelStyle: 'metal',   seedBase: 409 },
+  { key: 'glowstone',          label: 'Glowstone',        oreColor: '#ffcc44', highlightColor: '#ffee88', shape: 'round',    count: 22, minSize: 8,  maxSize: 18, oreName: 'Glowstone',      useGradient: true,  voxelStyle: 'jewel',   seedBase: 412 },
+
+  // ── Classic gems ──
+  { key: 'ruby_ore',     label: 'Ruby',     oreColor: '#cc1133', highlightColor: '#ff5577', shape: 'diamond',  count: 6,  minSize: 12, maxSize: 26, oreName: 'Ruby',     useGradient: true,  voxelStyle: 'crystal', seedBase: 415 },
+  { key: 'sapphire_ore', label: 'Sapphire', oreColor: '#1144cc', highlightColor: '#5577ff', shape: 'diamond',  count: 6,  minSize: 12, maxSize: 26, oreName: 'Sapphire', useGradient: true,  voxelStyle: 'crystal', seedBase: 418 },
+  { key: 'topaz_ore',    label: 'Topaz',    oreColor: '#dd8800', highlightColor: '#ffcc44', shape: 'diamond',  count: 7,  minSize: 12, maxSize: 26, oreName: 'Topaz',    useGradient: true,  voxelStyle: 'crystal', seedBase: 421 },
+  { key: 'amber_ore',    label: 'Amber',    oreColor: '#c87820', highlightColor: '#f0a040', shape: 'round',    count: 7,  minSize: 12, maxSize: 26, oreName: 'Amber',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 424 },
+  { key: 'opal_ore',     label: 'Opal',     oreColor: '#e0c8dd', highlightColor: '#ffeeff', shape: 'round',    count: 10, minSize: 12, maxSize: 24, oreName: 'Opal',     useGradient: true,  voxelStyle: 'jewel',   seedBase: 427 },
+  { key: 'obsidian_shards', label: 'Obsidian Shards', bg: 'basalt', oreColor: '#1a0822', highlightColor: '#5a3a66', shape: 'triangle', count: 12, minSize: 10, maxSize: 22, oreName: 'Obsidian', useGradient: true,  voxelStyle: 'crystal', seedBase: 430 },
+
+  // ── Terraria / RPG metals ──
+  { key: 'silver_ore',     label: 'Silver Ore',    oreColor: '#d0d0d8', highlightColor: '#f0f0f8', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Silver',     useGradient: false, voxelStyle: 'metal',   seedBase: 433 },
+  { key: 'tin_ore',        label: 'Tin Ore',       oreColor: '#a8a8b0', highlightColor: '#c8c8d0', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Tin',        useGradient: false, voxelStyle: 'metal',   seedBase: 436 },
+  { key: 'lead_ore',       label: 'Lead Ore',      oreColor: '#4a4a55', highlightColor: '#6a6a75', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Lead',       useGradient: false, voxelStyle: 'metal',   seedBase: 439 },
+  { key: 'platinum_ore',   label: 'Platinum Ore',  oreColor: '#d8e0e8', highlightColor: '#ffffff', shape: 'hexagon', count: 5,  minSize: 14, maxSize: 30, oreName: 'Platinum',   useGradient: true,  voxelStyle: 'metal',   seedBase: 442 },
+  { key: 'tungsten_ore',   label: 'Tungsten Ore',  oreColor: '#6a6a72', highlightColor: '#8a8a92', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Tungsten',   useGradient: false, voxelStyle: 'metal',   seedBase: 445 },
+  { key: 'mithril_ore',    label: 'Mithril',       oreColor: '#88aabb', highlightColor: '#bbddee', shape: 'hexagon', count: 5,  minSize: 14, maxSize: 30, oreName: 'Mithril',    useGradient: true,  voxelStyle: 'crystal', seedBase: 448 },
+  { key: 'cobalt_ore',     label: 'Cobalt',        oreColor: '#2266dd', highlightColor: '#4488ff', shape: 'round',   count: 10, minSize: 10, maxSize: 24, oreName: 'Cobalt',     useGradient: true,  voxelStyle: 'metal',   seedBase: 451 },
+  { key: 'adamantite_ore', label: 'Adamantite',    oreColor: '#dd2266', highlightColor: '#ff5588', shape: 'hexagon', count: 7,  minSize: 12, maxSize: 26, oreName: 'Adamantite', useGradient: true,  voxelStyle: 'crystal', seedBase: 454 },
+  { key: 'chlorophyte_ore', label: 'Chlorophyte',  oreColor: '#44dd44', highlightColor: '#88ff88', shape: 'round',   count: 12, minSize: 8,  maxSize: 20, oreName: 'Chlorophyte', useGradient: true, voxelStyle: 'jewel',   seedBase: 457 },
+  { key: 'hellstone_ore',  label: 'Hellstone',     bg: 'netherrack', oreColor: '#ff5500', highlightColor: '#ffaa00', shape: 'round',   count: 12, minSize: 10, maxSize: 22, oreName: 'Hellstone',  useGradient: true,  voxelStyle: 'metal',   seedBase: 460 },
+
+  // ── Industrial / chemistry ──
+  { key: 'sulfur_ore',     label: 'Sulfur',        oreColor: '#ddcc22', highlightColor: '#ffee66', shape: 'round',   count: 14, minSize: 8,  maxSize: 18, oreName: 'Sulfur',     useGradient: false, voxelStyle: 'flat',    seedBase: 463 },
+  { key: 'saltpeter_ore',  label: 'Saltpeter',     oreColor: '#e8e8d8', highlightColor: '#ffffff', shape: 'round',   count: 12, minSize: 8,  maxSize: 18, oreName: 'Saltpeter',  useGradient: false, voxelStyle: 'flat',    seedBase: 466 },
+  { key: 'bauxite_ore',    label: 'Bauxite',       oreColor: '#a85a30', highlightColor: '#c87a50', shape: 'round',   count: 10, minSize: 10, maxSize: 22, oreName: 'Bauxite',    useGradient: false, voxelStyle: 'metal',   seedBase: 469 },
+  { key: 'cinnabar_ore',   label: 'Cinnabar',      oreColor: '#cc2222', highlightColor: '#ee4444', shape: 'round',   count: 12, minSize: 8,  maxSize: 20, oreName: 'Cinnabar',   useGradient: true,  voxelStyle: 'crystal', seedBase: 472 },
+  { key: 'uranium_ore',    label: 'Uranium',       oreColor: '#ccdd44', highlightColor: '#eeff88', shape: 'round',   count: 9,  minSize: 10, maxSize: 22, oreName: 'Uranium',    useGradient: true,  voxelStyle: 'jewel',   seedBase: 475 },
+  { key: 'bismuth_ore',    label: 'Bismuth',       oreColor: '#aa66cc', highlightColor: '#66ddcc', shape: 'square',  count: 8,  minSize: 12, maxSize: 26, oreName: 'Bismuth',    useGradient: true,  voxelStyle: 'crystal', seedBase: 478 },
+
+  // ── Fantasy / magic ──
+  { key: 'aether_crystal', label: 'Aether Crystal', bg: 'dark_stone', oreColor: '#aaeeff', highlightColor: '#ffffff', shape: 'diamond', count: 8, minSize: 14, maxSize: 28, oreName: 'Aether', useGradient: true, voxelStyle: 'crystal', seedBase: 481 },
+  { key: 'arcane_crystal', label: 'Arcane Crystal', bg: 'dark_stone', oreColor: '#bb44ff', highlightColor: '#ee88ff', shape: 'diamond', count: 8, minSize: 14, maxSize: 28, oreName: 'Arcane', useGradient: true, voxelStyle: 'crystal', seedBase: 484 },
+  { key: 'iridium_ore',    label: 'Iridium',        bg: 'dark_stone', oreColor: '#884488', highlightColor: '#cc66cc', shape: 'hexagon', count: 6, minSize: 12, maxSize: 26, oreName: 'Iridium', useGradient: true, voxelStyle: 'metal',   seedBase: 487 },
+];
+
+const NEW_ORE_TEXTURE_PRESETS: Record<string, BlockPreset> = Object.fromEntries(
+  ORE_DESCRIPTORS.map(d => [d.key, makeOreTexturePreset(d)])
+);
+const NEW_ORE_VOXEL_PRESETS: Record<string, VoxelPreset> = Object.fromEntries(
+  ORE_DESCRIPTORS.map(d => [d.key, makeOreVoxelPreset(d)])
+);
+
+const NEW_ORE_CATEGORIES: { label: string; keys: string[] }[] = [
+  { label: 'Ore — Minecraft',     keys: ['lapis_ore', 'nether_quartz_ore', 'amethyst_ore', 'ancient_debris', 'glowstone'] },
+  { label: 'Ore — Gems',          keys: ['ruby_ore', 'sapphire_ore', 'topaz_ore', 'amber_ore', 'opal_ore', 'obsidian_shards'] },
+  { label: 'Ore — Metals',        keys: ['silver_ore', 'tin_ore', 'lead_ore', 'platinum_ore', 'tungsten_ore', 'mithril_ore', 'cobalt_ore', 'adamantite_ore', 'chlorophyte_ore', 'hellstone_ore'] },
+  { label: 'Ore — Industrial',    keys: ['sulfur_ore', 'saltpeter_ore', 'bauxite_ore', 'cinnabar_ore', 'uranium_ore', 'bismuth_ore'] },
+  { label: 'Ore — Fantasy',       keys: ['aether_crystal', 'arcane_crystal', 'iridium_ore'] },
+];
+
 function VoxelFaceSettings({ face, setFace }: { face: VoxelBlockFace; setFace: (f: VoxelBlockFace) => void }) {
   return (
     <div className="settings-panel">
@@ -543,6 +694,10 @@ const VOXEL_PRESETS: Record<string, VoxelPreset> = {
     bottom: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#485868', baseColor2: '#304050', baseColor3: '#203040', grainDirection: 'both', grainStrength: 0.25, depthShading: 0.55, outlineStrength: 0.2, paletteSize: 6 },
     sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('custom'),
   },
+  // Auto-generated ores defined alongside their texture counterparts —
+  // every key here also exists in WORKBENCH_PRESETS so the unified
+  // library can switch views without missing a card.
+  ...NEW_ORE_VOXEL_PRESETS,
 };
 
 type FaceName = 'top' | 'side' | 'bottom';
@@ -556,17 +711,39 @@ interface BlockPreset {
 
 // Pulls the dominant colors out of a 2D texture preset so we can build
 // a passable voxel approximation that picks up the preset's palette.
-// Everything else (grain, ore layers, etc.) stays at neutral defaults
-// — the goal is just to keep the voxel sliders looking *plausible*
-// instead of stuck on the previous user's settings.
+// For CartoonOre presets we also forward each ore layer into the voxel
+// face so derived ore presets actually keep their flecks/clusters; for
+// non-CartoonOre presets only the base palette is copied (the voxel
+// renderer can't really represent wood grain, brick patterns, etc).
 function deriveVoxelFaceFromTexture(cfg: FaceTextureConfig): VoxelBlockFace {
   const params = (cfg.params || {}) as Record<string, unknown>;
   const c1 = (params.color1 as string) || '#888888';
   const c2 = (params.color2 as string) || c1;
   const c3 = (params.color3 as string) || c2;
+  let oreLayers: VoxelOreLayer[] = [];
+  if (cfg.type === 'CartoonOre' && Array.isArray(params.ores)) {
+    const rawOres = params.ores as Array<Record<string, unknown>>;
+    oreLayers = rawOres.map(o => {
+      const useGrad = !!o.useGradient;
+      const shape = (o.shape as string) || 'round';
+      return {
+        color: (o.color as string) || '#888888',
+        highlightColor: (o.highlightColor as string) || '#bbbbbb',
+        density: Math.max(0.5, Math.min(10, ((o.count as number) || 8) / 4)),
+        clusterSize: 2,
+        name: (o.name as string) || 'Ore',
+        style: (useGrad && (shape === 'diamond' || shape === 'hexagon')) ? 'crystal'
+             : useGrad ? 'jewel'
+             : shape === 'diamond' || shape === 'hexagon' ? 'crystal'
+             : 'metal',
+        oreScale: 0.8,
+      };
+    });
+  }
   return {
     ...DEFAULT_VOXEL_FACE('custom'),
     baseColor1: c1, baseColor2: c2, baseColor3: c3,
+    oreLayers,
   };
 }
 
@@ -955,6 +1132,9 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
     side: { type: 'PerlinNoise', size: 256, seed: 371, params: { color1: '#145218', color2: '#06280c', noiseType: 'FractalNoise', scale: 14, octaves: 5, persistence: 0.5, cutout: 0.1 } },
     bottom: { type: 'PerlinNoise', size: 256, seed: 372, params: { color1: '#0e4418', color2: '#042008', noiseType: 'FractalNoise', scale: 14, octaves: 5, persistence: 0.5, cutout: 0.15 } },
   },
+  // See NEW_ORE_VOXEL_PRESETS for the matching voxel pair — both spreads
+  // intentionally use the same keys.
+  ...NEW_ORE_TEXTURE_PRESETS,
 };
 
 const WORKBENCH_CATEGORIES: [string, string[]][] = [
@@ -963,6 +1143,7 @@ const WORKBENCH_CATEGORIES: [string, string[]][] = [
   ['Ground & Sand', ['sand_block', 'red_sand', 'gravel', 'mud', 'cobblestone']],
   ['Snow & Ice', ['snow_block', 'packed_ice', 'blue_ice', 'taiga_podzol', 'tundra', 'frozen_tundra', 'permafrost']],
   ['Ore', ['ore_block', 'iron_ore', 'gold_ore', 'emerald_ore', 'redstone_ore', 'coal_ore', 'copper_ore']],
+  ...NEW_ORE_CATEGORIES.map(c => [c.label, c.keys] as [string, string[]]),
   ['Brick', ['stone_brick', 'red_brick', 'old_brick', 'white_brick', 'sandstone_brick', 'dark_brick']],
   ['Tile', ['tiled_floor', 'subway_tile', 'marble_tile', 'mosaic_tile', 'terracotta_tile', 'octagon_tile', 'hex_stone']],
   ['Glass', ['glass', 'stained_glass', 'stained_blue', 'stained_green', 'stained_purple', 'stained_yellow', 'frosted_glass']],
@@ -976,6 +1157,7 @@ const VOXEL_CATEGORIES: [string, string[]][] = [
   ['Ground & Sand', ['sand', 'sand_block', 'shell_sand', 'mud']],
   ['Snow & Ice', ['snow', 'packed_ice', 'blue_ice', 'snowy_pine', 'taiga_dirt', 'tundra', 'frozen_tundra', 'permafrost']],
   ['Ore', ['stone_ore', 'diamond_ore']],
+  ...NEW_ORE_CATEGORIES.map(c => [c.label, c.keys] as [string, string[]]),
   ['Other', ['lava', 'bouncy', 'glass']],
 ];
 
@@ -1134,6 +1316,104 @@ const renderVoxelPresetThumb = (canvas: HTMLCanvasElement, preset: VoxelPreset) 
   generateVoxelBlockFace(canvas, 128, preset.side, 16, 42);
 };
 
+// ─── Cross-pipeline preset derivation ────────────────────────────────────
+// The unified preset library can switch any preset between texture and
+// voxel rendering with a single click. When a preset only ships a
+// hand-crafted version in one map, we synthesize a passable equivalent
+// in the other map so the toggle works on every card.
+
+function deriveTextureFaceFromVoxel(face: VoxelBlockFace, seed: number): FaceTextureConfig {
+  const ores = (face.oreLayers || []).map(o => ({
+    color: o.color,
+    highlightColor: o.highlightColor,
+    // Map voxel ore styles onto CartoonOre shapes that read similarly.
+    shape: (o.style === 'crystal' ? 'diamond'
+          : o.style === 'jewel'   ? 'hexagon'
+          : o.style === 'metal'   ? 'round'
+          : 'round') as 'diamond' | 'hexagon' | 'round',
+    // Density on voxel side is roughly "clusters per face"; CartoonOre's
+    // count is per-canvas. The 3× factor keeps coverage similar.
+    count: Math.max(3, Math.round(o.density * 3)),
+    minSize: 10,
+    maxSize: 24,
+    name: o.name,
+    useGradient: o.style === 'crystal' || o.style === 'jewel',
+  }));
+  return {
+    type: 'CartoonOre', size: 256, seed,
+    params: {
+      color1: face.baseColor1, color2: face.baseColor2, color3: face.baseColor3,
+      bgNoise: 0.5, bgPatch: 30, outline: 1.2, shadow: 0.5,
+      ores,
+    },
+  };
+}
+
+function deriveTexturePresetFromVoxel(v: VoxelPreset, baseSeed = 700): BlockPreset {
+  return {
+    label: v.label,
+    top:    deriveTextureFaceFromVoxel(v.top,    baseSeed),
+    side:   deriveTextureFaceFromVoxel(v.side,   baseSeed + 1),
+    bottom: deriveTextureFaceFromVoxel(v.bottom, baseSeed + 2),
+  };
+}
+
+function deriveVoxelPresetFromTexture(p: BlockPreset): VoxelPreset {
+  return {
+    label: p.label,
+    top:    deriveVoxelFaceFromTexture(p.top),
+    side:   deriveVoxelFaceFromTexture(p.side),
+    bottom: deriveVoxelFaceFromTexture(p.bottom),
+    sideMode: 'uniform', sideSplitPos: 0.5,
+    sideTopFace: deriveVoxelFaceFromTexture(p.top),
+  };
+}
+
+// Forward declaration so module-scope helpers can use it. Defined at
+// the same site as WORKBENCH_PRESETS' creation a bit further up the file.
+// (Re-declared here as a type alias for readability inside the helpers.)
+type UnifiedPresetMeta = {
+  label: string;
+  hasTexture: boolean;
+  hasVoxel: boolean;
+};
+
+// Union of WORKBENCH_PRESETS and VOXEL_PRESETS keys, preserving the
+// order the user already sees (block library first, then voxel-only
+// entries). Each entry tracks which maps actually have a hand-crafted
+// version so the library can show a small badge / tooltip if it ever
+// needs to.
+const UNIFIED_PRESET_META: Record<string, UnifiedPresetMeta> = (() => {
+  const out: Record<string, UnifiedPresetMeta> = {};
+  for (const k of Object.keys(WORKBENCH_PRESETS)) {
+    out[k] = { label: WORKBENCH_PRESETS[k].label, hasTexture: true, hasVoxel: !!VOXEL_PRESETS[k] };
+  }
+  for (const k of Object.keys(VOXEL_PRESETS)) {
+    if (out[k]) { out[k].hasVoxel = true; continue; }
+    out[k] = { label: VOXEL_PRESETS[k].label, hasTexture: false, hasVoxel: true };
+  }
+  return out;
+})();
+
+// Unified category list. We start from the block (texture) categories
+// because they're the more curated set, then append any voxel-only
+// categories (and voxel-only keys that aren't already represented).
+const UNIFIED_CATEGORIES: [string, string[]][] = (() => {
+  const blockCategoryByLabel = new Map(WORKBENCH_CATEGORIES.map(([label, keys]) => [label, [...keys]] as [string, string[]]));
+  const order: string[] = WORKBENCH_CATEGORIES.map(([l]) => l);
+  for (const [label, keys] of VOXEL_CATEGORIES) {
+    if (blockCategoryByLabel.has(label)) {
+      const merged = blockCategoryByLabel.get(label)!;
+      for (const k of keys) if (!merged.includes(k)) merged.push(k);
+    } else {
+      blockCategoryByLabel.set(label, [...keys]);
+      order.push(label);
+    }
+  }
+  // Drop keys that don't actually exist in either map (defensive).
+  return order.map(label => [label, blockCategoryByLabel.get(label)!.filter(k => UNIFIED_PRESET_META[k])] as [string, string[]]);
+})();
+
 /**
  * A workbench section card whose body collapses behind its header on
  * click. Persists collapse state in localStorage under `storageKey`
@@ -1233,6 +1513,11 @@ export default function BlockWorkbench() {
   const [zipOptionsOpen, setZipOptionsOpen] = useState(false);
   const [activePresetKey, setActivePresetKey] = useLocalState<string>('bw_activePreset', '');
   const [activeVxPresetKey, setActiveVxPresetKey] = useLocalState<string>('bw_activeVxPreset', '');
+  // Unified library view mode — picking a preset applies the texture
+  // version when this is 'texture', the voxel version when 'voxel'.
+  // Synthesizes the other side automatically if the preset doesn't ship
+  // a hand-crafted version of that view (see derive*PresetFrom* helpers).
+  const [libraryView, setLibraryView] = useLocalState<'texture' | 'voxel'>('bw_libraryView', 'texture');
   const tilingRef = useRef<HTMLCanvasElement>(null);
 
   const folderHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
@@ -1592,8 +1877,10 @@ export default function BlockWorkbench() {
   }, [previewSource, vxSeed, vxRenderStyle, vxSideMode, vxSideSplitPos,
       vxTransitionPattern, vxTransitionNoise]);
 
-  const applyVoxelPreset = (name: string) => {
-    const p = VOXEL_PRESETS[name];
+  // `presetOverride` mirrors applyPreset — lets the unified library
+  // pass a derived voxel preset for texture-only entries.
+  const applyVoxelPreset = (name: string, presetOverride?: VoxelPreset) => {
+    const p = presetOverride ?? VOXEL_PRESETS[name];
     if (!p) return;
     // Mark the next render as voxel-sourced so downstream UI (export,
     // map panel hint, etc.) knows the source.
@@ -1619,8 +1906,11 @@ export default function BlockWorkbench() {
     setEditorMode('voxel');
   };
 
-  const applyPreset = (presetKey: string) => {
-    const preset = WORKBENCH_PRESETS[presetKey];
+  // `presetOverride` lets the unified library hand us a derived preset
+  // built from a voxel-only entry, so the same code path handles both
+  // hand-crafted and synthesized texture presets.
+  const applyPreset = (presetKey: string, presetOverride?: BlockPreset) => {
+    const preset = presetOverride ?? WORKBENCH_PRESETS[presetKey];
     if (!preset) return;
 
     const tempCanvas = document.createElement('canvas');
@@ -1680,6 +1970,31 @@ export default function BlockWorkbench() {
       setActiveVxPresetKey('');
     }
   };
+
+  // Single dispatcher backing the unified preset library. Looks up the
+  // hand-crafted version of `key` for the current view mode; if only
+  // the *other* map has the key, synthesizes a passable equivalent so
+  // every card works in both views.
+  const applyUnifiedPreset = (key: string) => {
+    if (libraryView === 'texture') {
+      const tex = WORKBENCH_PRESETS[key];
+      if (tex) { applyPreset(key); return; }
+      const vox = VOXEL_PRESETS[key];
+      if (vox) applyPreset(key, deriveTexturePresetFromVoxel(vox));
+    } else {
+      const vox = VOXEL_PRESETS[key];
+      if (vox) { applyVoxelPreset(key); return; }
+      const tex = WORKBENCH_PRESETS[key];
+      if (tex) applyVoxelPreset(key, deriveVoxelPresetFromTexture(tex));
+    }
+  };
+
+  // Build the actual preset map the unified PresetGrid renders. For
+  // texture view we hand it real BlockPresets (deriving from voxel if
+  // needed); for voxel view we hand it real VoxelPresets the same way.
+  // Computed inline below in the JSX rather than memoized — these maps
+  // are small (~80 entries) and rebuilding them on view-toggle clicks
+  // is cheaper than a useMemo dependency chain.
 
   const copyFaceTo = (target: FaceName) => {
     if (target === activeFace) return;
@@ -2212,28 +2527,61 @@ export default function BlockWorkbench() {
           )}
         </CollapsibleSection>
 
-        <CollapsibleSection title="Block Presets" storageKey="bw_sec_blockPresets" bodyClassName="wb-library-body">
-          <PresetGrid
-            presets={WORKBENCH_PRESETS}
-            categories={WORKBENCH_CATEGORIES}
-            activeKey={activePresetKey}
-            onPick={applyPreset}
-            renderThumb={renderBlockPresetThumb}
-            storageKey="bw_libCollapsed"
-            searchPlaceholder="Search block presets…"
-          />
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Voxel Presets" storageKey="bw_sec_voxelPresets" bodyClassName="wb-library-body">
-          <PresetGrid
-            presets={VOXEL_PRESETS}
-            categories={VOXEL_CATEGORIES}
-            activeKey={activeVxPresetKey}
-            onPick={applyVoxelPreset}
-            renderThumb={renderVoxelPresetThumb}
-            storageKey="bw_vxLibCollapsed"
-            searchPlaceholder="Search voxel presets…"
-          />
+        <CollapsibleSection title="Presets" storageKey="bw_sec_unifiedPresets" bodyClassName="wb-library-body">
+          {/* Single library that switches between texture and voxel
+              rendering for every card via this toggle. Picking a preset
+              applies it in the currently-selected view; if the preset
+              only ships one version we synthesize the other on the fly
+              so the toggle works everywhere. */}
+          <div className="wb-library-view-toggle" role="radiogroup" aria-label="Preset view mode">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={libraryView === 'texture'}
+              className={`type-btn ${libraryView === 'texture' ? 'active' : ''}`}
+              onClick={() => setLibraryView('texture')}
+              title="Show every preset rendered as a texture"
+            >Texture</button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={libraryView === 'voxel'}
+              className={`type-btn ${libraryView === 'voxel' ? 'active' : ''}`}
+              onClick={() => setLibraryView('voxel')}
+              title="Show every preset rendered as voxels"
+            >Voxel</button>
+          </div>
+          {libraryView === 'texture' ? (
+            <PresetGrid
+              presets={Object.fromEntries(
+                Object.keys(UNIFIED_PRESET_META).map(k => [
+                  k,
+                  WORKBENCH_PRESETS[k] ?? deriveTexturePresetFromVoxel(VOXEL_PRESETS[k]),
+                ])
+              )}
+              categories={UNIFIED_CATEGORIES}
+              activeKey={activePresetKey}
+              onPick={applyUnifiedPreset}
+              renderThumb={renderBlockPresetThumb}
+              storageKey="bw_libCollapsed"
+              searchPlaceholder="Search presets…"
+            />
+          ) : (
+            <PresetGrid
+              presets={Object.fromEntries(
+                Object.keys(UNIFIED_PRESET_META).map(k => [
+                  k,
+                  VOXEL_PRESETS[k] ?? deriveVoxelPresetFromTexture(WORKBENCH_PRESETS[k]),
+                ])
+              )}
+              categories={UNIFIED_CATEGORIES}
+              activeKey={activeVxPresetKey}
+              onPick={applyUnifiedPreset}
+              renderThumb={renderVoxelPresetThumb}
+              storageKey="bw_vxLibCollapsed"
+              searchPlaceholder="Search presets…"
+            />
+          )}
         </CollapsibleSection>
       </aside>
 

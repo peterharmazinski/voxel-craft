@@ -1645,6 +1645,21 @@ input[type='range'] {
   padding: 10px 12px;
 }
 
+/* Texture / Voxel view toggle that sits above the unified preset grid.
+   Two radio-style buttons share the row equally so the choice reads as
+   a true alternative rather than a primary/secondary action. */
+.wb-library-view-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.wb-library-view-toggle .type-btn {
+  width: 100%;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
 /* ── Preset Library Grid ───────────────────────────────────────────── */
 
 .preset-library {
