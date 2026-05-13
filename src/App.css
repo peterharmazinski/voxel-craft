@@ -1082,6 +1082,20 @@ input[type='range'] {
   font-weight: 600;
 }
 
+.workbench-toolbar-reset {
+  font-weight: 600;
+  /* Slightly muted by default so it doesn't compete with the save pill,
+     warms up to a red-ish tint on hover so the destructive nature is
+     obvious before the confirm dialog appears. */
+  color: var(--text-secondary);
+}
+
+.workbench-toolbar-reset:hover {
+  color: #fecaca;
+  border-color: #b91c1c;
+  background: rgba(185, 28, 28, 0.15);
+}
+
 .workbench-toolbar-popover-backdrop {
   position: fixed;
   inset: 0;
@@ -1153,33 +1167,41 @@ input[type='range'] {
 }
 
 .workbench-layout {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 440px;
-  /* Explicitly pin the single row to the container's height so each
-     column's overflow-y: auto kicks in instead of the row growing to
-     fit content. */
-  grid-template-rows: minmax(0, 1fr);
+  display: flex;
   gap: 16px;
   width: 100%;
   max-width: 1800px;
   margin: 0 auto;
   padding: 16px;
-  flex: 1;
+  flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
 }
 
-.workbench-library,
-.workbench-inspector,
+.workbench-library {
+  flex: 0 0 280px;
+}
+
 .workbench-stage {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.workbench-inspector {
+  flex: 0 0 440px;
+}
+
+.workbench-library,
+.workbench-stage,
+.workbench-inspector {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-width: 0;
+  /* In a flex row each column stretches to fill the row's cross
+     axis (height). min-height: 0 lets the column shrink below its
+     content's intrinsic height, which is what makes overflow-y: auto
+     actually trigger on a scroll inside the column. */
   min-height: 0;
-  /* Match the grid row exactly so overflowing content scrolls inside
-     this column instead of pushing the layout taller. */
-  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   /* Inner padding so the scrollbar doesn't sit flush against the
@@ -1727,8 +1749,11 @@ input[type='range'] {
 /* ── Responsive ────────────────────────────────────────────────────── */
 
 @media (max-width: 1280px) {
-  .workbench-layout {
-    grid-template-columns: 240px minmax(0, 1fr) 400px;
+  .workbench-library {
+    flex-basis: 240px;
+  }
+  .workbench-inspector {
+    flex-basis: 400px;
   }
 }
 
@@ -1738,7 +1763,7 @@ input[type='range'] {
     overflow: visible;
   }
   .workbench-layout {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     padding: 12px;
     height: auto;
     overflow: visible;
@@ -1747,7 +1772,7 @@ input[type='range'] {
   .workbench-library,
   .workbench-inspector,
   .workbench-stage {
-    height: auto;
+    flex: none;
     overflow: visible;
     padding-right: 0;
   }

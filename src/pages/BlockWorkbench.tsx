@@ -1539,6 +1539,28 @@ export default function BlockWorkbench() {
     if (proj) loadProject(proj);
   }, [loadProject]);
 
+  /**
+   * Wipe every workbench-related setting (face images, configs, voxel
+   * state, snow, presets, project name, library collapse state, ZIP
+   * options, etc.) back to the defaults that a brand-new visitor sees.
+   * Also clears the embedded TextureGenerator's `tg_*` keys plus the
+   * legacy standalone-page keys so nothing leaks into the next session.
+   */
+  const handleResetAll = useCallback(() => {
+    const ok = window.confirm(
+      'Reset everything to defaults?\n\n' +
+      'This clears all face textures, preset selections, voxel settings, ' +
+      'snow overlay, project name, and library state. Anything not saved ' +
+      'to a .voxelcraft file will be lost.'
+    );
+    if (!ok) return;
+    const prefixes = ['bw_', 'tg_', 'nm_', 'vb_'];
+    Object.keys(localStorage)
+      .filter(key => prefixes.some(p => key.startsWith(p)))
+      .forEach(key => localStorage.removeItem(key));
+    window.location.reload();
+  }, []);
+
   const handleZipExport = useCallback(async () => {
     const refs = [topRef.current, sideRef.current, bottomRef.current] as const;
     const names = ['block_top', 'block_side', 'block_bottom'] as const;
@@ -1655,6 +1677,11 @@ export default function BlockWorkbench() {
             <span className="workbench-toolbar-dot" />
             {dirty ? 'Unsaved' : 'Saved'}
           </span>
+          <button
+            className="btn-small workbench-toolbar-reset"
+            onClick={handleResetAll}
+            title="Reset the workbench to the default landing state (clears all unsaved work)"
+          >Reset</button>
           <div className="workbench-toolbar-help-wrap">
             <button
               className={`btn-small workbench-toolbar-help ${showShortcuts ? 'active' : ''}`}
