@@ -146,11 +146,15 @@ input[type='range'] {
 
 .nav-link {
   padding: 8px 16px;
+  border: 1px solid transparent;
   border-radius: var(--radius);
+  background: transparent;
   text-decoration: none;
   color: var(--text-secondary);
+  font-family: inherit;
   font-size: 14px;
   font-weight: 500;
+  cursor: pointer;
   transition: all 0.15s;
 }
 
@@ -159,9 +163,16 @@ input[type='range'] {
   background: var(--bg-hover);
 }
 
+.nav-link:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
 .nav-link.active {
   color: var(--accent);
   background: var(--accent-soft);
+  border-color: transparent;
 }
 
 /* ── Nav Help Button ─────────────────────────────────────────────── */
