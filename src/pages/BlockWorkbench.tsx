@@ -538,6 +538,22 @@ interface BlockPreset {
   bottom: FaceTextureConfig;
 }
 
+// Pulls the dominant colors out of a 2D texture preset so we can build
+// a passable voxel approximation that picks up the preset's palette.
+// Everything else (grain, ore layers, etc.) stays at neutral defaults
+// — the goal is just to keep the voxel sliders looking *plausible*
+// instead of stuck on the previous user's settings.
+function deriveVoxelFaceFromTexture(cfg: FaceTextureConfig): VoxelBlockFace {
+  const params = (cfg.params || {}) as Record<string, unknown>;
+  const c1 = (params.color1 as string) || '#888888';
+  const c2 = (params.color2 as string) || c1;
+  const c3 = (params.color3 as string) || c2;
+  return {
+    ...DEFAULT_VOXEL_FACE('custom'),
+    baseColor1: c1, baseColor2: c2, baseColor3: c3,
+  };
+}
+
 const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
   oak_trunk: {
     label: 'Oak Tree Trunk',
@@ -1462,19 +1478,19 @@ export default function BlockWorkbench() {
     if (key === lastRenderedVoxelKeyRef.current) return;
     lastRenderedVoxelKeyRef.current = key;
     if (suppressVoxelRenderRef.current) {
-      // loadProject just ran — it already restored the face images, so
-      // don't clobber them by re-rendering from the new voxel config.
+      // loadProject / applyPreset / applySnapshot just primed voxel
+      // state — they already set authoritative face images, so don't
+      // clobber them by re-rendering from the synced voxel config.
       suppressVoxelRenderRef.current = false;
       return;
     }
-    // Only auto-render while the user is actively editing voxel
-    // output. If the preview was sourced from a texture preset, leave
-    // it alone — the user has to explicitly click "Generate All Faces"
-    // to convert the preview to voxel-rendered output.
-    if (editorMode === 'voxel' && previewSource === 'voxel') {
+    // Live preview: any voxel-state change in voxel mode renders the
+    // block immediately, so users see edits without clicking a
+    // separate apply button.
+    if (editorMode === 'voxel') {
       renderVoxelToAllFaces();
     }
-  }, [editorMode, previewSource, vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
+  }, [editorMode, vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
       vxResolution, vxSeed, vxSideMode, vxSideSplitPos,
       vxTransitionPattern, vxTransitionNoise, vxRenderStyle,
       renderVoxelToAllFaces]);
@@ -1482,9 +1498,8 @@ export default function BlockWorkbench() {
   const applyVoxelPreset = (name: string) => {
     const p = VOXEL_PRESETS[name];
     if (!p) return;
-    // Mark the next render as voxel-sourced so the auto-render effect
-    // actually runs (it would otherwise skip if the preview was last
-    // sourced from a texture preset).
+    // Mark the next render as voxel-sourced so downstream UI (export,
+    // map panel hint, etc.) knows the source.
     setPreviewSource('voxel');
     setVxTopFace(p.top);
     setVxSideFace(p.side);
@@ -1492,14 +1507,15 @@ export default function BlockWorkbench() {
     setVxSideMode(p.sideMode);
     setVxSideSplitPos(p.sideSplitPos);
     setVxSideTopFace(p.sideTopFace);
-    // Apply block-level settings if the preset specifies them, so the
-    // Voxel Block Settings panel mirrors the preset and the user can
-    // adjust from a known starting point.
-    if (p.renderStyle !== undefined) setVxRenderStyle(p.renderStyle);
-    if (p.resolution !== undefined) setVxResolution(p.resolution);
-    if (p.seed !== undefined) setVxSeed(p.seed);
-    if (p.transitionPattern !== undefined) setVxTransitionPattern(p.transitionPattern);
-    if (p.transitionNoise !== undefined) setVxTransitionNoise(p.transitionNoise);
+    // Fully reset block-level settings on every preset pick, falling
+    // back to sensible defaults when the preset doesn't override them.
+    // This makes preset selection deterministic — the result no longer
+    // depends on whatever values the user happened to have before.
+    setVxRenderStyle(p.renderStyle ?? 'pixelated');
+    setVxResolution(p.resolution ?? 16);
+    setVxSeed(p.seed ?? 1);
+    setVxTransitionPattern(p.transitionPattern ?? 'straight');
+    setVxTransitionNoise(p.transitionNoise ?? 0.5);
     setActiveVxPresetKey(name);
     // Picking a voxel preset from the library should drop the user into
     // voxel mode automatically — otherwise the selection appears to do nothing.
@@ -1524,10 +1540,45 @@ export default function BlockWorkbench() {
     applyConfigToGenerator(configs[activeFace]);
     setGeneratorKey(k => k + 1);
     setActivePresetKey(presetKey);
-    // Lock voxel auto-render until the user explicitly clicks
-    // "Generate All Faces", so wandering over to the voxel tab and
-    // tweaking a slider doesn't wipe the freshly applied texture preset.
     setPreviewSource('texture');
+
+    // Sync the voxel state to match this preset so the Voxel Block
+    // inspector reflects what's on screen. We suppress the next
+    // voxel auto-render so the texture-rendered faces we just set
+    // aren't immediately overwritten — the user has to actually
+    // tweak something in voxel mode to opt into voxel rendering.
+    suppressVoxelRenderRef.current = true;
+    const voxelMatch = VOXEL_PRESETS[presetKey];
+    if (voxelMatch) {
+      setVxTopFace(voxelMatch.top);
+      setVxSideFace(voxelMatch.side);
+      setVxBottomFace(voxelMatch.bottom);
+      setVxSideMode(voxelMatch.sideMode);
+      setVxSideSplitPos(voxelMatch.sideSplitPos);
+      setVxSideTopFace(voxelMatch.sideTopFace);
+      setVxRenderStyle(voxelMatch.renderStyle ?? 'pixelated');
+      setVxResolution(voxelMatch.resolution ?? 16);
+      setVxSeed(voxelMatch.seed ?? 1);
+      setVxTransitionPattern(voxelMatch.transitionPattern ?? 'straight');
+      setVxTransitionNoise(voxelMatch.transitionNoise ?? 0.5);
+      setActiveVxPresetKey(presetKey);
+    } else {
+      const neutralTop = deriveVoxelFaceFromTexture(preset.top);
+      const neutralSide = deriveVoxelFaceFromTexture(preset.side);
+      const neutralBottom = deriveVoxelFaceFromTexture(preset.bottom);
+      setVxTopFace(neutralTop);
+      setVxSideFace(neutralSide);
+      setVxBottomFace(neutralBottom);
+      setVxSideTopFace(neutralTop);
+      setVxSideMode('uniform');
+      setVxSideSplitPos(0.5);
+      setVxRenderStyle('pixelated');
+      setVxResolution(16);
+      setVxSeed(1);
+      setVxTransitionPattern('straight');
+      setVxTransitionNoise(0.5);
+      setActiveVxPresetKey('');
+    }
   };
 
   const copyFaceTo = (target: FaceName) => {
@@ -2306,26 +2357,11 @@ export default function BlockWorkbench() {
               </>
             )}
             {editorMode === 'voxel' && (
-              <>
-                <button
-                  className={`btn-primary wb-capture-btn ${previewSource === 'texture' ? 'wb-capture-btn--needs-action' : ''}`}
-                  onClick={renderVoxelToAllFaces}
-                >
-                  Generate All Faces
-                </button>
-                {previewSource === 'texture' && (
-                  <p className="wb-inspector-hint">
-                    Your preview came from a texture preset, so the voxel
-                    settings below don't match what's on screen. Switch to the{' '}
-                    <button
-                      type="button"
-                      className="wb-inline-link"
-                      onClick={() => setEditorMode('texture')}
-                    >Texture tab</button>{' '}
-                    to tweak the preset, or click <strong>Generate All Faces</strong> to replace the preview with a voxel-rendered block.
-                  </p>
-                )}
-              </>
+              <p className="wb-inspector-hint">
+                Tweak any setting below and the preview updates live. Pick a
+                voxel preset from the library to reset to a known starting
+                point.
+              </p>
             )}
             {editorMode === 'normal' && (
               <p className="wb-inspector-hint">
