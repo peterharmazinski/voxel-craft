@@ -323,16 +323,28 @@ const VOXEL_PRESETS: Record<string, VoxelPreset> = {
   },
   flowery_grass: { label: 'Flowery Grass',
     top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#4a8c2a', baseColor2: '#3d7522', baseColor3: '#2d5a18', grainDirection: 'both', grainStrength: 0.4,
+      // Higher density + larger ore scale so flowers are clearly
+      // visible at the voxel renderer's default resolution. At density
+      // 4 / scale 0.5 the spots collapse into 1-pixel noise and read
+      // as "no flowers" — these numbers give pink/yellow/white pops
+      // that survive the 16×16 / 32×32 voxel grid.
       oreLayers: [
-        { color: '#dd4466', highlightColor: '#ff88aa', density: 4, clusterSize: 1, name: 'Flowers', style: 'flat', oreScale: 0.5 },
-        { color: '#eedd44', highlightColor: '#ffff88', density: 3, clusterSize: 1, name: 'Dandelions', style: 'flat', oreScale: 0.5 },
-        { color: '#ffffff', highlightColor: '#ffffee', density: 2, clusterSize: 1, name: 'Daisies', style: 'flat', oreScale: 0.5 },
+        { color: '#dd4466', highlightColor: '#ff88aa', density: 8, clusterSize: 2, name: 'Flowers', style: 'flat', oreScale: 1.3 },
+        { color: '#eedd44', highlightColor: '#ffff88', density: 6, clusterSize: 2, name: 'Dandelions', style: 'flat', oreScale: 1.2 },
+        { color: '#ffffff', highlightColor: '#ffffee', density: 5, clusterSize: 2, name: 'Daisies', style: 'flat', oreScale: 1.0 },
       ] },
     side: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#9b7653', baseColor2: '#7a5c3a', baseColor3: '#5c4028' },
     bottom: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#9b7653', baseColor2: '#7a5c3a', baseColor3: '#5c4028' },
     sideMode: 'split', sideSplitPos: 0.2,
-    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#4a8c2a', baseColor2: '#3d7522', baseColor3: '#2d5a18', grainStrength: 0.3 },
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#4a8c2a', baseColor2: '#3d7522', baseColor3: '#2d5a18', grainStrength: 0.3,
+      // Tiny flower hints peeking over the dirt strip so the side face
+      // also reads as a flower block, not plain grass.
+      oreLayers: [
+        { color: '#dd4466', highlightColor: '#ff88aa', density: 5, clusterSize: 1, name: 'Flowers', style: 'flat', oreScale: 0.9 },
+        { color: '#eedd44', highlightColor: '#ffff88', density: 4, clusterSize: 1, name: 'Dandelions', style: 'flat', oreScale: 0.8 },
+      ] },
     transitionPattern: 'mossy', transitionNoise: 0.6,
+    resolution: 32,
   },
   leaves: { label: 'Leaves',
     top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#2d8c2a', baseColor2: '#1f6b1e', baseColor3: '#145514', grainDirection: 'both', grainStrength: 0.6, depthShading: 0.3 },
@@ -343,13 +355,17 @@ const VOXEL_PRESETS: Record<string, VoxelPreset> = {
   fallen_leaves: { label: 'Fallen Leaves',
     top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#c47a2a', baseColor2: '#a05520', baseColor3: '#7a3a15', grainDirection: 'both', grainStrength: 0.5,
       oreLayers: [
-        { color: '#dd3322', highlightColor: '#ee6644', density: 5, clusterSize: 1, name: 'Red Leaves', style: 'flat', oreScale: 0.7 },
-        { color: '#eebb22', highlightColor: '#ffdd55', density: 4, clusterSize: 1, name: 'Yellow Leaves', style: 'flat', oreScale: 0.7 },
+        { color: '#dd3322', highlightColor: '#ee6644', density: 9, clusterSize: 2, name: 'Red Leaves', style: 'flat', oreScale: 1.3 },
+        { color: '#eebb22', highlightColor: '#ffdd55', density: 7, clusterSize: 2, name: 'Yellow Leaves', style: 'flat', oreScale: 1.2 },
       ] },
     side: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#7a5c3a', baseColor2: '#5c4028', baseColor3: '#3d2818' },
     bottom: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#7a5c3a', baseColor2: '#5c4028', baseColor3: '#3d2818' },
     sideMode: 'split', sideSplitPos: 0.15,
-    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#a06030', baseColor2: '#804820', baseColor3: '#603015', grainStrength: 0.4 },
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#a06030', baseColor2: '#804820', baseColor3: '#603015', grainStrength: 0.4,
+      oreLayers: [
+        { color: '#dd3322', highlightColor: '#ee6644', density: 5, clusterSize: 1, name: 'Red Leaves', style: 'flat', oreScale: 0.9 },
+      ] },
+    resolution: 32,
   },
   mud: { label: 'Mud',
     top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#5c4030', baseColor2: '#4a3528', baseColor3: '#382820', grainDirection: 'both', grainStrength: 0.3, outlineStrength: 0.1 },
