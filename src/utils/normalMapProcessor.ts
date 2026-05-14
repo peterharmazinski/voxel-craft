@@ -10,6 +10,10 @@ export interface NormalMapSettings {
   invertG: boolean;
   invertHeight: boolean;
   zRange: boolean;
+  /** Pre-Sobel blur passes (0 = off). Smooths the height source before gradient
+   *  computation to suppress Sobel artifacts on periodic patterns (concentric
+   *  rings, fine grid lines, etc.). Unlike blurSharp, this never sharpens. */
+  preBlur?: number;
 }
 
 export interface DisplacementSettings {
@@ -37,6 +41,7 @@ export const DEFAULT_NORMAL: NormalMapSettings = {
   strength: 2.5,
   level: 7,
   blurSharp: 0,
+  preBlur: 0,
   filterType: 'sobel',
   invertR: false,
   invertG: false,
@@ -59,7 +64,7 @@ export const NORMAL_PRESETS: Record<string, NormalMapSettings> = {
   sharp:      n(3.0, 8, -12, 'scharr'),
   deep_carve: n(5.0, 10,  -6, 'scharr'),
   // ── Material surfaces ─────────────────────────────────────────────────────
-  wood_grain: n(2.2, 7,   3, 'sobel'),   // softens harsh plank transitions
+  wood_grain: { ...n(2.2, 7,   3, 'sobel'), preBlur: 4 },   // softens harsh plank transitions; preBlur suppresses ring-center artifacts
   stone_rock: n(3.5, 8,  -2, 'scharr'),  // crisp mortar channels + face bump
   ore_gem:    n(4.5, 9,  -3, 'scharr'),  // dome pop on cartoon ore/gems
   brick_tile: n(3.5, 9,  -2, 'scharr'),  // hard-edged rectangular blocks
@@ -248,7 +253,9 @@ export function generateNormalMapFromHeightBuffer(
   outputCanvas: HTMLCanvasElement,
   settings: NormalMapSettings,
 ): void {
-  const s = blurFloat32(new Float32Array(buf), w, h, settings.blurSharp);
+  let tmp = new Float32Array(buf);
+  if (settings.preBlur && settings.preBlur > 0) tmp = blurFloat32(tmp, w, h, -settings.preBlur);
+  const s = blurFloat32(tmp, w, h, settings.blurSharp);
 
   outputCanvas.width = w;
   outputCanvas.height = h;
@@ -310,6 +317,7 @@ export function generateNormalMap(
   settings: NormalMapSettings,
 ): void {
   const gray = getGrayscaleData(heightSource);
+  if (settings.preBlur && settings.preBlur > 0) simpleBlur(gray, -settings.preBlur);
   const blurred = simpleBlur(gray, settings.blurSharp);
   const w = blurred.width, h = blurred.height;
   const s = blurred.data;

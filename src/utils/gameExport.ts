@@ -148,6 +148,9 @@ export interface VP3ExportParams {
   metallicSettings?: MetallicSettings;
   includeRoughness: boolean;
   roughnessSettings?: RoughnessSettings;
+  /** Per-face normal map setting overrides. When provided, the matching face uses its own
+   *  settings (e.g. different preBlur for top vs side) while unspecified faces fall back to normalSettings. */
+  normalSettingsOverrides?: Partial<Record<'top' | 'side' | 'bottom', NormalMapSettings>>;
   /** When set, adds a <blockId>.whmeta.json sidecar for the Unity VoxelCraftImporter. */
   whMetadata?: WHMetadata;
   /**
@@ -210,7 +213,8 @@ export async function buildVP3Zip(params: VP3ExportParams): Promise<Blob> {
     if (normalMode !== 'none') {
       const doBake = normalMode === 'all' || shouldBakeNormal(scaled);
       if (doBake) {
-        const nc = bakeNormal(scaled, size, normalSettings, faceConfigs[face]);
+        const faceNormalSettings = params.normalSettingsOverrides?.[face] ?? normalSettings;
+        const nc = bakeNormal(scaled, size, faceNormalSettings, faceConfigs[face]);
         entries.push({ name: `${prefix}_normal.png`, data: await canvasToPngBytes(nc) });
         bakedNormals.add(face);
       }

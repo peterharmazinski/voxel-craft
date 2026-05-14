@@ -127,6 +127,9 @@ export default function NormalMapGenerator() {
             <SliderControl label="Strength" value={normalSettings.strength} min={0.01} max={5} step={0.01} onChange={v => setNormalSettings(s => ({ ...s, strength: v }))} />
             <SliderControl label="Level" value={normalSettings.level} min={4} max={10} step={0.1} onChange={v => setNormalSettings(s => ({ ...s, level: v }))} />
             <SliderControl label="Blur/Sharp" value={normalSettings.blurSharp} min={-32} max={32} step={1} onChange={v => setNormalSettings(s => ({ ...s, blurSharp: v }))} />
+            <div title="Smooth the height source before gradient computation. Suppresses chevron/arrow artifacts on concentric rings and fine periodic patterns.">
+              <SliderControl label="Pre-blur" value={normalSettings.preBlur ?? 0} min={0} max={8} step={1} onChange={v => setNormalSettings(s => ({ ...s, preBlur: v }))} />
+            </div>
             <div className="settings-row">
               <label>Filter</label>
               <select value={normalSettings.filterType} onChange={e => setNormalSettings(s => ({ ...s, filterType: e.target.value as 'sobel' | 'scharr' }))}>

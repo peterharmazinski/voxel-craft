@@ -1661,6 +1661,8 @@ export function renderIsometricPreview(
   previewSize: number,
   skipShading = false,
   skipClear = false,
+  padding = 0.06,
+  background?: string,
 ) {
   const size = previewSize;
   if (!skipClear) {
@@ -1671,10 +1673,15 @@ export function renderIsometricPreview(
   ctx.imageSmoothingEnabled = false;
   if (!skipClear) ctx.clearRect(0, 0, size, size);
 
-  // w is the isometric face half-width. At 0.44 the cube bounding box is
-  // 2w × 2w ≈ 88% of the canvas, leaving ~6% padding on each side.
-  // (Old value 0.3 left the cube at only 60% fill, visually too small.)
-  const w = Math.floor(size * 0.44);
+  if (background) {
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, size, size);
+  }
+
+  // w = half-width of each isometric face. padding (0–0.49) controls empty
+  // border: 0.06 default leaves ~6% on each side (88% fill). Larger padding
+  // = more space around the cube; 0 = cube fills the entire canvas.
+  const w = Math.floor(size * (0.5 - padding));
   const sideH = w;
   const cx = size / 2;
   // Actual cube bounding box height = 2w (top to bottom), not 1.5w.

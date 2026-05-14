@@ -30,6 +30,7 @@ import {
   type NormalBakeMode,
   type WHVoxelRole,
 } from '../utils/gameExport';
+import { buildObjZip, buildGlbBlob, buildStlBlob } from '../utils/modelExport';
 import {
   type VoxelCraftProject,
   type ProjectListEntry,
@@ -1226,6 +1227,9 @@ interface BlockPreset {
   // Mirrors VoxelPreset.glow — light-source presets carry their bloom
   // recipe so picking them turns glow on automatically.
   glow?: GlowOptions;
+  /** Per-face pre-blur overrides applied automatically when this preset is selected.
+   *  Use for patterns that need Sobel artifact suppression (e.g. concentric tree rings). */
+  facePreBlur?: Partial<Record<FaceName, number>>;
 }
 
 // Pulls the dominant colors out of a 2D texture preset so we can build
@@ -1272,12 +1276,14 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
     top: { type: 'Wood', size: 256, seed: 1, params: { color1: '#c49a6c', color2: '#8b5e3c', color3: '#a0744c', planks: 0, xScale: 5, scale: 1, persistence: 0.5, grainWidth: 1, gapWidth: 0.3, rings: true } },
     side: { type: 'Bark', size: 256, seed: 1, params: { color1: '#7a5838', color2: '#5c3f24', color3: '#3d2818', fissures: 8, roughness: 0.6, depth: 0.7, barkScale: 1 } },
     bottom: { type: 'Wood', size: 256, seed: 2, params: { color1: '#c49a6c', color2: '#8b5e3c', color3: '#a0744c', planks: 0, xScale: 5, scale: 1, persistence: 0.5, grainWidth: 1, gapWidth: 0.3, rings: true } },
+    facePreBlur: { top: 4, bottom: 4 },
   },
   birch_trunk: {
     label: 'Birch Tree Trunk',
     top: { type: 'Wood', size: 256, seed: 3, params: { color1: '#e8dcc0', color2: '#c4a878', color3: '#8b6838', planks: 0, xScale: 4, scale: 0.8, persistence: 0.4, grainWidth: 0.8, gapWidth: 0.3, rings: true } },
     side: { type: 'Bark', size: 256, seed: 3, params: { color1: '#f0ece4', color2: '#d4ccc0', color3: '#2a2420', fissures: 4, roughness: 0.2, depth: 0.4, barkScale: 1 } },
     bottom: { type: 'Wood', size: 256, seed: 4, params: { color1: '#e8dcc0', color2: '#c4a878', color3: '#8b6838', planks: 0, xScale: 4, scale: 0.8, persistence: 0.4, grainWidth: 0.8, gapWidth: 0.3, rings: true } },
+    facePreBlur: { top: 4, bottom: 4 },
   },
   grass_block: {
     label: 'Grass Block',
@@ -1380,24 +1386,28 @@ const WORKBENCH_PRESETS: Record<string, BlockPreset> = {
     top: { type: 'Wood', size: 256, seed: 10, params: { color1: '#a07848', color2: '#6b4c2a', color3: '#7d5c38', planks: 0, xScale: 5, scale: 1, persistence: 0.5, grainWidth: 1, gapWidth: 0.35, rings: true } },
     side: { type: 'Bark', size: 256, seed: 10, params: { color1: '#4a3828', color2: '#3a2818', color3: '#2a1a10', fissures: 10, roughness: 0.7, depth: 0.8, barkScale: 1.2 } },
     bottom: { type: 'Wood', size: 256, seed: 11, params: { color1: '#a07848', color2: '#6b4c2a', color3: '#7d5c38', planks: 0, xScale: 5, scale: 1, persistence: 0.5, grainWidth: 1, gapWidth: 0.35, rings: true } },
+    facePreBlur: { top: 4, bottom: 4 },
   },
   jungle_trunk: {
     label: 'Jungle Trunk',
     top: { type: 'Wood', size: 256, seed: 15, params: { color1: '#b89060', color2: '#8a6838', color3: '#9c7848', planks: 0, xScale: 6, scale: 1.2, persistence: 0.5, grainWidth: 1.2, gapWidth: 0.3, rings: true } },
     side: { type: 'Bark', size: 256, seed: 15, params: { color1: '#6a5030', color2: '#4a3820', color3: '#3a2810', fissures: 6, roughness: 0.5, depth: 0.5, barkScale: 0.8 } },
     bottom: { type: 'Wood', size: 256, seed: 16, params: { color1: '#b89060', color2: '#8a6838', color3: '#9c7848', planks: 0, xScale: 6, scale: 1.2, persistence: 0.5, grainWidth: 1.2, gapWidth: 0.3, rings: true } },
+    facePreBlur: { top: 4, bottom: 4 },
   },
   dark_oak_trunk: {
     label: 'Dark Oak Trunk',
     top: { type: 'Wood', size: 256, seed: 20, params: { color1: '#5c4028', color2: '#3a2818', color3: '#4a3420', planks: 0, xScale: 4, scale: 1, persistence: 0.6, grainWidth: 1, gapWidth: 0.4, rings: true } },
     side: { type: 'Bark', size: 256, seed: 20, params: { color1: '#3a2818', color2: '#2a1a10', color3: '#1a0c08', fissures: 12, roughness: 0.8, depth: 0.9, barkScale: 1.1 } },
     bottom: { type: 'Wood', size: 256, seed: 21, params: { color1: '#5c4028', color2: '#3a2818', color3: '#4a3420', planks: 0, xScale: 4, scale: 1, persistence: 0.6, grainWidth: 1, gapWidth: 0.4, rings: true } },
+    facePreBlur: { top: 4, bottom: 4 },
   },
   acacia_trunk: {
     label: 'Acacia Trunk',
     top: { type: 'Wood', size: 256, seed: 25, params: { color1: '#c87838', color2: '#a05828', color3: '#b06830', planks: 0, xScale: 5, scale: 0.9, persistence: 0.4, grainWidth: 0.9, gapWidth: 0.3, rings: true } },
     side: { type: 'Bark', size: 256, seed: 25, params: { color1: '#8a8070', color2: '#6a6050', color3: '#504840', fissures: 5, roughness: 0.3, depth: 0.4, barkScale: 0.9 } },
     bottom: { type: 'Wood', size: 256, seed: 26, params: { color1: '#c87838', color2: '#a05828', color3: '#b06830', planks: 0, xScale: 5, scale: 0.9, persistence: 0.4, grainWidth: 0.9, gapWidth: 0.3, rings: true } },
+    facePreBlur: { top: 4, bottom: 4 },
   },
   flowery_grass: {
     label: 'Flowery Grass',
@@ -2003,9 +2013,14 @@ export default function BlockWorkbench() {
   const [generatorKey, setGeneratorKey] = useState(0);
   const [litPreview, setLitPreview] = useLocalState('bw_lit', true);
   const [bgMode, setBgMode] = useLocalState<string>('bw_bg', '#2d2d2d');
+  const [bgCustomColor, setBgCustomColor] = useLocalState<string>('bw_bg_custom', '#ff6600');
+  const [isoPadding, setIsoPadding] = useLocalState<number>('bw_iso_padding', 0.06);
   const [normalSettings, setNormalSettings] = useState<NormalMapSettings>({ ...DEFAULT_NORMAL });
   const normalSettingsRef = useRef(normalSettings);
   normalSettingsRef.current = normalSettings;
+  const [facePreBlur, setFacePreBlur] = useLocalState<{ top: number; side: number; bottom: number }>('bw_face_preblur', { top: 0, side: 0, bottom: 0 });
+  const facePreBlurRef = useRef(facePreBlur);
+  facePreBlurRef.current = facePreBlur;
 
   const [editorMode, setEditorMode] = useLocalState<EditorMode>('bw_editorMode', 'texture');
 
@@ -2136,11 +2151,12 @@ export default function BlockWorkbench() {
     });
   }, []);
 
-  const applyLighting = useCallback((diffuseCanvas: HTMLCanvasElement, lightDir: [number, number, number], darkening: number) => {
+  const applyLighting = useCallback((diffuseCanvas: HTMLCanvasElement, lightDir: [number, number, number], darkening: number, face: 'top' | 'side' | 'bottom' = 'top') => {
     const w = diffuseCanvas.width;
     const h = diffuseCanvas.height;
     const normCanvas = document.createElement('canvas');
-    generateNormalMap(diffuseCanvas, normCanvas, normalSettingsRef.current);
+    const effectiveNormalSettings = { ...normalSettingsRef.current, preBlur: facePreBlurRef.current[face] };
+    generateNormalMap(diffuseCanvas, normCanvas, effectiveNormalSettings);
 
     const ctx = diffuseCanvas.getContext('2d')!;
     const normCtx = normCanvas.getContext('2d')!;
@@ -2258,13 +2274,13 @@ export default function BlockWorkbench() {
         litSide.getContext('2d')!.drawImage(sideRef.current, 0, 0);
         litRight.getContext('2d')!.drawImage(sideRef.current, 0, 0);
 
-        if (topImg) applyLighting(litTop, [0, 0, 1], 0);
-        if (sideImg) applyLighting(litSide, [0.5, 0.2, 0.8], 0.12);
-        if (sideImg) applyLighting(litRight, [-0.3, 0.2, 0.7], 0.25);
+        if (topImg) applyLighting(litTop, [0, 0, 1], 0, 'top');
+        if (sideImg) applyLighting(litSide, [0.5, 0.2, 0.8], 0.12, 'side');
+        if (sideImg) applyLighting(litRight, [-0.3, 0.2, 0.7], 0.25, 'side');
 
-        renderIsometricPreview(isoRef.current, litTop, litSide, litRight, 300, true, true);
+        renderIsometricPreview(isoRef.current, litTop, litSide, litRight, 300, true, true, isoPadding);
       } else {
-        renderIsometricPreview(isoRef.current, topRef.current, sideRef.current, sideRef.current, 300, false, true);
+        renderIsometricPreview(isoRef.current, topRef.current, sideRef.current, sideRef.current, 300, false, true, isoPadding);
       }
     }
     if (tilingRef.current && tilingPreview) {
@@ -2284,7 +2300,7 @@ export default function BlockWorkbench() {
     }
 
     setRenderCount(c => c + 1);
-  }, [topImg, sideImg, bottomImg, drawImg, applyLighting, litPreview, normalSettings, bgMode, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed, tilingPreview, activeFace, previewSource, vxResolution, glowEnabled, glowIntensity, glowRadius, glowThreshold, glowColorMode, glowColor]);
+  }, [topImg, sideImg, bottomImg, drawImg, applyLighting, litPreview, normalSettings, facePreBlur, bgMode, isoPadding, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed, tilingPreview, activeFace, previewSource, vxResolution, glowEnabled, glowIntensity, glowRadius, glowThreshold, glowColorMode, glowColor]);
 
   useEffect(() => { updatePreview(); }, [updatePreview]);
 
@@ -2618,6 +2634,19 @@ export default function BlockWorkbench() {
       setActiveVxPresetKey('');
     }
     applyPresetGlow(preset.glow);
+
+    // Auto-apply per-face pre-blur when the preset specifies it (e.g. tree ring
+    // top/bottom faces). Unspecified faces are reset to 0 so a previous preset's
+    // blur doesn't bleed into the new selection.
+    if (preset.facePreBlur) {
+      setFacePreBlur({
+        top:    preset.facePreBlur.top    ?? 0,
+        side:   preset.facePreBlur.side   ?? 0,
+        bottom: preset.facePreBlur.bottom ?? 0,
+      });
+    } else {
+      setFacePreBlur({ top: 0, side: 0, bottom: 0 });
+    }
   };
 
   // Single dispatcher backing the unified preset library. Looks up the
@@ -2855,6 +2884,7 @@ export default function BlockWorkbench() {
     // packs). Falls back to a flat name for the single-size case.
     const nameFor = (base: string, size: number) => multiSize ? `${size}/${base}.png` : `${base}.png`;
 
+    const faceNameForIndex = ['top', 'side', 'bottom'] as const;
     for (const size of sizes) {
       for (let i = 0; i < 3; i++) {
         const src = refs[i];
@@ -2870,7 +2900,8 @@ export default function BlockWorkbench() {
         }
         if (zipIncludeNormal) {
           const c = document.createElement('canvas');
-          generateNormalMap(tmp, c, normalSettingsRef.current);
+          const zipFaceNormalSettings = { ...normalSettingsRef.current, preBlur: facePreBlurRef.current[faceNameForIndex[i]] };
+          generateNormalMap(tmp, c, zipFaceNormalSettings);
           entries.push({ name: nameFor(`${names[i]}_normal`, size), data: await canvasToPngBytes(c) });
         }
         if (zipIncludeDisplacement) {
@@ -2913,7 +2944,7 @@ export default function BlockWorkbench() {
         // which has the preview background (including checkerboard) baked
         // into its pixels.
         const iso = document.createElement('canvas');
-        renderIsometricPreview(iso, topRef.current, sideRef.current, sideRef.current, size);
+        renderIsometricPreview(iso, topRef.current, sideRef.current, sideRef.current, size, false, false, isoPadding, bgMode !== 'checker' ? bgMode : undefined);
         entries.push({ name: nameFor('block_iso', size), data: await canvasToPngBytes(iso) });
       }
     }
@@ -2927,7 +2958,7 @@ export default function BlockWorkbench() {
     a.download = multiSize ? 'block_textures_multi.zip' : 'block_textures.zip';
     a.click();
     URL.revokeObjectURL(url);
-  }, [exportSize, zipSizes, zipIncludeDiffuse, zipIncludeNormal, zipIncludeDisplacement, zipIncludeAO, zipIncludeSpecular, zipIncludeEmission, zipIncludeIso, glowIntensity, glowRadius, glowThreshold, glowColorMode, glowColor]);
+  }, [exportSize, zipSizes, zipIncludeDiffuse, zipIncludeNormal, zipIncludeDisplacement, zipIncludeAO, zipIncludeSpecular, zipIncludeEmission, zipIncludeIso, isoPadding, bgMode, glowIntensity, glowRadius, glowThreshold, glowColorMode, glowColor]);
 
   const handleWorldHopperExport = useCallback(async () => {
     const blockId = sanitiseBlockName(whBlockId || 'my_block');
@@ -2941,7 +2972,7 @@ export default function BlockWorkbench() {
     let iconCanvas: HTMLCanvasElement | null = null;
     if (topRef.current && sideRef.current) {
       iconCanvas = document.createElement('canvas');
-      renderIsometricPreview(iconCanvas, topRef.current, sideRef.current, sideRef.current, exportSize);
+      renderIsometricPreview(iconCanvas, topRef.current, sideRef.current, sideRef.current, exportSize, false, false, isoPadding, bgMode !== 'checker' ? bgMode : undefined);
     }
 
     let snowFaces: { top: HTMLCanvasElement | null; side: HTMLCanvasElement | null; bottom: HTMLCanvasElement | null } | undefined;
@@ -2972,6 +3003,11 @@ export default function BlockWorkbench() {
       faceConfigs: { top: topConfig, side: sideConfig, bottom: bottomConfig },
       normalMode: whNormalMode,
       normalSettings: normalSettingsRef.current,
+      normalSettingsOverrides: {
+        top: { ...normalSettingsRef.current, preBlur: facePreBlurRef.current.top },
+        side: { ...normalSettingsRef.current, preBlur: facePreBlurRef.current.side },
+        bottom: { ...normalSettingsRef.current, preBlur: facePreBlurRef.current.bottom },
+      },
       includeEmission: glowEnabled,
       glowOptions: glowOpts,
       includeAO: false,
@@ -2998,8 +3034,37 @@ export default function BlockWorkbench() {
     URL.revokeObjectURL(url);
   }, [whBlockId, whDisplayName, whItemId, whRole, whResistancePoints, whCanBeCollected, whNormalMode,
       whIncludeSnow, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed,
-      exportSize, glowEnabled, glowIntensity, glowRadius, glowThreshold, glowColorMode, glowColor,
+      exportSize, isoPadding, bgMode, glowEnabled, glowIntensity, glowRadius, glowThreshold, glowColorMode, glowColor,
       topConfig, sideConfig, bottomConfig]);
+
+  const handleObjExport = useCallback(async () => {
+    if (!topRef.current && !sideRef.current && !bottomRef.current) return;
+    const name = sanitiseBlockName(whBlockId || 'block');
+    const blob = await buildObjZip({ name, size: exportSize, faces: { top: topRef.current, side: sideRef.current, bottom: bottomRef.current } });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${name}_obj.zip`; a.click();
+    URL.revokeObjectURL(url);
+  }, [whBlockId, exportSize]);
+
+  const handleGlbExport = useCallback(async () => {
+    if (!topRef.current && !sideRef.current && !bottomRef.current) return;
+    const name = sanitiseBlockName(whBlockId || 'block');
+    const blob = await buildGlbBlob({ name, size: exportSize, faces: { top: topRef.current, side: sideRef.current, bottom: bottomRef.current } });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${name}.glb`; a.click();
+    URL.revokeObjectURL(url);
+  }, [whBlockId, exportSize]);
+
+  const handleStlExport = useCallback(() => {
+    const name = sanitiseBlockName(whBlockId || 'block');
+    const blob = buildStlBlob(name);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${name}.stl`; a.click();
+    URL.revokeObjectURL(url);
+  }, [whBlockId]);
 
   const activeCanvasRef = activeFace === 'top' ? topRef : activeFace === 'side' ? sideRef : bottomRef;
 
@@ -3396,7 +3461,14 @@ export default function BlockWorkbench() {
             </label>
             <label className="wb-preview-bg">
               <span>BG:</span>
-              <select value={bgMode} onChange={e => setBgMode(e.target.value)} aria-label="Preview background color">
+              <select
+                value={['#2d2d2d','#1a1a2e','#000000','#ffffff','#4a6741','#87ceeb','checker'].includes(bgMode) ? bgMode : 'custom'}
+                onChange={e => {
+                  if (e.target.value === 'custom') setBgMode(bgCustomColor);
+                  else setBgMode(e.target.value);
+                }}
+                aria-label="Preview background color"
+              >
                 <option value="#2d2d2d">Dark</option>
                 <option value="#1a1a2e">Navy</option>
                 <option value="#000000">Black</option>
@@ -3404,7 +3476,31 @@ export default function BlockWorkbench() {
                 <option value="#4a6741">Green</option>
                 <option value="#87ceeb">Sky</option>
                 <option value="checker">Transparency</option>
+                <option value="custom">Custom…</option>
               </select>
+              {!['#2d2d2d','#1a1a2e','#000000','#ffffff','#4a6741','#87ceeb','checker'].includes(bgMode) && (
+                <input
+                  type="color"
+                  value={bgMode}
+                  onChange={e => { setBgCustomColor(e.target.value); setBgMode(e.target.value); }}
+                  aria-label="Custom background color"
+                  style={{ width: 28, height: 24, padding: 1, border: 'none', cursor: 'pointer' }}
+                />
+              )}
+            </label>
+            <label className="wb-preview-padding" title="Space around the cube in the isometric preview and exports">
+              <span>Padding:</span>
+              <input
+                type="range"
+                min={0}
+                max={0.4}
+                step={0.01}
+                value={isoPadding}
+                onChange={e => setIsoPadding(Number(e.target.value))}
+                aria-label="Isometric cube padding"
+                style={{ width: 70 }}
+              />
+              <span style={{ fontVariantNumeric: 'tabular-nums', minWidth: 32 }}>{Math.round(isoPadding * 100)}%</span>
             </label>
           </div>
 
@@ -3591,7 +3687,7 @@ export default function BlockWorkbench() {
             </select>
           }
         >
-          <div className="download-bar">
+          <div className="download-bar" style={{ flexWrap: 'wrap' }}>
             {(['top', 'side', 'bottom'] as const).map(f => (
               <button key={f} className="btn-primary" onClick={() => {
                 const ref = f === 'top' ? topRef : f === 'side' ? sideRef : bottomRef;
@@ -3606,9 +3702,9 @@ export default function BlockWorkbench() {
             <button className="btn-primary" onClick={() => {
               if (!topRef.current || !sideRef.current) return;
               const cleanIso = document.createElement('canvas');
-              renderIsometricPreview(cleanIso, topRef.current, sideRef.current, sideRef.current, exportSize);
+              renderIsometricPreview(cleanIso, topRef.current, sideRef.current, sideRef.current, exportSize, false, false, isoPadding, bgMode !== 'checker' ? bgMode : undefined);
               downloadCanvas(cleanIso, 'block_iso', 'png');
-            }} title="Download assembled isometric 3D block as PNG (transparent background)">Iso 3D</button>
+            }} title="Download assembled isometric 3D block as PNG">Iso 3D</button>
             <div className="wb-zip-wrap">
               <button className="btn-primary" onClick={handleZipExport} title="Download faces and selected maps as ZIP">ZIP</button>
               <button
@@ -3755,6 +3851,11 @@ export default function BlockWorkbench() {
                 </div>
               )}
             </div>
+
+            {/* ── 3D model exports ───────────────────────────────── */}
+            <button className="btn-primary" onClick={handleObjExport} title="Export as Wavefront OBJ + MTL + textures (ZIP)">OBJ</button>
+            <button className="btn-primary" onClick={handleGlbExport} title="Export as GLTF binary (GLB) with embedded textures">GLB</button>
+            <button className="btn-primary" onClick={handleStlExport} title="Export as binary STL mesh (no textures — for 3D printing)">STL</button>
           </div>
         </CollapsibleSection>
       </main>
@@ -4085,7 +4186,12 @@ export default function BlockWorkbench() {
             sourceCanvas={activeCanvasRef.current}
             filePrefix={`block_${activeFace}`}
             version={renderCount}
-            onNormalSettingsChange={setNormalSettings}
+            normalSettings={{ ...normalSettings, preBlur: facePreBlur[activeFace] }}
+            onNormalSettingsChange={(s) => {
+              const { preBlur, ...rest } = s;
+              setNormalSettings(rest as NormalMapSettings);
+              setFacePreBlur(prev => ({ ...prev, [activeFace]: preBlur ?? 0 }));
+            }}
             hasSource={renderCount > 0 && !!imgs[activeFace]}
           />
         </div>
