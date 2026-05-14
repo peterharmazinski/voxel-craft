@@ -13,6 +13,7 @@ import {
   generateHexagon,
   generateOctagon,
   generateStoneWall,
+  generatePlain,
   type BrickPattern,
   type BrickColorMode,
   type TileColorMode,
@@ -20,9 +21,10 @@ import {
 } from './textureGenerators';
 import { SimplexNoise, NoiseType } from './noise';
 
-export type TextureType = 'PerlinNoise' | 'Checker' | 'Brick' | 'Gradient' | 'Terrain' | 'Wood' | 'Bark' | 'Tiles' | 'Textiles' | 'Clouds' | 'Voxel' | 'CartoonOre' | 'Hexagon' | 'Octagon' | 'StoneWall';
+export type TextureType = 'Plain' | 'PerlinNoise' | 'Checker' | 'Brick' | 'Gradient' | 'Terrain' | 'Wood' | 'Bark' | 'Tiles' | 'Textiles' | 'Clouds' | 'Voxel' | 'CartoonOre' | 'Hexagon' | 'Octagon' | 'StoneWall';
 
 export const TEXTURE_TYPES: { id: TextureType; label: string }[] = [
+  { id: 'Plain', label: 'Plain' },
   { id: 'PerlinNoise', label: 'Perlin Noise' },
   { id: 'Clouds', label: 'Clouds' },
   { id: 'Checker', label: 'Checker' },
@@ -63,6 +65,12 @@ export function renderFaceTexture(canvas: HTMLCanvasElement, config: FaceTexture
   const { type, size, seed, params: p } = config;
 
   switch (type) {
+    case 'Plain':
+      generatePlain(canvas, size,
+        p.color as string || '#cccccc',
+        p.grain as number ?? 0,
+        seed);
+      break;
     case 'PerlinNoise':
       generatePerlinNoise(canvas, size,
         p.color1 as string || '#e6d7c3', p.color2 as string || '#1a1714',

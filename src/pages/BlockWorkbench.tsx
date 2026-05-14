@@ -2908,16 +2908,12 @@ export default function BlockWorkbench() {
         }
       }
 
-      if (zipIncludeIso && isoRef.current) {
-        // The iso preview is rendered at a fixed 300px on the stage, so
-        // scale it into a square canvas at the requested size before
-        // encoding. Keeps the bundled iso consistent with the other
-        // face sizes.
+      if (zipIncludeIso && topRef.current && sideRef.current) {
+        // Render fresh onto a transparent canvas — never copy from isoRef
+        // which has the preview background (including checkerboard) baked
+        // into its pixels.
         const iso = document.createElement('canvas');
-        iso.width = size; iso.height = size;
-        const ictx = iso.getContext('2d')!;
-        ictx.imageSmoothingEnabled = size > isoRef.current.width;
-        ictx.drawImage(isoRef.current, 0, 0, size, size);
+        renderIsometricPreview(iso, topRef.current, sideRef.current, sideRef.current, size);
         entries.push({ name: nameFor('block_iso', size), data: await canvasToPngBytes(iso) });
       }
     }
@@ -2945,9 +2941,7 @@ export default function BlockWorkbench() {
     let iconCanvas: HTMLCanvasElement | null = null;
     if (topRef.current && sideRef.current) {
       iconCanvas = document.createElement('canvas');
-      // skipClear=false (default) clears the canvas before drawing, leaving a
-      // transparent background instead of whatever the preview stage shows.
-      renderIsometricPreview(iconCanvas, topRef.current, sideRef.current, sideRef.current, 128);
+      renderIsometricPreview(iconCanvas, topRef.current, sideRef.current, sideRef.current, exportSize);
     }
 
     let snowFaces: { top: HTMLCanvasElement | null; side: HTMLCanvasElement | null; bottom: HTMLCanvasElement | null } | undefined;
@@ -3610,8 +3604,11 @@ export default function BlockWorkbench() {
               if (bottomRef.current) downloadAtSize(bottomRef.current, 'block_bottom');
             }}>All</button>
             <button className="btn-primary" onClick={() => {
-              if (isoRef.current) downloadAtSize(isoRef.current, 'block_iso');
-            }} title="Download assembled isometric 3D block as PNG">Iso 3D</button>
+              if (!topRef.current || !sideRef.current) return;
+              const cleanIso = document.createElement('canvas');
+              renderIsometricPreview(cleanIso, topRef.current, sideRef.current, sideRef.current, exportSize);
+              downloadCanvas(cleanIso, 'block_iso', 'png');
+            }} title="Download assembled isometric 3D block as PNG (transparent background)">Iso 3D</button>
             <div className="wb-zip-wrap">
               <button className="btn-primary" onClick={handleZipExport} title="Download faces and selected maps as ZIP">ZIP</button>
               <button

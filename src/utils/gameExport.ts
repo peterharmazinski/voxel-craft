@@ -152,8 +152,8 @@ export interface VP3ExportParams {
   whMetadata?: WHMetadata;
   /**
    * When set, adds a <blockId>_icon.png to the ZIP — used by the Unity importer
-   * as the SE ItemData icon sprite. Pass the isometric preview canvas scaled to
-   * the desired icon resolution (128×128 recommended).
+   * as the SE ItemData icon sprite. Pass the isometric preview canvas at the
+   * desired icon resolution — matches exportSize so it stays consistent with the face textures.
    */
   iconCanvas?: HTMLCanvasElement | null;
   /**

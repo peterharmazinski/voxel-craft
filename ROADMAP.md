@@ -12,6 +12,11 @@ Single button / keyboard shortcut that re-rolls Top, Side, and Bottom seeds simu
 ### Copy face settings
 Push the current face's full config (generator type + all params + seed) to one or all other faces. Needed constantly: start Side from the Top config, then adjust colors; or lock all three faces to the same generator for uniform blocks.
 
+### Plain texture generator
+A new generator type that outputs a flat solid color — no noise, no pattern, no tiling. Just a color picker and an optional subtle grain slider (0 = pure flat). Useful as a clean starting canvas before using the paint layer, and as a first-class block style in its own right (concrete, glass, metal panels). Should appear first in the generator list since it is the simplest option.
+
+Pairs with: **Manual touch-up (pixel paint layer)** in Tier 2 — selecting Plain as the generator and then painting over it is the intended free-draw workflow.
+
 ### Save custom presets to the library
 Promote the current workbench config (one or all three faces) into a named entry in the preset grid that persists across projects. Currently only `.voxelcraft` project files preserve custom configs — there's no way to build a personal preset library.
 

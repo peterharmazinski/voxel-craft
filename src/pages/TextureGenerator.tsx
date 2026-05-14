@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import SliderControl from '../components/SliderControl';
 import MapPanel from '../components/MapPanel';
 import { downloadCanvas } from '../utils/helpers';
@@ -19,6 +20,7 @@ import {
   generateHexagon,
   generateOctagon,
   generateStoneWall,
+  generatePlain,
   type BrickPattern,
   type BrickColorMode,
   type TileColorMode,
@@ -31,9 +33,10 @@ import {
   type VoxelRenderStyle,
 } from '../utils/textureGenerators';
 
-type TextureType = 'PerlinNoise' | 'Checker' | 'Brick' | 'Gradient' | 'Terrain' | 'Wood' | 'Bark' | 'Tiles' | 'Textiles' | 'Clouds' | 'Voxel' | 'CartoonOre' | 'Hexagon' | 'Octagon' | 'StoneWall';
+type TextureType = 'Plain' | 'PerlinNoise' | 'Checker' | 'Brick' | 'Gradient' | 'Terrain' | 'Wood' | 'Bark' | 'Tiles' | 'Textiles' | 'Clouds' | 'Voxel' | 'CartoonOre' | 'Hexagon' | 'Octagon' | 'StoneWall';
 
 const TEXTURE_TYPES: { id: TextureType; label: string }[] = [
+  { id: 'Plain', label: 'Plain' },
   { id: 'PerlinNoise', label: 'Perlin Noise' },
   { id: 'Clouds', label: 'Clouds' },
   { id: 'Checker', label: 'Checker' },
@@ -239,6 +242,21 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
   const [swTextureNoise, setSwTextureNoise] = useLocalState('tg_swTN', 0.4);
   const [swSeed, setSwSeed] = useLocalState('tg_swSd', 1);
 
+  // Plain
+  const [plColor, setPlColor] = useLocalState('tg_plC', '#cccccc');
+  const [plGrain, setPlGrain] = useLocalState('tg_plGr', 0);
+  const [plSeed, setPlSeed] = useLocalState('tg_plSd', 1);
+
+  // Paint layer
+  const [paintMode, setPaintMode] = useState(false);
+  const [paintTool, setPaintTool] = useLocalState<'brush' | 'eraser' | 'fill'>('tg_ptTool', 'brush');
+  const [paintColor, setPaintColor] = useLocalState('tg_ptColor', '#ff0000');
+  const [paintSize, setPaintSize] = useLocalState('tg_ptSize', 8);
+  const paintCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const baseCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isDrawingRef = useRef(false);
+  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
+
   const [pixelate, setPixelate] = useLocalState('tg_pxOn', false);
   const [pixelRes, setPixelRes] = useLocalState('tg_pxRe', 16);
   const [pixelPalette, setPixelPalette] = useLocalState('tg_pxPa', 0);
@@ -247,6 +265,9 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
     const canvas = canvasRef.current;
     if (!canvas) return;
     switch (activeType) {
+      case 'Plain':
+        generatePlain(canvas, size, plColor, plGrain, plSeed);
+        break;
       case 'PerlinNoise':
         generatePerlinNoise(canvas, size, pnColor1, pnColor2, pnType, pnOctaves, pnPersistence, pnScale, pnSeed, 1, pnUseGradient ? pnColorStops : undefined);
         break;
@@ -358,8 +379,18 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
       ctx.clearRect(0, 0, size, size);
       ctx.drawImage(small, 0, 0, size, size);
     }
+    // Save base for paint recomposite, then apply any existing paint on top
+    if (baseCanvasRef.current) {
+      baseCanvasRef.current.width = canvas.width;
+      baseCanvasRef.current.height = canvas.height;
+      baseCanvasRef.current.getContext('2d')!.drawImage(canvas, 0, 0);
+    }
+    if (paintCanvasRef.current) {
+      canvas.getContext('2d')!.drawImage(paintCanvasRef.current, 0, 0);
+    }
     setCanvasReady(c => c + 1);
   }, [activeType, size, rotation, pixelate, pixelRes, pixelPalette,
+    plColor, plGrain, plSeed,
     pnColor1, pnColor2, pnType, pnOctaves, pnScale, pnPersistence, pnSeed, pnUseGradient, pnColorStops,
     clColor1, clColor2, clScale, clDetail, clPercentage, clSeed,
     ckColor1, ckColor2, ckX, ckY, ckPercentage, ckSeed, ckShade, ckTexture,
@@ -378,6 +409,114 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
   ]);
 
   useEffect(() => { updateTexture(); }, [updateTexture]);
+
+  // Reset paint canvas when size changes
+  useEffect(() => {
+    if (paintCanvasRef.current) {
+      paintCanvasRef.current.width = size;
+      paintCanvasRef.current.height = size;
+    }
+    if (baseCanvasRef.current) {
+      baseCanvasRef.current.width = size;
+      baseCanvasRef.current.height = size;
+    }
+  }, [size]);
+
+  const recomposite = useCallback(() => {
+    const canvas = canvasRef.current;
+    const base = baseCanvasRef.current;
+    const paint = paintCanvasRef.current;
+    if (!canvas || !base || !paint) return;
+    const ctx = canvas.getContext('2d')!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(base, 0, 0);
+    ctx.drawImage(paint, 0, 0);
+    setCanvasReady(c => c + 1);
+  }, []);
+
+  const floodFill = useCallback((px: number, py: number, fillColor: string) => {
+    const paint = paintCanvasRef.current;
+    if (!paint) return;
+    const ctx = paint.getContext('2d')!;
+    const w = paint.width; const h = paint.height;
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+    const idx = (py * w + px) * 4;
+    const tr = d[idx]; const tg = d[idx + 1]; const tb = d[idx + 2]; const ta = d[idx + 3];
+    const fc = parseInt(fillColor.slice(1), 16);
+    const fr = (fc >> 16) & 255; const fg = (fc >> 8) & 255; const fb = fc & 255;
+    if (fr === tr && fg === tg && fb === tb && ta === 255) return;
+    const stack: [number, number][] = [[px, py]];
+    const visited = new Uint8Array(w * h);
+    while (stack.length) {
+      const [x, y] = stack.pop()!;
+      if (x < 0 || x >= w || y < 0 || y >= h) continue;
+      const i4 = (y * w + x) * 4;
+      if (visited[y * w + x]) continue;
+      if (d[i4] !== tr || d[i4 + 1] !== tg || d[i4 + 2] !== tb || d[i4 + 3] !== ta) continue;
+      visited[y * w + x] = 1;
+      d[i4] = fr; d[i4 + 1] = fg; d[i4 + 2] = fb; d[i4 + 3] = 255;
+      stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+    ctx.putImageData(imgData, 0, 0);
+    recomposite();
+  }, [recomposite]);
+
+  const drawStroke = useCallback((x: number, y: number, fromX?: number, fromY?: number) => {
+    const paint = paintCanvasRef.current;
+    if (!paint) return;
+    const ctx = paint.getContext('2d')!;
+    if (paintTool === 'eraser') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = 'rgba(0,0,0,1)';
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = paintColor;
+    }
+    ctx.lineWidth = paintSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(fromX ?? x, fromY ?? y);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+    recomposite();
+  }, [paintTool, paintColor, paintSize, recomposite]);
+
+  const canvasCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+  };
+
+  const handlePaintDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!paintMode) return;
+    const { x, y } = canvasCoords(e);
+    if (paintTool === 'fill') { floodFill(Math.floor(x), Math.floor(y), paintColor); return; }
+    isDrawingRef.current = true;
+    lastPosRef.current = { x, y };
+    drawStroke(x, y, x, y);
+  }, [paintMode, paintTool, paintColor, floodFill, drawStroke]);
+
+  const handlePaintMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!paintMode || !isDrawingRef.current) return;
+    const { x, y } = canvasCoords(e);
+    const last = lastPosRef.current;
+    drawStroke(x, y, last?.x, last?.y);
+    lastPosRef.current = { x, y };
+  }, [paintMode, drawStroke]);
+
+  const handlePaintUp = useCallback(() => { isDrawingRef.current = false; lastPosRef.current = null; }, []);
+
+  const clearPaint = useCallback(() => {
+    const paint = paintCanvasRef.current;
+    if (!paint) return;
+    paint.getContext('2d')!.clearRect(0, 0, paint.width, paint.height);
+    recomposite();
+  }, [recomposite]);
 
   const renderSettings = () => {
     const applyPnPreset = (key: string) => {
@@ -461,6 +600,28 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
       setCoBaseColor1(p.c1); setCoBaseColor2(p.c2); setCoBaseColor3(p.c3); setCoBgNoise(p.bgNoise); setCoBgPatch(p.bgPatch); setCoBgGradient(p.bgGradient); setCoOutline(p.outline); setCoShadow(p.shadow); setCoOres(p.ores);
     };
     switch (activeType) {
+      case 'Plain': return (
+        <div className="settings-panel"><h3>Plain</h3>
+          <div className="settings-row"><label>Color</label><CS color={plColor} onChange={setPlColor} /></div>
+          <SliderControl label="Grain" value={plGrain} min={0} max={1} step={0.01} onChange={setPlGrain} />
+          {plGrain > 0 && <SliderControl label="Seed" value={plSeed} min={1} max={1000} step={1} onChange={setPlSeed} extra={<DiceBtn onClick={() => setPlSeed(Math.floor(Math.random() * 999) + 1)} />} />}
+          <div className="settings-row" style={{ marginTop: 12, borderTop: '1px solid #333', paddingTop: 10 }}>
+            <label><input type="checkbox" checked={paintMode} onChange={e => setPaintMode(e.target.checked)} /> Paint Mode</label>
+          </div>
+          {paintMode && <>
+            <div className="settings-row">
+              <label>Tool</label>
+              {(['brush', 'eraser', 'fill'] as const).map(t => (
+                <button key={t} className={`btn-small ${paintTool === t ? 'active' : ''}`} onClick={() => setPaintTool(t)}>{t.charAt(0).toUpperCase() + t.slice(1)}</button>
+              ))}
+            </div>
+            {paintTool !== 'eraser' && <div className="settings-row"><label>Color</label><CS color={paintColor} onChange={setPaintColor} /></div>}
+            {paintTool !== 'fill' && <SliderControl label="Brush Size" value={paintSize} min={1} max={64} step={1} onChange={setPaintSize} />}
+            <div className="settings-row">
+              <button className="btn-small" onClick={clearPaint}>Clear Paint</button>
+            </div>
+          </>}
+        </div>);
       case 'PerlinNoise': return (
         <div className="settings-panel"><h3>Perlin Noise</h3>
           <div className="settings-row"><label>Preset</label><select defaultValue="" onChange={e => { if (e.target.value) applyPnPreset(e.target.value); e.target.value = ''; }}><option value="">— Select —</option><option value="marble">Marble</option><option value="organic">Organic</option><option value="static">Static</option><option value="lava_flow">Lava Flow</option><option value="water">Water</option></select></div>
@@ -718,7 +879,11 @@ export default function TextureGenerator({ hideMapPanel = false }: { hideMapPane
   return (
     <div className="page-layout">
       <div className="preview-column">
-        <canvas ref={canvasRef} width={size} height={size} className="texture-canvas" />
+        <canvas ref={canvasRef} width={size} height={size} className="texture-canvas"
+          style={{ cursor: paintMode ? (paintTool === 'fill' ? 'crosshair' : 'cell') : 'default' }}
+          onMouseDown={handlePaintDown} onMouseMove={handlePaintMove} onMouseUp={handlePaintUp} onMouseLeave={handlePaintUp} />
+        <canvas ref={paintCanvasRef} width={size} height={size} style={{ display: 'none' }} />
+        <canvas ref={baseCanvasRef} width={size} height={size} style={{ display: 'none' }} />
         <div className="download-bar">
           <select value={size} onChange={e => setSize(parseInt(e.target.value))}>
             <option value="256">256×256</option><option value="512">512×512</option><option value="1024">1024×1024</option><option value="2048">2048×2048</option>

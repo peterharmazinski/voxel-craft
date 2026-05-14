@@ -1671,24 +1671,32 @@ export function renderIsometricPreview(
   ctx.imageSmoothingEnabled = false;
   if (!skipClear) ctx.clearRect(0, 0, size, size);
 
-  const w = Math.floor(size * 0.3);
+  // w is the isometric face half-width. At 0.44 the cube bounding box is
+  // 2w × 2w ≈ 88% of the canvas, leaving ~6% padding on each side.
+  // (Old value 0.3 left the cube at only 60% fill, visually too small.)
+  const w = Math.floor(size * 0.44);
   const sideH = w;
   const cx = size / 2;
-  const totalH = Math.floor(w * 1.5);
-  const dcy = Math.floor((size - totalH) / 2 + w / 2);
+  // Actual cube bounding box height = 2w (top to bottom), not 1.5w.
+  // Equal top/bottom padding: dcy = (size - w) / 2 places the cube center at size/2.
+  const dcy = Math.round((size - w) / 2);
 
-  // Top face — isometric diamond
+  // Draw each face 1px oversized on all shared edges so that sub-pixel rounding
+  // in the canvas transform never leaves a transparent seam between faces.
+  const over = 1;
+
+  // Top face — isometric diamond.
   ctx.save();
   ctx.translate(cx, dcy);
   ctx.transform(1, 0.5, -1, 0.5, 0, 0);
-  ctx.drawImage(topCanvas, -w / 2, -w / 2, w, w);
+  ctx.drawImage(topCanvas, -w / 2 - over, -w / 2 - over, w + over * 2, w + over * 2);
   ctx.restore();
 
-  // Left side face
+  // Left side face.
   ctx.save();
-  ctx.translate(cx - w, dcy);
+  ctx.translate(cx - w, dcy - over);
   ctx.transform(1, 0.5, 0, 1, 0, 0);
-  ctx.scale(w / leftSideCanvas.width, sideH / leftSideCanvas.height);
+  ctx.scale(w / leftSideCanvas.width, (sideH + over * 2) / leftSideCanvas.height);
   ctx.drawImage(leftSideCanvas, 0, 0);
   if (!skipShading) {
     ctx.fillStyle = 'rgba(0,0,0,0.15)';
@@ -1696,11 +1704,11 @@ export function renderIsometricPreview(
   }
   ctx.restore();
 
-  // Right side face
+  // Right side face.
   ctx.save();
-  ctx.translate(cx, dcy + w / 2);
+  ctx.translate(cx, dcy + w / 2 - over);
   ctx.transform(1, -0.5, 0, 1, 0, 0);
-  ctx.scale(w / rightSideCanvas.width, sideH / rightSideCanvas.height);
+  ctx.scale(w / rightSideCanvas.width, (sideH + over * 2) / rightSideCanvas.height);
   ctx.drawImage(rightSideCanvas, 0, 0);
   if (!skipShading) {
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
@@ -2258,5 +2266,38 @@ export function generateStoneWall(
     }
   }
 
+  ctx.putImageData(imgData, 0, 0);
+}
+
+export function generatePlain(
+  canvas: HTMLCanvasElement,
+  size: number,
+  color: string,
+  grain: number,
+  seed: number,
+) {
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, size, size);
+  if (grain <= 0) return;
+  const h = color.replace('#', '');
+  const cr = parseInt(h.slice(0, 2), 16);
+  const cg = parseInt(h.slice(2, 4), 16);
+  const cb = parseInt(h.slice(4, 6), 16);
+  const imgData = ctx.getImageData(0, 0, size, size);
+  const d = imgData.data;
+  const noise = new SimplexNoise(seed);
+  const amp = grain * 50;
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const n = noise.noise(x / 8, y / 8) * amp;
+      d[i]     = Math.min(255, Math.max(0, cr + n));
+      d[i + 1] = Math.min(255, Math.max(0, cg + n));
+      d[i + 2] = Math.min(255, Math.max(0, cb + n));
+    }
+  }
   ctx.putImageData(imgData, 0, 0);
 }
