@@ -99,6 +99,54 @@ const BLOCK_PRESETS: Record<string, { top: VoxelBlockFace; side: VoxelBlockFace;
     sideMode: 'split', sideSplitPos: 0.15,
     sideTopFace: { ...DEFAULT_FACE('custom'), baseColor1: '#a06030', baseColor2: '#804820', baseColor3: '#603015', grainStrength: 0.4 },
   },
+  maple_leaves: {
+    top: { ...DEFAULT_FACE('custom'), baseColor1: '#c46020', baseColor2: '#a04018', baseColor3: '#7a2810', grainDirection: 'both', grainStrength: 0.5,
+      oreLayers: [
+        { color: '#dd4422', highlightColor: '#ee6633', density: 6, clusterSize: 1, name: 'Red Maple', style: 'flat', oreScale: 0.8 },
+        { color: '#e8880a', highlightColor: '#ffaa22', density: 5, clusterSize: 1, name: 'Orange Maple', style: 'flat', oreScale: 0.7 },
+        { color: '#ddcc22', highlightColor: '#ffee55', density: 4, clusterSize: 1, name: 'Yellow Maple', style: 'flat', oreScale: 0.6 },
+      ] },
+    side: { ...DEFAULT_FACE('dirt'), baseColor1: '#7a5c3a', baseColor2: '#5c4028', baseColor3: '#3d2818' },
+    bottom: { ...DEFAULT_FACE('dirt'), baseColor1: '#7a5c3a', baseColor2: '#5c4028', baseColor3: '#3d2818' },
+    sideMode: 'split', sideSplitPos: 0.15,
+    sideTopFace: { ...DEFAULT_FACE('custom'), baseColor1: '#a04020', baseColor2: '#7a2810', baseColor3: '#5c1808', grainStrength: 0.4 },
+  },
+  tropical_leaves: {
+    top: { ...DEFAULT_FACE('custom'), baseColor1: '#2a7a30', baseColor2: '#1d5c22', baseColor3: '#144018', grainDirection: 'both', grainStrength: 0.4,
+      oreLayers: [
+        { color: '#44aa44', highlightColor: '#66cc55', density: 6, clusterSize: 2, name: 'Bright Leaves', style: 'flat', oreScale: 1.0 },
+        { color: '#88cc22', highlightColor: '#aaee44', density: 4, clusterSize: 1, name: 'Yellow-Green', style: 'flat', oreScale: 0.7 },
+        { color: '#1a5a14', highlightColor: '#227722', density: 3, clusterSize: 2, name: 'Dark Leaves', style: 'flat', oreScale: 0.9 },
+      ] },
+    side: { ...DEFAULT_FACE('dirt'), baseColor1: '#6b5a3a', baseColor2: '#4a3f28', baseColor3: '#332a18' },
+    bottom: { ...DEFAULT_FACE('dirt'), baseColor1: '#6b5a3a', baseColor2: '#4a3f28', baseColor3: '#332a18' },
+    sideMode: 'split', sideSplitPos: 0.12,
+    sideTopFace: { ...DEFAULT_FACE('custom'), baseColor1: '#2a6a20', baseColor2: '#1d4c18', baseColor3: '#143410', grainStrength: 0.4 },
+  },
+  pine_needles: {
+    top: { ...DEFAULT_FACE('custom'), baseColor1: '#4a3820', baseColor2: '#382a18', baseColor3: '#261c10', grainDirection: 'both', grainStrength: 0.35,
+      oreLayers: [
+        { color: '#2a4a20', highlightColor: '#3a6028', density: 8, clusterSize: 1, name: 'Dark Needles', style: 'flat', oreScale: 0.5 },
+        { color: '#3a5a28', highlightColor: '#4a7030', density: 7, clusterSize: 1, name: 'Green Needles', style: 'flat', oreScale: 0.4 },
+        { color: '#6b5030', highlightColor: '#8b6840', density: 4, clusterSize: 1, name: 'Brown Needles', style: 'flat', oreScale: 0.5 },
+      ] },
+    side: { ...DEFAULT_FACE('dirt'), baseColor1: '#6b5030', baseColor2: '#4a3820', baseColor3: '#332818' },
+    bottom: { ...DEFAULT_FACE('dirt'), baseColor1: '#6b5030', baseColor2: '#4a3820', baseColor3: '#332818' },
+    sideMode: 'split', sideSplitPos: 0.12,
+    sideTopFace: { ...DEFAULT_FACE('custom'), baseColor1: '#382a18', baseColor2: '#261c10', baseColor3: '#1a1208', grainStrength: 0.3 },
+  },
+  worn_grass: {
+    top: { ...DEFAULT_FACE('custom'), baseColor1: '#8a8448', baseColor2: '#6b6838', baseColor3: '#4f4c28', grainDirection: 'both', grainStrength: 0.4,
+      oreLayers: [
+        { color: '#7a6030', highlightColor: '#9a7840', density: 6, clusterSize: 2, name: 'Bare Soil', style: 'flat', oreScale: 1.2 },
+        { color: '#6a7838', highlightColor: '#8a9a48', density: 4, clusterSize: 2, name: 'Sparse Grass', style: 'flat', oreScale: 0.9 },
+        { color: '#5a5028', highlightColor: '#6a6030', density: 3, clusterSize: 1, name: 'Dry Patches', style: 'flat', oreScale: 0.7 },
+      ] },
+    side: { ...DEFAULT_FACE('dirt'), baseColor1: '#7a6040', baseColor2: '#5c4a30', baseColor3: '#3d3020' },
+    bottom: { ...DEFAULT_FACE('dirt'), baseColor1: '#7a6040', baseColor2: '#5c4a30', baseColor3: '#3d3020' },
+    sideMode: 'split', sideSplitPos: 0.20,
+    sideTopFace: { ...DEFAULT_FACE('custom'), baseColor1: '#7a7838', baseColor2: '#5c5a28', baseColor3: '#3d3c18', grainStrength: 0.35 },
+  },
   mud: {
     top: { ...DEFAULT_FACE('custom'), baseColor1: '#5c4030', baseColor2: '#4a3528', baseColor3: '#382820', grainDirection: 'both', grainStrength: 0.3, outlineStrength: 0.1 },
     side: { ...DEFAULT_FACE('custom'), baseColor1: '#4a3528', baseColor2: '#382820', baseColor3: '#2a1e18', grainDirection: 'both', grainStrength: 0.2 },
@@ -212,6 +260,10 @@ export default function VoxelBlock() {
   const [renderStyle, setRenderStyle] = useLocalState<VoxelRenderStyle>('vb_style', 'pixelated');
 
   const [renderCount, setRenderCount] = useState(0);
+  const [lockTop, setLockTop] = useState(false);
+  const [lockSideBlend, setLockSideBlend] = useState(false);
+  const [lockSide, setLockSide] = useState(false);
+  const [lockBottom, setLockBottom] = useState(false);
   const [topFace, setTopFace] = useLocalState<VoxelBlockFace>('vb_top', BLOCK_PRESETS.grass.top);
   const [sideFace, setSideFace] = useLocalState<VoxelBlockFace>('vb_side', BLOCK_PRESETS.grass.side);
   const [bottomFace, setBottomFace] = useLocalState<VoxelBlockFace>('vb_btm', BLOCK_PRESETS.grass.bottom);
@@ -276,12 +328,14 @@ export default function VoxelBlock() {
   const applyPreset = (name: string) => {
     const p = BLOCK_PRESETS[name];
     if (!p) return;
-    setTopFace(p.top);
-    setSideFace(p.side);
-    setBottomFace(p.bottom);
-    setSideMode(p.sideMode);
-    setSideSplitPos(p.sideSplitPos);
-    setSideTopFace(p.sideTopFace);
+    if (!lockTop) setTopFace(p.top);
+    if (!lockSide) setSideFace(p.side);
+    if (!lockBottom) setBottomFace(p.bottom);
+    if (!lockSideBlend) {
+      setSideMode(p.sideMode);
+      setSideSplitPos(p.sideSplitPos);
+      setSideTopFace(p.sideTopFace);
+    }
   };
 
   const renderFaceSettings = (face: VoxelBlockFace, setFace: (f: VoxelBlockFace) => void) => (
@@ -350,7 +404,23 @@ export default function VoxelBlock() {
       <div className="controls-column">
         <div className="settings-panel">
           <h3>Block Settings</h3>
-          <div className="settings-row"><label>Preset</label><select defaultValue="" onChange={e => { if (e.target.value) applyPreset(e.target.value); e.target.value = ''; }}><option value="">— Select —</option><option value="grass">Grass</option><option value="flowery_grass">Flowery Grass</option><option value="leaves">Leaves</option><option value="fallen_leaves">Fallen Leaves</option><option value="mud">Mud</option><option value="lava">Lava</option><option value="tree_trunk">Tree Trunk (Oak)</option><option value="birch_trunk">Birch Trunk</option><option value="dark_oak_trunk">Dark Oak Trunk</option><option value="spruce_trunk">Spruce Trunk</option><option value="jungle_trunk">Jungle Trunk</option><option value="log">Wood Log</option><option value="sand_block">Sand</option><option value="shell_sand">Shell Sand</option><option value="sand">Sandstone</option><option value="stone_ore">Iron Ore</option><option value="diamond_ore">Diamond Ore</option><option value="bouncy">Bouncy</option><option value="glass">Glass</option></select></div>
+          <div className="settings-row"><label>Preset</label><select defaultValue="" onChange={e => { if (e.target.value) applyPreset(e.target.value); e.target.value = ''; }}><option value="">— Select —</option><option value="grass">Grass</option><option value="worn_grass">Worn Grass</option><option value="flowery_grass">Flowery Grass</option><option value="leaves">Leaves</option><option value="fallen_leaves">Fallen Leaves</option><option value="maple_leaves">Maple Leaves</option><option value="tropical_leaves">Tropical Leaves</option><option value="pine_needles">Pine Needles</option><option value="mud">Mud</option><option value="lava">Lava</option><option value="tree_trunk">Tree Trunk (Oak)</option><option value="birch_trunk">Birch Trunk</option><option value="dark_oak_trunk">Dark Oak Trunk</option><option value="spruce_trunk">Spruce Trunk</option><option value="jungle_trunk">Jungle Trunk</option><option value="log">Wood Log</option><option value="sand_block">Sand</option><option value="shell_sand">Shell Sand</option><option value="sand">Sandstone</option><option value="stone_ore">Iron Ore</option><option value="diamond_ore">Diamond Ore</option><option value="bouncy">Bouncy</option><option value="glass">Glass</option></select></div>
+          <div className="settings-row" style={{ gap: 6, flexWrap: 'wrap' }}>
+            <label style={{ flexShrink: 0 }}>Lock parts</label>
+            {(
+              [
+                { label: 'Top', locked: lockTop, toggle: () => setLockTop(v => !v) },
+                { label: 'Blend', locked: lockSideBlend, toggle: () => setLockSideBlend(v => !v) },
+                { label: 'Side', locked: lockSide, toggle: () => setLockSide(v => !v) },
+                { label: 'Bottom', locked: lockBottom, toggle: () => setLockBottom(v => !v) },
+              ]
+            ).map(({ label, locked, toggle }) => (
+              <button key={label} onClick={toggle} title={locked ? `${label} is locked — preset won't change it` : `${label} is unlocked — preset will replace it`}
+                style={{ padding: '2px 8px', fontSize: '0.78em', borderRadius: 4, cursor: 'pointer', border: '1px solid', borderColor: locked ? '#c97' : '#555', background: locked ? '#3a2a1a' : 'transparent', color: locked ? '#e8a060' : '#888', userSelect: 'none' }}>
+                {locked ? '🔒' : '🔓'} {label}
+              </button>
+            ))}
+          </div>
           <div className="settings-row"><label>Style</label><select value={renderStyle} onChange={e => setRenderStyle(e.target.value as VoxelRenderStyle)}><option value="pixelated">Pixelated</option><option value="cartoon">Cartoon</option><option value="realistic">Realistic</option><option value="painterly">Painterly</option><option value="flat">Flat / Minimal</option></select></div>
           <div className="settings-row"><label>Resolution</label><select value={resolution} onChange={e => setResolution(parseInt(e.target.value))}><option value="8">8×8</option><option value="16">16×16</option><option value="32">32×32</option><option value="64">64×64</option><option value="128">128×128</option><option value="256">256×256</option><option value="512">512×512</option><option value="1024">1024×1024</option></select></div>
           <SliderControl label="Seed" value={seed} min={1} max={1000} step={1} onChange={setSeed} />

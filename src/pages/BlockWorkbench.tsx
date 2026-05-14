@@ -25,6 +25,12 @@ import {
 import TextureGenerator from './TextureGenerator';
 import { createZip, canvasToPngBytes } from '../utils/zipExport';
 import {
+  buildVP3Zip, sanitiseBlockName,
+  WH_ROLE_OPTIONS,
+  type NormalBakeMode,
+  type WHVoxelRole,
+} from '../utils/gameExport';
+import {
   type VoxelCraftProject,
   type ProjectListEntry,
   supportsFileSystemAccess,
@@ -66,12 +72,34 @@ interface VoxelPreset {
   glow?: GlowOptions;
 }
 
+interface BlendLayer {
+  id: string;
+  enabled: boolean;
+  colors: VoxelBlockFace;
+  sideMode: VoxelBlockSideMode;
+  sideSplitPos: number;
+  transitionPattern: SideTransitionPattern;
+  transitionNoise: number;
+}
+
 const DEFAULT_VOXEL_FACE = (base: VoxelBaseType, ores: VoxelOreLayer[] = []): VoxelBlockFace => ({
   baseType: base,
   baseColor1: '#8b8b8b', baseColor2: '#6b6b6b', baseColor3: '#555555',
   grainStrength: 0.3, grainDirection: 'both',
   oreLayers: ores,
   depthShading: 0.4, outlineStrength: 0.2, paletteSize: 12,
+});
+
+let _blendLayerSeq = 0;
+const makeBlendLayer = (overrides?: Partial<Omit<BlendLayer, 'id'>>): BlendLayer => ({
+  id: `bl-${++_blendLayerSeq}-${Date.now()}`,
+  enabled: true,
+  colors: DEFAULT_VOXEL_FACE('custom'),
+  sideMode: 'split',
+  sideSplitPos: 0.2,
+  transitionPattern: 'jagged',
+  transitionNoise: 0.5,
+  ...overrides,
 });
 
 // ─── Ore preset factory ──────────────────────────────────────────────────
@@ -1138,6 +1166,50 @@ const VOXEL_PRESETS: Record<string, VoxelPreset> = {
     bottom: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#485868', baseColor2: '#304050', baseColor3: '#203040', grainDirection: 'both', grainStrength: 0.25, depthShading: 0.55, outlineStrength: 0.2, paletteSize: 6 },
     sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('custom'),
   },
+  // Aliases so WORKBENCH_PRESET keys that differ from VOXEL_PRESET keys
+  // still resolve to the correct sideMode instead of falling back to 'uniform'.
+  grass_block: { label: 'Grass Block',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#4a8c2a', baseColor2: '#3d7522', baseColor3: '#2d5a18', grainDirection: 'both', grainStrength: 0.5 },
+    side: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#9b7653', baseColor2: '#7a5c3a', baseColor3: '#5c4028' },
+    bottom: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#9b7653', baseColor2: '#7a5c3a', baseColor3: '#5c4028' },
+    sideMode: 'split', sideSplitPos: 0.2,
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#4a8c2a', baseColor2: '#3d7522', baseColor3: '#2d5a18', grainStrength: 0.4 },
+    transitionPattern: 'mossy', transitionNoise: 0.5,
+  },
+  mossy_grass: { label: 'Mossy Grass',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#2d6b1a', baseColor2: '#1a4010', baseColor3: '#0f2a08', grainDirection: 'both', grainStrength: 0.5 },
+    side: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#6a7a53', baseColor2: '#4a5838', baseColor3: '#2a3820' },
+    bottom: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#8a7653', baseColor2: '#5c4828', baseColor3: '#3a2e18' },
+    sideMode: 'split', sideSplitPos: 0.2,
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#2d6b1a', baseColor2: '#1a4010', baseColor3: '#0f2a08', grainStrength: 0.4 },
+    transitionPattern: 'mossy', transitionNoise: 0.6,
+  },
+  dry_grass: { label: 'Dry Grass',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#b8a848', baseColor2: '#8a7830', baseColor3: '#5c4e18', grainDirection: 'both', grainStrength: 0.45 },
+    side: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#9b7653', baseColor2: '#7a5c3a', baseColor3: '#5c4028' },
+    bottom: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#9b7653', baseColor2: '#7a5c3a', baseColor3: '#5c4028' },
+    sideMode: 'split', sideSplitPos: 0.15,
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#b8a848', baseColor2: '#8a7830', baseColor3: '#5c4e18', grainStrength: 0.35 },
+    transitionPattern: 'jagged', transitionNoise: 0.4,
+  },
+  taiga_podzol: { label: 'Taiga Podzol',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#6a5838', baseColor2: '#584828', baseColor3: '#463818', grainDirection: 'both', grainStrength: 0.4, depthShading: 0.3, outlineStrength: 0.1,
+      oreLayers: [
+        { color: '#4a6830', highlightColor: '#5a7840', density: 2, clusterSize: 1, name: 'Pine Needle', style: 'flat', oreScale: 0.3 },
+        { color: '#7a6840', highlightColor: '#8a7850', density: 1.5, clusterSize: 1, name: 'Twig', style: 'flat', oreScale: 0.4 },
+      ] },
+    side: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#7a5c3a', baseColor2: '#5c4028', baseColor3: '#3e2a18', grainStrength: 0.4, grainDirection: 'horizontal' },
+    bottom: { ...DEFAULT_VOXEL_FACE('dirt'), baseColor1: '#6a4c2a', baseColor2: '#4c3018', baseColor3: '#2e1a08', grainStrength: 0.3, grainDirection: 'horizontal' },
+    sideMode: 'gradient_top', sideSplitPos: 0.25,
+    sideTopFace: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#6a5838', baseColor2: '#584828', baseColor3: '#463818', grainDirection: 'both', grainStrength: 0.35 },
+  },
+  snow_block: { label: 'Snow Block',
+    top: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#f0f4fa', baseColor2: '#e0e8f2', baseColor3: '#d0dce8', grainDirection: 'both', grainStrength: 0.1, depthShading: 0.2, outlineStrength: 0, paletteSize: 5,
+      oreLayers: [{ color: '#ffffff', highlightColor: '#f8fcff', density: 4, clusterSize: 2, name: 'Sparkle', style: 'crystal', oreScale: 0.3 }] },
+    side: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#e0e8f2', baseColor2: '#d0dce8', baseColor3: '#c0ccd8', grainDirection: 'horizontal', grainStrength: 0.15, depthShading: 0.3, outlineStrength: 0, paletteSize: 5 },
+    bottom: { ...DEFAULT_VOXEL_FACE('custom'), baseColor1: '#d0dce8', baseColor2: '#c0ccd8', baseColor3: '#b0bcc8', grainDirection: 'both', grainStrength: 0.1, depthShading: 0.35, outlineStrength: 0, paletteSize: 5 },
+    sideMode: 'uniform', sideSplitPos: 0.5, sideTopFace: DEFAULT_VOXEL_FACE('custom'),
+  },
   // Auto-generated ores defined alongside their texture counterparts —
   // every key here also exists in WORKBENCH_PRESETS so the unified
   // library can switch views without missing a card.
@@ -1939,16 +2011,17 @@ export default function BlockWorkbench() {
 
   const [vxResolution, setVxResolution] = useLocalState('bw_vxRes', 16);
   const [vxSeed, setVxSeed] = useLocalState('bw_vxSeed', 1);
-  const [vxSideMode, setVxSideMode] = useLocalState<VoxelBlockSideMode>('bw_vxSMode', 'split');
-  const [vxSideSplitPos, setVxSideSplitPos] = useLocalState('bw_vxSPos', 0.2);
-  const [vxTransitionPattern, setVxTransitionPattern] = useLocalState<SideTransitionPattern>('bw_vxTrPat', 'jagged');
-  const [vxTransitionNoise, setVxTransitionNoise] = useLocalState('bw_vxTrNoi', 0.5);
+  const [blendLayers, setBlendLayers] = useLocalState<BlendLayer[]>('bw_blendLayers', [makeBlendLayer()]);
   const [vxRenderStyle, setVxRenderStyle] = useLocalState<VoxelRenderStyle>('bw_vxStyle', 'pixelated');
   const [vxTopFace, setVxTopFace] = useLocalState<VoxelBlockFace>('bw_vxTop', DEFAULT_VOXEL_FACE('custom', []));
   const [vxSideFace, setVxSideFace] = useLocalState<VoxelBlockFace>('bw_vxSide', DEFAULT_VOXEL_FACE('dirt'));
   const [vxBottomFace, setVxBottomFace] = useLocalState<VoxelBlockFace>('bw_vxBtm', DEFAULT_VOXEL_FACE('dirt'));
-  const [vxSideTopFace, setVxSideTopFace] = useLocalState<VoxelBlockFace>('bw_vxSTop', DEFAULT_VOXEL_FACE('custom'));
   const [vxActiveFace, setVxActiveFace] = useLocalState<'top' | 'side' | 'bottom'>('bw_vxFace', 'top');
+
+  const [lockPresetTop, setLockPresetTop] = useState(false);
+  const [lockPresetSideBlend, setLockPresetSideBlend] = useState(false);
+  const [lockPresetSide, setLockPresetSide] = useState(false);
+  const [lockPresetBottom, setLockPresetBottom] = useState(false);
 
   const [snowEnabled, setSnowEnabled] = useLocalState('bw_snow', false);
   const [snowDepth, setSnowDepth] = useLocalState('bw_snowDepth', 0.35);
@@ -1979,6 +2052,17 @@ export default function BlockWorkbench() {
   // always offer it as a ZIP entry alongside the other maps.
   const [zipIncludeEmission, setZipIncludeEmission] = useLocalState('bw_zipEmission', false);
   const [zipOptionsOpen, setZipOptionsOpen] = useState(false);
+
+  // ── World Hopper VP3 export ──────────────────────────────────────────
+  const [whBlockId, setWhBlockId] = useLocalState('bw_whBlockId', '');
+  const [whDisplayName, setWhDisplayName] = useLocalState('bw_whDisplayName', '');
+  const [whItemId, setWhItemId] = useLocalState('bw_whItemId', '');
+  const [whRole, setWhRole] = useLocalState<WHVoxelRole>('bw_whRole', 'Stone');
+  const [whResistancePoints, setWhResistancePoints] = useLocalState('bw_whResist', 9);
+  const [whCanBeCollected, setWhCanBeCollected] = useLocalState('bw_whCollect', true);
+  const [whNormalMode, setWhNormalMode] = useLocalState<NormalBakeMode>('bw_whNorm', 'smart');
+  const [whIncludeSnow, setWhIncludeSnow] = useLocalState('bw_whSnow', false);
+  const [whOpen, setWhOpen] = useState(false);
   // Multi-size ZIP export — when more than one size is selected the ZIP
   // contains every face × every map × every size, with `_<px>` suffixed
   // onto each filename (or a `<px>/` subfolder when single-map-per-face).
@@ -2228,74 +2312,64 @@ export default function BlockWorkbench() {
 
   const renderVoxelToAllFaces = useCallback(() => {
     const outputSize = 256;
-    const styledTop = { ...vxTopFace, renderStyle: vxRenderStyle };
-    const styledSide = { ...vxSideFace, renderStyle: vxRenderStyle };
+    const styledTop    = { ...vxTopFace,    renderStyle: vxRenderStyle };
+    const styledSide   = { ...vxSideFace,   renderStyle: vxRenderStyle };
     const styledBottom = { ...vxBottomFace, renderStyle: vxRenderStyle };
-    const styledSideTop = { ...vxSideTopFace, renderStyle: vxRenderStyle };
+    // Use the first enabled layer for the voxel side-blend pass.
+    const primary = blendLayers.find(l => l.enabled) ?? blendLayers[0];
+    const styledSideTop = { ...(primary?.colors ?? DEFAULT_VOXEL_FACE('custom')), renderStyle: vxRenderStyle };
 
-    const tmpTop = document.createElement('canvas');
-    const tmpSide = document.createElement('canvas');
+    const tmpTop    = document.createElement('canvas');
+    const tmpSide   = document.createElement('canvas');
     const tmpBottom = document.createElement('canvas');
 
-    generateVoxelBlockFace(tmpTop, outputSize, styledTop, vxResolution, vxSeed);
+    generateVoxelBlockFace(tmpTop,    outputSize, styledTop,    vxResolution, vxSeed);
     generateVoxelBlockFace(tmpBottom, outputSize, styledBottom, vxResolution, vxSeed + 30);
 
     const blockOpts: VoxelBlockOptions = {
-      resolution: vxResolution, seed: vxSeed, top: styledTop, side: styledSide, bottom: styledBottom,
-      sideMode: vxSideMode, sideSplitPos: vxSideSplitPos, sideTopFace: styledSideTop,
-      transitionPattern: vxTransitionPattern, transitionNoise: vxTransitionNoise,
+      resolution: vxResolution, seed: vxSeed,
+      top: styledTop, side: styledSide, bottom: styledBottom,
+      sideMode:          primary?.sideMode          ?? 'uniform',
+      sideSplitPos:      primary?.sideSplitPos      ?? 0.5,
+      sideTopFace:       styledSideTop,
+      transitionPattern: primary?.transitionPattern ?? 'straight',
+      transitionNoise:   primary?.transitionNoise   ?? 0.5,
     };
     generateVoxelBlockSide(tmpSide, outputSize, blockOpts);
 
     setTopImg(tmpTop.toDataURL('image/png'));
     setSideImg(tmpSide.toDataURL('image/png'));
     setBottomImg(tmpBottom.toDataURL('image/png'));
-    // After this render the preview faces are voxel-sourced, so voxel
-    // slider tweaks can safely auto-apply from here on.
     setPreviewSource('voxel');
-  }, [vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace, vxResolution, vxSeed, vxSideMode, vxSideSplitPos, vxTransitionPattern, vxTransitionNoise, vxRenderStyle, setTopImg, setSideImg, setBottomImg]);
+  }, [vxTopFace, vxSideFace, vxBottomFace, blendLayers, vxResolution, vxSeed, vxRenderStyle, setTopImg, setSideImg, setBottomImg]);
 
   // Track which voxel configuration we last rendered so we can detect
   // genuine voxel-config changes (preset picks, slider tweaks) and skip
   // re-rendering when the user merely *switches into* voxel mode while
   // their preview already shows custom textures or a loaded project.
-  const lastRenderedVoxelKeyRef = useRef<string>(JSON.stringify({
-    vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
-    vxResolution, vxSeed, vxSideMode, vxSideSplitPos,
-    vxTransitionPattern, vxTransitionNoise, vxRenderStyle,
-  }));
+  // Initialise to '' so the first effect run always attempts a render —
+  // if we seed this with the restored localStorage state, clicking the
+  // same preset a second session in a row produces a key match and the
+  // preview stays blank until the user nudges a slider.
+  const lastRenderedVoxelKeyRef = useRef<string>('');
   const suppressVoxelRenderRef = useRef(false);
 
   useEffect(() => {
     const key = JSON.stringify({
-      vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
-      vxResolution, vxSeed, vxSideMode, vxSideSplitPos,
-      vxTransitionPattern, vxTransitionNoise, vxRenderStyle,
+      vxTopFace, vxSideFace, vxBottomFace, blendLayers,
+      vxResolution, vxSeed, vxRenderStyle,
     });
-    // No-op when the voxel config hasn't actually changed since the
-    // last render — this is the common path for plain mode switches.
     if (key === lastRenderedVoxelKeyRef.current) return;
     lastRenderedVoxelKeyRef.current = key;
     if (suppressVoxelRenderRef.current) {
-      // loadProject / applyPreset / applySnapshot just primed voxel
-      // state — they already set authoritative face images, so don't
-      // clobber them by re-rendering from the synced voxel config.
       suppressVoxelRenderRef.current = false;
       return;
     }
-    // Live preview, but only when the preview is already voxel-sourced
-    // (the user picked a voxel preset, or already converted to voxel).
-    // While a texture preset is on screen we silently let the user
-    // tweak voxel sliders without overwriting the texture render — the
-    // tweaks apply once they explicitly switch to voxel rendering
-    // (via the inspector's "Render as voxel" button or a voxel preset).
     if (editorMode === 'voxel' && previewSource === 'voxel') {
       renderVoxelToAllFaces();
     }
-  }, [editorMode, previewSource, vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
-      vxResolution, vxSeed, vxSideMode, vxSideSplitPos,
-      vxTransitionPattern, vxTransitionNoise, vxRenderStyle,
-      renderVoxelToAllFaces]);
+  }, [editorMode, previewSource, vxTopFace, vxSideFace, vxBottomFace, blendLayers,
+      vxResolution, vxSeed, vxRenderStyle, renderVoxelToAllFaces]);
 
   // ─────────────────────────────────────────────────────────────────────
   //   Shared block-level settings re-render path (texture rendering)
@@ -2304,6 +2378,9 @@ export default function BlockWorkbench() {
   // shared between texture + voxel rendering changes while the preview
   // is texture-sourced, re-render the texture face images so the change
   // shows up live.
+  // Set to true by loadProject / applySnapshot when they restore images
+  // directly from saved state — prevents the texture effects from
+  // immediately re-deriving and overwriting those restored images.
   const suppressTextureRenderRef = useRef(false);
 
   useEffect(() => {
@@ -2312,56 +2389,101 @@ export default function BlockWorkbench() {
       suppressTextureRenderRef.current = false;
       return;
     }
-    if (!topConfig && !sideConfig && !bottomConfig) return;
+    if (!topConfig && !bottomConfig) return;
 
-    const faceCanvases: Record<FaceName, HTMLCanvasElement | null> = { top: null, side: null, bottom: null };
-
-    const renderOne = (face: FaceName, cfg: FaceTextureConfig | null, faceIdx: number) => {
-      if (!cfg) return;
+    const renderOne = (cfg: FaceTextureConfig | null, faceIdx: number): HTMLCanvasElement | null => {
+      if (!cfg) return null;
       // Block Seed drives per-face seeds with a prime offset so adjacent
       // slider values produce visibly different textures on each face.
-      // We render with the derived seed but DON'T write it back to the
-      // face config — that lets the Texture tab keep showing the user's
-      // captured (or preset-chosen) seed, and lets undo / preset re-load
-      // restore the original look without us silently mutating configs.
       const derivedSeed = vxSeed * 37 + faceIdx + 1;
-      const derivedCfg: FaceTextureConfig = { ...cfg, seed: derivedSeed };
       const c = document.createElement('canvas');
-      c.width = derivedCfg.size;
-      c.height = derivedCfg.size;
-      renderFaceTexture(c, derivedCfg);
+      c.width = cfg.size;
+      c.height = cfg.size;
+      renderFaceTexture(c, { ...cfg, seed: derivedSeed });
       applyBlockStylePostProcess(c, vxRenderStyle as BlockRenderStyle);
-      faceCanvases[face] = c;
+      return c;
     };
 
-    renderOne('top', topConfig, 0);
-    renderOne('side', sideConfig, 1);
-    renderOne('bottom', bottomConfig, 2);
+    const topCanvas    = renderOne(topConfig,    0);
+    const bottomCanvas = renderOne(bottomConfig, 2);
 
-    // Side Blend composes the top texture onto the upper portion of
-    // the side face, using the same split / transition semantics as
-    // the voxel renderer's `generateVoxelBlockSide`.
-    if (faceCanvases.side && faceCanvases.top && vxSideMode !== 'uniform') {
-      compositeTextureSide(faceCanvases.side, faceCanvases.top, {
-        sideMode: vxSideMode,
-        sideSplitPos: vxSideSplitPos,
-        transitionPattern: vxTransitionPattern,
-        transitionNoise: vxTransitionNoise,
-        seed: vxSeed,
+    if (topCanvas)    setTopImg(topCanvas.toDataURL('image/png'));
+    if (bottomCanvas) setBottomImg(bottomCanvas.toDataURL('image/png'));
+    // setSideImg is handled exclusively by the live-edit effect below.
+    // topConfig/bottomConfig are in deps so switching presets re-renders
+    // top/bottom even when seed and renderStyle are unchanged. blendLayers
+    // is intentionally absent — blend changes only affect the side face.
+  }, [previewSource, vxSeed, vxRenderStyle, topConfig, bottomConfig]);
+
+  // ─────────────────────────────────────────────────────────────────────
+  //   Side — sole authority for setSideImg (texture mode only)
+  // ─────────────────────────────────────────────────────────────────────
+  // Renders the side face from scratch on every fire so there is NEVER a
+  // shared canvas that can accumulate two composites. Uses the same
+  // deterministic seed formula (vxSeed * 37 + 2) as the main texture
+  // effect so flower positions are stable across blend-color edits.
+  //
+  // sideConfig is in deps so a new preset's side texture immediately
+  // replaces the old one even when the seed hasn't changed.
+  useEffect(() => {
+    if (previewSource !== 'texture') return;
+    if (!sideConfig) return;
+
+    // Render the base side texture fresh — one deterministic canvas, no
+    // accumulated state from previous renders.
+    //
+    // Strip `grassOverlay` from params when active blend layers are present.
+    // Some side configs (e.g. grass presets) bake a grassOverlay directly into
+    // renderFaceTexture as a post-process step. Keeping it alongside an active
+    // blend-layer composite creates a double strip. The blend layer is the sole
+    // authority for top-portion compositing; the base render is pure dirt/stone.
+    const hasActiveLayers = blendLayers.some(l => l.enabled && l.sideMode !== 'uniform');
+    const baseParams = hasActiveLayers && sideConfig.params
+      ? Object.fromEntries(
+          Object.entries(sideConfig.params as Record<string, unknown>)
+            .filter(([k]) => k !== 'grassOverlay'),
+        )
+      : sideConfig.params;
+    const baseConfig: FaceTextureConfig = { ...sideConfig, params: baseParams };
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = sideConfig.size;
+    canvas.height = sideConfig.size;
+    renderFaceTexture(canvas, { ...baseConfig, seed: vxSeed * 37 + 2 });
+    applyBlockStylePostProcess(canvas, vxRenderStyle as BlockRenderStyle);
+
+    // Apply each enabled blend layer in order.  The number of composite
+    // calls is exactly the number of enabled non-uniform layers — one
+    // strip per layer, impossible to double-composite.
+    for (const layer of blendLayers) {
+      if (!layer.enabled || layer.sideMode === 'uniform') continue;
+      const grassCanvas = document.createElement('canvas');
+      grassCanvas.width  = canvas.width;
+      grassCanvas.height = canvas.height;
+      renderFaceTexture(grassCanvas, {
+        type: 'PerlinNoise', size: canvas.width, seed: vxSeed + 60,
+        params: {
+          color1: layer.colors.baseColor1,
+          color2: layer.colors.baseColor2 ?? layer.colors.baseColor1,
+          noiseType: 'FractalNoise', scale: 20, octaves: 4, persistence: 0.5,
+        },
+      } as FaceTextureConfig);
+      applyBlockStylePostProcess(grassCanvas, vxRenderStyle as BlockRenderStyle);
+      compositeTextureSide(canvas, grassCanvas, {
+        sideMode:          layer.sideMode,
+        sideSplitPos:      layer.sideSplitPos,
+        transitionPattern: layer.transitionPattern,
+        transitionNoise:   layer.transitionNoise,
+        seed:              vxSeed,
       });
     }
 
-    if (faceCanvases.top) setTopImg(faceCanvases.top.toDataURL('image/png'));
-    if (faceCanvases.side) setSideImg(faceCanvases.side.toDataURL('image/png'));
-    if (faceCanvases.bottom) setBottomImg(faceCanvases.bottom.toDataURL('image/png'));
-    // Deliberately exclude topConfig/sideConfig/bottomConfig and their
-    // setters from deps — the closure picks up their latest values at
-    // every fire because the deps below DO change when this effect
-    // should run, and capturing a new face from the Texture tab is
-    // handled by its own setter call so it doesn't need to re-trigger.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [previewSource, vxSeed, vxRenderStyle, vxSideMode, vxSideSplitPos,
-      vxTransitionPattern, vxTransitionNoise]);
+    setSideImg(canvas.toDataURL('image/png'));
+  // sideConfig in deps so a new preset's side texture fires even when vxSeed
+  // is unchanged.  blendLayers is the single source of truth for all blend
+  // geometry and colors — changing any layer field fires this effect once.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blendLayers, previewSource, vxSeed, vxRenderStyle, sideConfig]);
 
   // Sync the workbench glow state from a preset's optional `glow`
   // recipe. Light-source presets define it; plain presets leave it
@@ -2395,12 +2517,19 @@ export default function BlockWorkbench() {
     // Mark the next render as voxel-sourced so downstream UI (export,
     // map panel hint, etc.) knows the source.
     setPreviewSource('voxel');
-    setVxTopFace(p.top);
-    setVxSideFace(p.side);
-    setVxBottomFace(p.bottom);
-    setVxSideMode(p.sideMode);
-    setVxSideSplitPos(p.sideSplitPos);
-    setVxSideTopFace(p.sideTopFace);
+    if (!lockPresetTop) setVxTopFace(p.top);
+    if (!lockPresetSide) setVxSideFace(p.side);
+    if (!lockPresetBottom) setVxBottomFace(p.bottom);
+    if (!lockPresetSideBlend) {
+      setBlendLayers([makeBlendLayer({
+        enabled:           p.sideMode !== 'uniform',
+        colors:            p.sideTopFace,
+        sideMode:          p.sideMode,
+        sideSplitPos:      p.sideSplitPos,
+        transitionPattern: p.transitionPattern ?? 'straight',
+        transitionNoise:   p.transitionNoise   ?? 0.5,
+      })]);
+    }
     // Fully reset block-level settings on every preset pick, falling
     // back to sensible defaults when the preset doesn't override them.
     // This makes preset selection deterministic — the result no longer
@@ -2408,8 +2537,6 @@ export default function BlockWorkbench() {
     setVxRenderStyle(p.renderStyle ?? 'pixelated');
     setVxResolution(p.resolution ?? 16);
     setVxSeed(p.seed ?? 1);
-    setVxTransitionPattern(p.transitionPattern ?? 'straight');
-    setVxTransitionNoise(p.transitionNoise ?? 0.5);
     setActiveVxPresetKey(name);
     applyPresetGlow(p.glow);
     // Picking a voxel preset from the library should drop the user into
@@ -2424,14 +2551,17 @@ export default function BlockWorkbench() {
     const preset = presetOverride ?? WORKBENCH_PRESETS[presetKey];
     if (!preset) return;
 
-    const tempCanvas = document.createElement('canvas');
+    // Update face configs only — the effects chain (main texture effect for
+    // top/bottom, live-edit effect for side) drives all canvas rendering.
+    // No direct canvas work here prevents any race between imperative renders
+    // and effect-based renders, and eliminates the double-blend-strip bug where
+    // a PLAIN intermediate write would appear at a different y-position than the
+    // blend composite applied by the live-edit effect.
     const configs: Record<FaceName, FaceTextureConfig> = { top: preset.top, side: preset.side, bottom: preset.bottom };
-
     for (const face of ['top', 'side', 'bottom'] as FaceName[]) {
-      tempCanvas.width = configs[face].size;
-      tempCanvas.height = configs[face].size;
-      renderFaceTexture(tempCanvas, configs[face]);
-      setImgs[face](tempCanvas.toDataURL('image/png'));
+      if (face === 'top'    && lockPresetTop)   continue;
+      if (face === 'side'   && lockPresetSide)  continue;
+      if (face === 'bottom' && lockPresetBottom) continue;
       setFaceConfigs[face](configs[face]);
     }
 
@@ -2441,43 +2571,50 @@ export default function BlockWorkbench() {
     setPreviewSource('texture');
 
     // Sync the voxel state to match this preset so the Voxel Block
-    // inspector reflects what's on screen. We suppress both auto-
-    // renders so the texture-rendered faces we just set aren't
-    // immediately overwritten — the texture re-render would fire
-    // because we're setting voxel state (shared block settings), and
-    // we want the preset's per-face seeds to stick until the user
-    // explicitly touches a block-level slider.
+    // inspector reflects what's on screen. Suppress the voxel auto-render
+    // so it doesn't overwrite the texture-mode preview when shared block
+    // settings (seed, renderStyle) change. The texture effects drive the
+    // canvas via the configs we just set above.
     suppressVoxelRenderRef.current = true;
-    suppressTextureRenderRef.current = true;
     const voxelMatch = VOXEL_PRESETS[presetKey];
     if (voxelMatch) {
-      setVxTopFace(voxelMatch.top);
-      setVxSideFace(voxelMatch.side);
-      setVxBottomFace(voxelMatch.bottom);
-      setVxSideMode(voxelMatch.sideMode);
-      setVxSideSplitPos(voxelMatch.sideSplitPos);
-      setVxSideTopFace(voxelMatch.sideTopFace);
+      if (!lockPresetTop)    setVxTopFace(voxelMatch.top);
+      if (!lockPresetSide)   setVxSideFace(voxelMatch.side);
+      if (!lockPresetBottom) setVxBottomFace(voxelMatch.bottom);
+      if (!lockPresetSideBlend) {
+        setBlendLayers([makeBlendLayer({
+          enabled:           voxelMatch.sideMode !== 'uniform',
+          colors:            voxelMatch.sideTopFace,
+          sideMode:          voxelMatch.sideMode,
+          sideSplitPos:      voxelMatch.sideSplitPos,
+          transitionPattern: voxelMatch.transitionPattern ?? 'straight',
+          transitionNoise:   voxelMatch.transitionNoise   ?? 0.5,
+        })]);
+      }
       setVxRenderStyle(voxelMatch.renderStyle ?? 'pixelated');
       setVxResolution(voxelMatch.resolution ?? 16);
       setVxSeed(voxelMatch.seed ?? 1);
-      setVxTransitionPattern(voxelMatch.transitionPattern ?? 'straight');
-      setVxTransitionNoise(voxelMatch.transitionNoise ?? 0.5);
       setActiveVxPresetKey(presetKey);
     } else {
-      const neutralTop = deriveVoxelFaceFromTexture(preset.top);
-      const neutralSide = deriveVoxelFaceFromTexture(preset.side);
+      const neutralTop    = deriveVoxelFaceFromTexture(preset.top);
+      const neutralSide   = deriveVoxelFaceFromTexture(preset.side);
       const neutralBottom = deriveVoxelFaceFromTexture(preset.bottom);
-      setVxTopFace(neutralTop);
-      setVxSideFace(neutralSide);
-      setVxBottomFace(neutralBottom);
-      setVxSideTopFace(neutralTop);
-      setVxSideMode('uniform');
-      setVxSideSplitPos(0.5);
+      if (!lockPresetTop)    setVxTopFace(neutralTop);
+      if (!lockPresetSide)   setVxSideFace(neutralSide);
+      if (!lockPresetBottom) setVxBottomFace(neutralBottom);
+      if (!lockPresetSideBlend) {
+        setBlendLayers([makeBlendLayer({
+          enabled:           false,
+          colors:            neutralTop,
+          sideMode:          'uniform',
+          sideSplitPos:      0.5,
+          transitionPattern: 'straight',
+          transitionNoise:   0.5,
+        })]);
+      }
       setVxRenderStyle('pixelated');
       setVxResolution(16);
       setVxSeed(1);
-      setVxTransitionPattern('straight');
-      setVxTransitionNoise(0.5);
       setActiveVxPresetKey('');
     }
     applyPresetGlow(preset.glow);
@@ -2560,11 +2697,17 @@ export default function BlockWorkbench() {
     if (persistedMode === 'texture') {
       proj.textureConfigs = { top: topConfig, side: sideConfig, bottom: bottomConfig };
     } else {
+      const primaryLayer = blendLayers.find(l => l.enabled) ?? blendLayers[0];
       proj.voxelConfigs = {
         resolution: vxResolution, seed: vxSeed, renderStyle: vxRenderStyle,
-        sideMode: vxSideMode, sideSplitPos: vxSideSplitPos,
-        transitionPattern: vxTransitionPattern, transitionNoise: vxTransitionNoise,
-        top: vxTopFace, side: vxSideFace, bottom: vxBottomFace, sideTopFace: vxSideTopFace,
+        top: vxTopFace, side: vxSideFace, bottom: vxBottomFace,
+        blendLayers,
+        // Legacy fields for old app versions — first layer's values
+        sideMode:          primaryLayer?.sideMode          ?? 'uniform',
+        sideSplitPos:      primaryLayer?.sideSplitPos      ?? 0.5,
+        transitionPattern: primaryLayer?.transitionPattern ?? 'straight',
+        transitionNoise:   primaryLayer?.transitionNoise   ?? 0.5,
+        sideTopFace:       primaryLayer?.colors            ?? DEFAULT_VOXEL_FACE('custom'),
       };
     }
     if (snowEnabled) {
@@ -2572,8 +2715,7 @@ export default function BlockWorkbench() {
     }
     return proj;
   }, [editorMode, topImg, sideImg, bottomImg, topConfig, sideConfig, bottomConfig,
-      vxResolution, vxSeed, vxRenderStyle, vxSideMode, vxSideSplitPos,
-      vxTransitionPattern, vxTransitionNoise, vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
+      vxResolution, vxSeed, vxRenderStyle, blendLayers, vxTopFace, vxSideFace, vxBottomFace,
       snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed]);
 
   const loadProject = useCallback((proj: VoxelCraftProject) => {
@@ -2597,14 +2739,22 @@ export default function BlockWorkbench() {
       setVxResolution(proj.voxelConfigs.resolution);
       setVxSeed(proj.voxelConfigs.seed);
       setVxRenderStyle(proj.voxelConfigs.renderStyle);
-      setVxSideMode(proj.voxelConfigs.sideMode);
-      setVxSideSplitPos(proj.voxelConfigs.sideSplitPos);
-      setVxTransitionPattern(proj.voxelConfigs.transitionPattern);
-      setVxTransitionNoise(proj.voxelConfigs.transitionNoise);
       setVxTopFace(proj.voxelConfigs.top);
       setVxSideFace(proj.voxelConfigs.side);
       setVxBottomFace(proj.voxelConfigs.bottom);
-      setVxSideTopFace(proj.voxelConfigs.sideTopFace);
+      if (proj.voxelConfigs.blendLayers?.length) {
+        setBlendLayers(proj.voxelConfigs.blendLayers as BlendLayer[]);
+      } else if (proj.voxelConfigs.sideMode) {
+        // Backward compat: reconstruct one layer from old single-blend fields
+        setBlendLayers([makeBlendLayer({
+          enabled:           proj.voxelConfigs.sideMode !== 'uniform',
+          colors:            proj.voxelConfigs.sideTopFace ?? DEFAULT_VOXEL_FACE('custom'),
+          sideMode:          proj.voxelConfigs.sideMode,
+          sideSplitPos:      proj.voxelConfigs.sideSplitPos      ?? 0.5,
+          transitionPattern: proj.voxelConfigs.transitionPattern ?? 'straight',
+          transitionNoise:   proj.voxelConfigs.transitionNoise   ?? 0.5,
+        })]);
+      }
     }
     if (proj.snow) {
       setSnowEnabled(proj.snow.enabled);
@@ -2620,9 +2770,8 @@ export default function BlockWorkbench() {
     setActiveVxPresetKey('');
     setDirty(false);
   }, [setEditorMode, setTopImg, setSideImg, setBottomImg, setTopConfig, setSideConfig, setBottomConfig,
-      setVxResolution, setVxSeed, setVxRenderStyle, setVxSideMode, setVxSideSplitPos,
-      setVxTransitionPattern, setVxTransitionNoise, setVxTopFace, setVxSideFace, setVxBottomFace, setVxSideTopFace,
-      setSnowEnabled, setSnowDepth, setSnowColor1, setSnowColor2, setSnowSeed,
+      setVxResolution, setVxSeed, setVxRenderStyle, setVxTopFace, setVxSideFace, setVxBottomFace,
+      setBlendLayers, setSnowEnabled, setSnowDepth, setSnowColor1, setSnowColor2, setSnowSeed,
       setProjectName, setActivePresetKey, setActiveVxPresetKey]);
 
   const handleSaveProject = useCallback(async () => {
@@ -2784,6 +2933,80 @@ export default function BlockWorkbench() {
     URL.revokeObjectURL(url);
   }, [exportSize, zipSizes, zipIncludeDiffuse, zipIncludeNormal, zipIncludeDisplacement, zipIncludeAO, zipIncludeSpecular, zipIncludeEmission, zipIncludeIso, glowIntensity, glowRadius, glowThreshold, glowColorMode, glowColor]);
 
+  const handleWorldHopperExport = useCallback(async () => {
+    const blockId = sanitiseBlockName(whBlockId || 'my_block');
+    const glowOpts: GlowOptions = {
+      intensity: glowIntensity,
+      radius: glowRadius,
+      threshold: glowThreshold,
+      color: glowColorMode === 'custom' ? glowColor : 'auto',
+    };
+
+    let iconCanvas: HTMLCanvasElement | null = null;
+    if (topRef.current && sideRef.current) {
+      iconCanvas = document.createElement('canvas');
+      // skipClear=false (default) clears the canvas before drawing, leaving a
+      // transparent background instead of whatever the preview stage shows.
+      renderIsometricPreview(iconCanvas, topRef.current, sideRef.current, sideRef.current, 128);
+    }
+
+    let snowFaces: { top: HTMLCanvasElement | null; side: HTMLCanvasElement | null; bottom: HTMLCanvasElement | null } | undefined;
+    if (whIncludeSnow && topRef.current && sideRef.current) {
+      const snowOpts: SnowOverlayOptions = {
+        depth:  snowEnabled ? snowDepth  : 0.35,
+        color1: snowEnabled ? snowColor1 : '#f0f4fa',
+        color2: snowEnabled ? snowColor2 : '#d8e4f0',
+        seed:   snowEnabled ? snowSeed   : 42,
+      };
+      const snTop = document.createElement('canvas');
+      snTop.width = topRef.current.width; snTop.height = topRef.current.height;
+      snTop.getContext('2d')!.drawImage(topRef.current, 0, 0);
+      applySnowOverlay(snTop, snowOpts, 'top');
+
+      const snSide = document.createElement('canvas');
+      snSide.width = sideRef.current.width; snSide.height = sideRef.current.height;
+      snSide.getContext('2d')!.drawImage(sideRef.current, 0, 0);
+      applySnowOverlay(snSide, { ...snowOpts, depth: Math.min(snowOpts.depth * 0.4, 0.15) }, 'side');
+
+      snowFaces = { top: snTop, side: snSide, bottom: bottomRef.current };
+    }
+
+    const blob = await buildVP3Zip({
+      blockId,
+      size: exportSize,
+      faces: { top: topRef.current, side: sideRef.current, bottom: bottomRef.current },
+      faceConfigs: { top: topConfig, side: sideConfig, bottom: bottomConfig },
+      normalMode: whNormalMode,
+      normalSettings: normalSettingsRef.current,
+      includeEmission: glowEnabled,
+      glowOptions: glowOpts,
+      includeAO: false,
+      includeSpecular: false,
+      includeDisplacement: false,
+      includeMetallic: false,
+      includeRoughness: false,
+      whMetadata: {
+        displayName: whDisplayName || blockId,
+        role: whRole,
+        resistancePoints: whResistancePoints,
+        canBeCollected: whCanBeCollected,
+        itemId: whItemId || blockId,
+      },
+      iconCanvas,
+      snowFaces,
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${blockId}_wh.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [whBlockId, whDisplayName, whItemId, whRole, whResistancePoints, whCanBeCollected, whNormalMode,
+      whIncludeSnow, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed,
+      exportSize, glowEnabled, glowIntensity, glowRadius, glowThreshold, glowColorMode, glowColor,
+      topConfig, sideConfig, bottomConfig]);
+
   const activeCanvasRef = activeFace === 'top' ? topRef : activeFace === 'side' ? sideRef : bottomRef;
 
   // Mark the project as dirty whenever output state changes. Skipped on the
@@ -2797,9 +3020,8 @@ export default function BlockWorkbench() {
     if (suppressDirtyRef.current) { suppressDirtyRef.current = false; return; }
     setDirty(true);
   }, [topImg, sideImg, bottomImg, projectName,
-      vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace, vxResolution, vxSeed,
-      vxRenderStyle, vxSideMode, vxSideSplitPos, vxTransitionPattern, vxTransitionNoise,
-      snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed]);
+      vxTopFace, vxSideFace, vxBottomFace, blendLayers, vxResolution, vxSeed,
+      vxRenderStyle, snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed]);
 
   // ─────────────────────────────────────────────────────────────────────
   //   Undo / Redo
@@ -2809,10 +3031,9 @@ export default function BlockWorkbench() {
     projectName: string;
     topImg: string | null; sideImg: string | null; bottomImg: string | null;
     topConfig: FaceTextureConfig | null; sideConfig: FaceTextureConfig | null; bottomConfig: FaceTextureConfig | null;
-    vxTopFace: VoxelBlockFace; vxSideFace: VoxelBlockFace; vxBottomFace: VoxelBlockFace; vxSideTopFace: VoxelBlockFace;
+    vxTopFace: VoxelBlockFace; vxSideFace: VoxelBlockFace; vxBottomFace: VoxelBlockFace;
     vxResolution: number; vxSeed: number; vxRenderStyle: VoxelRenderStyle;
-    vxSideMode: VoxelBlockSideMode; vxSideSplitPos: number;
-    vxTransitionPattern: SideTransitionPattern; vxTransitionNoise: number;
+    blendLayers: BlendLayer[];
     snowEnabled: boolean; snowDepth: number; snowColor1: string; snowColor2: string; snowSeed: number;
     activePresetKey: string; activeVxPresetKey: string;
   };
@@ -2826,15 +3047,14 @@ export default function BlockWorkbench() {
     projectName,
     topImg, sideImg, bottomImg,
     topConfig, sideConfig, bottomConfig,
-    vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace,
+    vxTopFace, vxSideFace, vxBottomFace,
     vxResolution, vxSeed, vxRenderStyle,
-    vxSideMode, vxSideSplitPos,
-    vxTransitionPattern, vxTransitionNoise,
+    blendLayers,
     snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed,
     activePresetKey, activeVxPresetKey,
   }), [projectName, topImg, sideImg, bottomImg, topConfig, sideConfig, bottomConfig,
-      vxTopFace, vxSideFace, vxBottomFace, vxSideTopFace, vxResolution, vxSeed, vxRenderStyle,
-      vxSideMode, vxSideSplitPos, vxTransitionPattern, vxTransitionNoise,
+      vxTopFace, vxSideFace, vxBottomFace, vxResolution, vxSeed, vxRenderStyle,
+      blendLayers,
       snowEnabled, snowDepth, snowColor1, snowColor2, snowSeed,
       activePresetKey, activeVxPresetKey]);
 
@@ -2848,17 +3068,15 @@ export default function BlockWorkbench() {
     setProjectName(snap.projectName);
     setTopImg(snap.topImg); setSideImg(snap.sideImg); setBottomImg(snap.bottomImg);
     setTopConfig(snap.topConfig); setSideConfig(snap.sideConfig); setBottomConfig(snap.bottomConfig);
-    setVxTopFace(snap.vxTopFace); setVxSideFace(snap.vxSideFace); setVxBottomFace(snap.vxBottomFace); setVxSideTopFace(snap.vxSideTopFace);
+    setVxTopFace(snap.vxTopFace); setVxSideFace(snap.vxSideFace); setVxBottomFace(snap.vxBottomFace);
     setVxResolution(snap.vxResolution); setVxSeed(snap.vxSeed); setVxRenderStyle(snap.vxRenderStyle);
-    setVxSideMode(snap.vxSideMode); setVxSideSplitPos(snap.vxSideSplitPos);
-    setVxTransitionPattern(snap.vxTransitionPattern); setVxTransitionNoise(snap.vxTransitionNoise);
+    setBlendLayers(snap.blendLayers);
     setSnowEnabled(snap.snowEnabled); setSnowDepth(snap.snowDepth);
     setSnowColor1(snap.snowColor1); setSnowColor2(snap.snowColor2); setSnowSeed(snap.snowSeed);
     setActivePresetKey(snap.activePresetKey); setActiveVxPresetKey(snap.activeVxPresetKey);
   }, [setProjectName, setTopImg, setSideImg, setBottomImg, setTopConfig, setSideConfig, setBottomConfig,
-      setVxTopFace, setVxSideFace, setVxBottomFace, setVxSideTopFace,
-      setVxResolution, setVxSeed, setVxRenderStyle, setVxSideMode, setVxSideSplitPos,
-      setVxTransitionPattern, setVxTransitionNoise,
+      setVxTopFace, setVxSideFace, setVxBottomFace,
+      setVxResolution, setVxSeed, setVxRenderStyle, setBlendLayers,
       setSnowEnabled, setSnowDepth, setSnowColor1, setSnowColor2, setSnowSeed,
       setActivePresetKey, setActiveVxPresetKey]);
 
@@ -3103,6 +3321,22 @@ export default function BlockWorkbench() {
               onClick={() => setLibraryView('voxel')}
               title="Show every preset rendered as voxels"
             >Voxel</button>
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '4px 0 2px' }}>
+            {(
+              [
+                { label: 'Top', locked: lockPresetTop, toggle: () => setLockPresetTop(v => !v) },
+                { label: 'Blend', locked: lockPresetSideBlend, toggle: () => setLockPresetSideBlend(v => !v) },
+                { label: 'Side', locked: lockPresetSide, toggle: () => setLockPresetSide(v => !v) },
+                { label: 'Bottom', locked: lockPresetBottom, toggle: () => setLockPresetBottom(v => !v) },
+              ]
+            ).map(({ label, locked, toggle }) => (
+              <button key={label} onClick={toggle}
+                title={locked ? `${label} is locked — next preset won't change it` : `${label} is unlocked — next preset will replace it`}
+                style={{ padding: '2px 8px', fontSize: '0.75em', borderRadius: 4, cursor: 'pointer', border: '1px solid', borderColor: locked ? '#c97' : '#444', background: locked ? '#3a2a1a' : 'transparent', color: locked ? '#e8a060' : '#666', userSelect: 'none' }}>
+                {locked ? '🔒' : '🔓'} {label}
+              </button>
+            ))}
           </div>
           {libraryView === 'texture' ? (
             <PresetGrid
@@ -3440,6 +3674,90 @@ export default function BlockWorkbench() {
                 </div>
               )}
             </div>
+
+            {/* ── World Hopper VP3 export ─────────────────────────── */}
+            <div className="wb-zip-wrap">
+              <button
+                className="btn-primary"
+                onClick={handleWorldHopperExport}
+                title="Export a VP3 package ready for the World Hopper Unity importer"
+              >WH</button>
+              <button
+                className="btn-primary wb-zip-chevron"
+                onClick={() => setWhOpen(o => !o)}
+                title="World Hopper export settings"
+              >▾</button>
+              {whOpen && (
+                <div className="wb-zip-popover">
+                  <div className="wb-zip-popover-title">World Hopper export</div>
+
+                  <label className="wb-zip-label">Block ID
+                    <input
+                      type="text"
+                      className="wb-zip-input"
+                      value={whBlockId}
+                      placeholder="my_block"
+                      onChange={e => setWhBlockId(e.target.value)}
+                    />
+                  </label>
+                  <label className="wb-zip-label">Display name
+                    <input
+                      type="text"
+                      className="wb-zip-input"
+                      value={whDisplayName}
+                      placeholder="My Block"
+                      onChange={e => setWhDisplayName(e.target.value)}
+                    />
+                  </label>
+                  <label className="wb-zip-label">Item ID (SE)
+                    <input
+                      type="text"
+                      className="wb-zip-input"
+                      value={whItemId}
+                      placeholder="same as Block ID"
+                      onChange={e => setWhItemId(e.target.value)}
+                    />
+                  </label>
+                  <label className="wb-zip-label">Role
+                    <select
+                      className="wb-zip-input"
+                      value={whRole}
+                      onChange={e => setWhRole(e.target.value as WHVoxelRole)}
+                    >
+                      {WH_ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </label>
+                  <label className="wb-zip-label">Resistance
+                    <input
+                      type="number"
+                      className="wb-zip-input"
+                      min={0} max={255}
+                      value={whResistancePoints}
+                      onChange={e => setWhResistancePoints(Number(e.target.value))}
+                    />
+                  </label>
+                  <label className="wb-zip-label">Normal maps
+                    <select
+                      className="wb-zip-input"
+                      value={whNormalMode}
+                      onChange={e => setWhNormalMode(e.target.value as NormalBakeMode)}
+                    >
+                      <option value="none">None</option>
+                      <option value="smart">Smart (auto-detect)</option>
+                      <option value="all">All faces</option>
+                    </select>
+                  </label>
+                  <label><input type="checkbox" checked={whCanBeCollected} onChange={e => setWhCanBeCollected(e.target.checked)} /> Can be collected</label>
+                  <label><input type="checkbox" checked={whIncludeSnow} onChange={e => setWhIncludeSnow(e.target.checked)} /> Include snow variant</label>
+
+                  <p className="wb-zip-hint">Import via <em>Tools › World Hopper › Import › Import Voxel-Craft Package</em>. The ZIP includes the icon from the Iso 3D preview.{whIncludeSnow ? ' Snow textures use the workbench snow settings (or defaults if snow is off).' : ''}</p>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button className="btn-primary" style={{ flex: 1 }} onClick={handleWorldHopperExport}>Export</button>
+                    <button className="btn-primary wb-zip-close" onClick={() => setWhOpen(false)}>Close</button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </CollapsibleSection>
       </main>
@@ -3558,30 +3876,112 @@ export default function BlockWorkbench() {
                 onChange={setVxSeed}
                 extra={<button type="button" onClick={() => setVxSeed(Math.floor(Math.random() * 999) + 1)} title="Randomize seed" className="btn-icon">&#x1F3B2;</button>}
               />
-              <div className="settings-row">
-                <label>Side Blend</label>
-                <select value={vxSideMode} onChange={e => setVxSideMode(e.target.value as VoxelBlockSideMode)}>
-                  <option value="uniform">Uniform (side only)</option>
-                  <option value="split">Split (top/bottom)</option>
-                  <option value="gradient_top">Gradient from top</option>
-                  <option value="gradient_bottom">Gradient from bottom</option>
-                </select>
-              </div>
-              {vxSideMode !== 'uniform' && <>
-                <SliderControl label="Split Position" value={vxSideSplitPos} min={0.05} max={0.95} step={0.01} onChange={setVxSideSplitPos} />
-                <div className="settings-row">
-                  <label>Transition</label>
-                  <select value={vxTransitionPattern} onChange={e => setVxTransitionPattern(e.target.value as SideTransitionPattern)}>
-                    <option value="straight">Straight</option>
-                    <option value="jagged">Jagged</option>
-                    <option value="mossy">Mossy</option>
-                    <option value="layered">Layered</option>
-                    <option value="drip">Drip</option>
-                    <option value="rounded">Rounded</option>
-                  </select>
+              {/* Blend Layers */}
+              <div style={{ marginTop: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <h4 style={{ margin: 0, fontSize: '14px', color: 'var(--text-primary)' }}>Blend Layers</h4>
+                  <button
+                    type="button"
+                    className="btn-small"
+                    onClick={() => setBlendLayers(prev => [...prev, makeBlendLayer()])}
+                    title="Add a new blend layer"
+                  >+ Add Layer</button>
                 </div>
-                {vxTransitionPattern !== 'straight' && <SliderControl label="Transition Strength" value={vxTransitionNoise} min={0} max={1} step={0.01} onChange={setVxTransitionNoise} />}
-              </>}
+                {blendLayers.map((layer, idx) => (
+                  <div key={layer.id} style={{ border: '1px solid var(--border-color)', borderRadius: 6, padding: 8, marginBottom: 6, opacity: layer.enabled ? 1 : 0.5 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                      <input
+                        type="checkbox"
+                        checked={layer.enabled}
+                        onChange={e => setBlendLayers(prev => prev.map((l, i) => i === idx ? { ...l, enabled: e.target.checked } : l))}
+                        title="Enable/disable this layer"
+                      />
+                      <span style={{ flex: 1, fontSize: '12px', color: 'var(--text-secondary)' }}>Layer {idx + 1}</span>
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        disabled={idx === 0}
+                        onClick={() => setBlendLayers(prev => {
+                          const next = [...prev];
+                          [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                          return next;
+                        })}
+                        title="Move layer up"
+                        style={{ fontSize: '11px' }}
+                      >↑</button>
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        disabled={idx === blendLayers.length - 1}
+                        onClick={() => setBlendLayers(prev => {
+                          const next = [...prev];
+                          [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+                          return next;
+                        })}
+                        title="Move layer down"
+                        style={{ fontSize: '11px' }}
+                      >↓</button>
+                      <button
+                        type="button"
+                        className="btn-icon"
+                        disabled={blendLayers.length <= 1}
+                        onClick={() => setBlendLayers(prev => prev.filter((_, i) => i !== idx))}
+                        title="Remove this layer"
+                        style={{ fontSize: '11px' }}
+                      >✕</button>
+                    </div>
+                    <div className="settings-row">
+                      <label>Mode</label>
+                      <select
+                        value={layer.sideMode}
+                        onChange={e => setBlendLayers(prev => prev.map((l, i) => i === idx ? { ...l, sideMode: e.target.value as VoxelBlockSideMode } : l))}
+                      >
+                        <option value="uniform">Uniform (side only)</option>
+                        <option value="split">Split (top/bottom)</option>
+                        <option value="gradient_top">Gradient from top</option>
+                        <option value="gradient_bottom">Gradient from bottom</option>
+                      </select>
+                    </div>
+                    {layer.sideMode !== 'uniform' && <>
+                      <SliderControl
+                        label="Split Position"
+                        value={layer.sideSplitPos}
+                        min={0.05} max={0.95} step={0.01}
+                        onChange={v => setBlendLayers(prev => prev.map((l, i) => i === idx ? { ...l, sideSplitPos: v } : l))}
+                      />
+                      <div className="settings-row">
+                        <label>Transition</label>
+                        <select
+                          value={layer.transitionPattern}
+                          onChange={e => setBlendLayers(prev => prev.map((l, i) => i === idx ? { ...l, transitionPattern: e.target.value as SideTransitionPattern } : l))}
+                        >
+                          <option value="straight">Straight</option>
+                          <option value="jagged">Jagged</option>
+                          <option value="mossy">Mossy</option>
+                          <option value="layered">Layered</option>
+                          <option value="drip">Drip</option>
+                          <option value="rounded">Rounded</option>
+                        </select>
+                      </div>
+                      {layer.transitionPattern !== 'straight' && (
+                        <SliderControl
+                          label="Transition Strength"
+                          value={layer.transitionNoise}
+                          min={0} max={1} step={0.01}
+                          onChange={v => setBlendLayers(prev => prev.map((l, i) => i === idx ? { ...l, transitionNoise: v } : l))}
+                        />
+                      )}
+                      <div style={{ marginTop: 6 }}>
+                        <h4 style={{ margin: '0 0 6px', fontSize: '13px', color: 'var(--text-primary)' }}>Top Colors</h4>
+                        <VoxelFaceSettings
+                          face={layer.colors}
+                          setFace={f => setBlendLayers(prev => prev.map((l, i) => i === idx ? { ...l, colors: f } : l))}
+                        />
+                      </div>
+                    </>}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Mode-specific extras: texture mode gets action buttons,
@@ -3672,15 +4072,7 @@ export default function BlockWorkbench() {
 
                 {vxActiveFace === 'top' && <VoxelFaceSettings face={vxTopFace} setFace={setVxTopFace} />}
                 {vxActiveFace === 'side' && (
-                  <>
-                    <VoxelFaceSettings face={vxSideFace} setFace={setVxSideFace} />
-                    {vxSideMode !== 'uniform' && (
-                      <div style={{ marginTop: 8 }}>
-                        <h4 style={{ margin: '0 0 8px', fontSize: '14px', color: 'var(--text-primary)' }}>Side — Top Layer (blended)</h4>
-                        <VoxelFaceSettings face={vxSideTopFace} setFace={setVxSideTopFace} />
-                      </div>
-                    )}
-                  </>
+                  <VoxelFaceSettings face={vxSideFace} setFace={setVxSideFace} />
                 )}
                 {vxActiveFace === 'bottom' && <VoxelFaceSettings face={vxBottomFace} setFace={setVxBottomFace} />}
               </>

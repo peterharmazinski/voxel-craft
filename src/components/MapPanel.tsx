@@ -3,28 +3,46 @@ import SliderControl from './SliderControl';
 import { downloadCanvas } from '../utils/helpers';
 import {
   generateNormalMap,
+  generateNormalMapFromHeightBuffer,
   generateDisplacementMap,
   generateAOMap,
   generateSpecularMap,
+  generateMetallicMap,
+  generateRoughnessMap,
+  NORMAL_PRESETS,
+  NORMAL_PRESET_LABELS,
   DEFAULT_NORMAL,
   DEFAULT_DISPLACEMENT,
   DEFAULT_AO,
   DEFAULT_SPECULAR,
+  DEFAULT_METALLIC,
+  DEFAULT_ROUGHNESS,
   type NormalMapSettings,
   type DisplacementSettings,
   type AOSettings,
   type SpecularSettings,
+  type MetallicSettings,
+  type RoughnessSettings,
 } from '../utils/normalMapProcessor';
+import { computeHeightBuffer, type FaceTextureConfig } from '../utils/renderTexture';
 
-type MapType = 'normal' | 'displacement' | 'ao' | 'specular';
+type MapType = 'normal' | 'displacement' | 'ao' | 'specular' | 'metallic' | 'roughness';
 
 interface MapPanelProps {
   sourceCanvas: HTMLCanvasElement | null;
   filePrefix?: string;
   version?: number;
-  onNormalSettingsChange?: (settings: NormalMapSettings) => void;
+  /**
+   * Controlled normal map settings — owned by the parent so the center-column
+   * preset picker stays in sync. When omitted, MapPanel manages its own state.
+   */
+  normalSettings?: NormalMapSettings;
+  onNormalSettingsChange?: (settings: NormalMapSettings, presetKey?: string) => void;
+  normalPresetKey?: string;
   /** If false, the "Generate Maps" button is shown disabled with a hint instead. Defaults to true (assume source is ready). */
   hasSource?: boolean;
+  /** When provided, generator-derived height data is used for normal maps instead of a lossy color→grayscale conversion. */
+  faceConfig?: FaceTextureConfig | null;
 }
 
 function renderLitPreview(
@@ -105,20 +123,30 @@ function renderLitPreview(
   ctx.putImageData(outImg, 0, 0);
 }
 
-export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version = 0, onNormalSettingsChange, hasSource = true }: MapPanelProps) {
+export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version = 0, normalSettings: controlledNormalSettings, onNormalSettingsChange, normalPresetKey = '', hasSource = true, faceConfig }: MapPanelProps) {
   const normalRef = useRef<HTMLCanvasElement>(null);
   const dispRef = useRef<HTMLCanvasElement>(null);
   const aoRef = useRef<HTMLCanvasElement>(null);
   const specRef = useRef<HTMLCanvasElement>(null);
+  const metallicRef = useRef<HTMLCanvasElement>(null);
+  const roughnessRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [enabled, setEnabled] = useState(false);
   const [activeMap, setActiveMap] = useState<MapType>('normal');
-  const [normalSettings, setNormalSettings] = useState<NormalMapSettings>({ ...DEFAULT_NORMAL });
+  // Internal normal settings used when the parent does not control them.
+  const [internalNormalSettings, setInternalNormalSettings] = useState<NormalMapSettings>({ ...DEFAULT_NORMAL });
+  const normalSettings = controlledNormalSettings ?? internalNormalSettings;
+  const handleNormalSettingsChange = (s: NormalMapSettings, presetKey?: string) => {
+    if (!controlledNormalSettings) setInternalNormalSettings(s);
+    onNormalSettingsChange?.(s, presetKey ?? '');
+  };
   const [dispSettings, setDispSettings] = useState<DisplacementSettings>({ ...DEFAULT_DISPLACEMENT });
   const [aoSettings, setAoSettings] = useState<AOSettings>({ ...DEFAULT_AO });
   const [specSettings, setSpecSettings] = useState<SpecularSettings>({ ...DEFAULT_SPECULAR });
+  const [metallicSettings, setMetallicSettings] = useState<MetallicSettings>({ ...DEFAULT_METALLIC });
+  const [roughnessSettings, setRoughnessSettings] = useState<RoughnessSettings>({ ...DEFAULT_ROUGHNESS });
 
   const [showPreview, setShowPreview] = useState(true);
   const [lightX, setLightX] = useState(0.7);
@@ -132,10 +160,6 @@ export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version
   const [customHeightName, setCustomHeightName] = useState<string>('');
 
   const heightSource = customHeight ?? sourceCanvas;
-
-  useEffect(() => {
-    if (onNormalSettingsChange) onNormalSettingsChange(normalSettings);
-  }, [normalSettings, onNormalSettingsChange]);
 
   const handleHeightUpload = useCallback((file: File) => {
     const reader = new FileReader();
@@ -156,11 +180,20 @@ export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version
 
   const generate = useCallback(() => {
     if (!enabled || !heightSource || heightSource.width === 0) return;
-    if (normalRef.current) generateNormalMap(heightSource, normalRef.current, normalSettings);
+    if (normalRef.current) {
+      const heightBuf = !customHeight && faceConfig ? computeHeightBuffer(faceConfig) : null;
+      if (heightBuf) {
+        generateNormalMapFromHeightBuffer(heightBuf, faceConfig!.size, faceConfig!.size, normalRef.current, normalSettings);
+      } else {
+        generateNormalMap(heightSource, normalRef.current, normalSettings);
+      }
+    }
     if (dispRef.current) generateDisplacementMap(heightSource, dispRef.current, dispSettings);
     if (aoRef.current) generateAOMap(heightSource, aoRef.current, aoSettings);
     if (specRef.current) generateSpecularMap(heightSource, specRef.current, specSettings);
-  }, [enabled, heightSource, normalSettings, dispSettings, aoSettings, specSettings, version]);
+    if (metallicRef.current) generateMetallicMap(heightSource, metallicRef.current, metallicSettings);
+    if (roughnessRef.current) generateRoughnessMap(heightSource, roughnessRef.current, roughnessSettings);
+  }, [enabled, heightSource, customHeight, faceConfig, normalSettings, dispSettings, aoSettings, specSettings, metallicSettings, roughnessSettings, version]);
 
   useEffect(() => { generate(); }, [generate]);
 
@@ -187,7 +220,9 @@ export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version
 
   const activeCanvas = activeMap === 'normal' ? normalRef :
                        activeMap === 'displacement' ? dispRef :
-                       activeMap === 'ao' ? aoRef : specRef;
+                       activeMap === 'ao' ? aoRef :
+                       activeMap === 'specular' ? specRef :
+                       activeMap === 'metallic' ? metallicRef : roughnessRef;
 
   if (!enabled) {
     const canEnable = hasSource || !!customHeight;
@@ -200,7 +235,7 @@ export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version
           title={canEnable ? 'Generate Normal / Displacement / AO / Specular maps for this face' : 'Capture a texture to this face first, or upload a custom height map below'}
           style={{ opacity: canEnable ? 1 : 0.55, cursor: canEnable ? 'pointer' : 'not-allowed' }}
         >
-          Generate Maps (Normal, Displacement, AO, Specular)
+          Generate Maps (Normal, Displacement, AO, Specular, Metallic, Roughness)
         </button>
         {!canEnable && (
           <div style={{ marginTop: 6 }}>
@@ -278,9 +313,9 @@ export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version
       )}
 
       <div className="map-tabs-row">
-        {(['normal', 'displacement', 'ao', 'specular'] as MapType[]).map(t => (
+        {(['normal', 'displacement', 'ao', 'specular', 'metallic', 'roughness'] as MapType[]).map(t => (
           <button key={t} className={`type-btn ${activeMap === t ? 'active' : ''}`} onClick={() => setActiveMap(t)}>
-            {t === 'normal' ? 'Normal' : t === 'displacement' ? 'Displace' : t === 'ao' ? 'AO' : 'Specular'}
+            {t === 'normal' ? 'Normal' : t === 'displacement' ? 'Displace' : t === 'ao' ? 'AO' : t === 'specular' ? 'Specular' : t === 'metallic' ? 'Metallic' : 'Roughness'}
           </button>
         ))}
       </div>
@@ -290,60 +325,46 @@ export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version
         <canvas ref={dispRef} className={`map-thumb ${activeMap === 'displacement' ? 'active' : ''}`} />
         <canvas ref={aoRef} className={`map-thumb ${activeMap === 'ao' ? 'active' : ''}`} />
         <canvas ref={specRef} className={`map-thumb ${activeMap === 'specular' ? 'active' : ''}`} />
+        <canvas ref={metallicRef} className={`map-thumb ${activeMap === 'metallic' ? 'active' : ''}`} />
+        <canvas ref={roughnessRef} className={`map-thumb ${activeMap === 'roughness' ? 'active' : ''}`} />
       </div>
 
       {activeMap === 'normal' && (
         <div className="map-settings">
           <div className="settings-row">
             <label>Preset</label>
-            <select defaultValue="" onChange={e => {
-              if (!e.target.value) return;
-              const presets: Record<string, NormalMapSettings> = {
-                subtle: { strength: 1.0, level: 7, blurSharp: 2, filterType: 'sobel', invertR: false, invertG: false, invertHeight: false, zRange: true },
-                default: { ...DEFAULT_NORMAL },
-                strong: { strength: 4.0, level: 7, blurSharp: 0, filterType: 'sobel', invertR: false, invertG: false, invertHeight: false, zRange: true },
-                extreme: { strength: 5.0, level: 8, blurSharp: -4, filterType: 'scharr', invertR: false, invertG: false, invertHeight: false, zRange: true },
-                smooth: { strength: 2.0, level: 6, blurSharp: 8, filterType: 'sobel', invertR: false, invertG: false, invertHeight: false, zRange: true },
-                sharp: { strength: 3.0, level: 8, blurSharp: -12, filterType: 'scharr', invertR: false, invertG: false, invertHeight: false, zRange: true },
-                inverted: { strength: 2.5, level: 7, blurSharp: 0, filterType: 'sobel', invertR: false, invertG: false, invertHeight: true, zRange: true },
-                brick_tile: { strength: 3.5, level: 9, blurSharp: -2, filterType: 'scharr', invertR: false, invertG: false, invertHeight: false, zRange: true },
-                organic: { strength: 1.8, level: 6, blurSharp: 4, filterType: 'sobel', invertR: false, invertG: false, invertHeight: false, zRange: true },
-                metal: { strength: 0.8, level: 5, blurSharp: 6, filterType: 'sobel', invertR: false, invertG: false, invertHeight: false, zRange: true },
-              };
-              if (presets[e.target.value]) setNormalSettings(presets[e.target.value]);
-              e.target.value = '';
-            }}>
+            <select
+              value={normalPresetKey}
+              onChange={e => {
+                const key = e.target.value;
+                const p = NORMAL_PRESETS[key];
+                if (p) onNormalSettingsChange ? onNormalSettingsChange(p, key) : handleNormalSettingsChange(p);
+              }}
+            >
               <option value="" disabled>Choose…</option>
-              <option value="subtle">Subtle</option>
-              <option value="default">Default</option>
-              <option value="strong">Strong</option>
-              <option value="extreme">Extreme</option>
-              <option value="smooth">Smooth</option>
-              <option value="sharp">Sharp / Crisp</option>
-              <option value="inverted">Inverted Depth</option>
-              <option value="brick_tile">Brick / Tile</option>
-              <option value="organic">Organic / Soft</option>
-              <option value="metal">Metal / Flat</option>
+              {Object.entries(NORMAL_PRESET_LABELS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
             </select>
           </div>
-          <SliderControl label="Strength" value={normalSettings.strength} min={0.01} max={5} step={0.01} onChange={v => setNormalSettings(s => ({ ...s, strength: v }))} />
-          <SliderControl label="Level" value={normalSettings.level} min={4} max={10} step={0.1} onChange={v => setNormalSettings(s => ({ ...s, level: v }))} />
-          <SliderControl label="Blur/Sharp" value={normalSettings.blurSharp} min={-32} max={32} step={1} onChange={v => setNormalSettings(s => ({ ...s, blurSharp: v }))} />
+          <SliderControl label="Strength" value={normalSettings.strength} min={0.01} max={5} step={0.01} onChange={v => handleNormalSettingsChange({ ...normalSettings, strength: v })} />
+          <SliderControl label="Level" value={normalSettings.level} min={4} max={10} step={0.1} onChange={v => handleNormalSettingsChange({ ...normalSettings, level: v })} />
+          <SliderControl label="Blur/Sharp" value={normalSettings.blurSharp} min={-32} max={32} step={1} onChange={v => handleNormalSettingsChange({ ...normalSettings, blurSharp: v })} />
           <div className="settings-row">
             <label>Filter</label>
-            <select value={normalSettings.filterType} onChange={e => setNormalSettings(s => ({ ...s, filterType: e.target.value as 'sobel' | 'scharr' }))}>
+            <select value={normalSettings.filterType} onChange={e => handleNormalSettingsChange({ ...normalSettings, filterType: e.target.value as 'sobel' | 'scharr' })}>
               <option value="sobel">Sobel</option><option value="scharr">Scharr</option>
             </select>
           </div>
           <div className="settings-row">
             <label>Invert</label>
-            <label className="check-label"><input type="checkbox" checked={normalSettings.invertR} onChange={e => setNormalSettings(s => ({ ...s, invertR: e.target.checked }))} /> R</label>
-            <label className="check-label"><input type="checkbox" checked={normalSettings.invertG} onChange={e => setNormalSettings(s => ({ ...s, invertG: e.target.checked }))} /> G</label>
-            <label className="check-label"><input type="checkbox" checked={normalSettings.invertHeight} onChange={e => setNormalSettings(s => ({ ...s, invertHeight: e.target.checked }))} /> H</label>
+            <label className="check-label"><input type="checkbox" checked={normalSettings.invertR} onChange={e => handleNormalSettingsChange({ ...normalSettings, invertR: e.target.checked })} /> R</label>
+            <label className="check-label"><input type="checkbox" checked={normalSettings.invertG} onChange={e => handleNormalSettingsChange({ ...normalSettings, invertG: e.target.checked })} /> G</label>
+            <label className="check-label"><input type="checkbox" checked={normalSettings.invertHeight} onChange={e => handleNormalSettingsChange({ ...normalSettings, invertHeight: e.target.checked })} /> H</label>
           </div>
           <div className="settings-row">
             <label className="check-label" title="Remap Z so that maximum tilt darkens fully (matches the standalone Normal Map page behaviour)">
-              <input type="checkbox" checked={normalSettings.zRange} onChange={e => setNormalSettings(s => ({ ...s, zRange: e.target.checked }))} /> Z Range
+              <input type="checkbox" checked={normalSettings.zRange} onChange={e => handleNormalSettingsChange({ ...normalSettings, zRange: e.target.checked })} /> Z Range
             </label>
           </div>
         </div>
@@ -385,15 +406,38 @@ export default function MapPanel({ sourceCanvas, filePrefix = 'texture', version
         </div>
       )}
 
+      {activeMap === 'metallic' && (
+        <div className="map-settings">
+          <SliderControl label="Strength" value={metallicSettings.strength} min={0} max={2} step={0.01} onChange={v => setMetallicSettings(s => ({ ...s, strength: v }))} />
+          <SliderControl label="Saturation Weight" value={metallicSettings.saturationWeight} min={0} max={2} step={0.01} onChange={v => setMetallicSettings(s => ({ ...s, saturationWeight: v }))} />
+          <SliderControl label="Brightness Weight" value={metallicSettings.brightnessWeight} min={0} max={1} step={0.01} onChange={v => setMetallicSettings(s => ({ ...s, brightnessWeight: v }))} />
+          <div className="settings-row">
+            <label><input type="checkbox" checked={metallicSettings.invert} onChange={e => setMetallicSettings(s => ({ ...s, invert: e.target.checked }))} /> Invert</label>
+          </div>
+        </div>
+      )}
+
+      {activeMap === 'roughness' && (
+        <div className="map-settings">
+          <SliderControl label="Strength" value={roughnessSettings.strength} min={0} max={2} step={0.01} onChange={v => setRoughnessSettings(s => ({ ...s, strength: v }))} />
+          <SliderControl label="Contrast" value={roughnessSettings.contrast} min={-1} max={1} step={0.01} onChange={v => setRoughnessSettings(s => ({ ...s, contrast: v }))} />
+          <div className="settings-row">
+            <label><input type="checkbox" checked={roughnessSettings.invert} onChange={e => setRoughnessSettings(s => ({ ...s, invert: e.target.checked }))} /> Invert (output smoothness)</label>
+          </div>
+        </div>
+      )}
+
       <div className="map-download-row">
         <button className="btn-primary" onClick={() => { const c = activeCanvas.current; if (c) downloadCanvas(c, `${filePrefix}_${activeMap}`, 'png'); }}>
-          Download {activeMap === 'normal' ? 'Normal' : activeMap === 'displacement' ? 'Displacement' : activeMap === 'ao' ? 'AO' : 'Specular'}
+          Download {activeMap === 'normal' ? 'Normal' : activeMap === 'displacement' ? 'Displacement' : activeMap === 'ao' ? 'AO' : activeMap === 'specular' ? 'Specular' : activeMap === 'metallic' ? 'Metallic' : 'Roughness'}
         </button>
         <button className="btn-primary" onClick={() => {
           if (normalRef.current) downloadCanvas(normalRef.current, `${filePrefix}_normal`, 'png');
           if (dispRef.current) downloadCanvas(dispRef.current, `${filePrefix}_displacement`, 'png');
           if (aoRef.current) downloadCanvas(aoRef.current, `${filePrefix}_ao`, 'png');
           if (specRef.current) downloadCanvas(specRef.current, `${filePrefix}_specular`, 'png');
+          if (metallicRef.current) downloadCanvas(metallicRef.current, `${filePrefix}_metallic`, 'png');
+          if (roughnessRef.current) downloadCanvas(roughnessRef.current, `${filePrefix}_roughness`, 'png');
         }}>Download All Maps</button>
       </div>
     </div>

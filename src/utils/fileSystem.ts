@@ -26,14 +26,25 @@ export interface VoxelCraftProject {
     resolution: number;
     seed: number;
     renderStyle: VoxelRenderStyle;
-    sideMode: VoxelBlockSideMode;
-    sideSplitPos: number;
-    transitionPattern: SideTransitionPattern;
-    transitionNoise: number;
     top: VoxelBlockFace;
     side: VoxelBlockFace;
     bottom: VoxelBlockFace;
-    sideTopFace: VoxelBlockFace;
+    // v2: multi-layer blend stack (takes priority over legacy fields when present)
+    blendLayers?: Array<{
+      id: string;
+      enabled: boolean;
+      colors: VoxelBlockFace;
+      sideMode: VoxelBlockSideMode;
+      sideSplitPos: number;
+      transitionPattern: SideTransitionPattern;
+      transitionNoise: number;
+    }>;
+    // Legacy single-blend fields — kept for loading old project files
+    sideMode?: VoxelBlockSideMode;
+    sideSplitPos?: number;
+    transitionPattern?: SideTransitionPattern;
+    transitionNoise?: number;
+    sideTopFace?: VoxelBlockFace;
   };
   snow?: {
     enabled: boolean;

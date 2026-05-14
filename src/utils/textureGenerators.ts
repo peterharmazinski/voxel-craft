@@ -36,6 +36,7 @@ export function generatePerlinNoise(
   seed: number,
   percentage: number,
   colorStops?: NoiseColorStop[],
+  heightOut?: Float32Array,
 ) {
   const ctx = canvas.getContext('2d')!;
   canvas.width = size;
@@ -58,6 +59,7 @@ export function generatePerlinNoise(
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const v = S.simplexNoise(noiseType, size, octaves, persistence, percentage, scale, x, y);
+      if (heightOut) heightOut[x + y * size] = v;
       const i = (x + y * size) * 4;
       if (gradStops) {
         const c = sampleGradient(gradStops, v);
@@ -573,6 +575,7 @@ export function generateWood(
   grainWidth: number = 1,
   gapWidth: number = 0.4,
   rings: boolean = false,
+  heightOut?: Float32Array,
 ) {
   const ctx = canvas.getContext('2d')!;
   canvas.width = size;
@@ -604,6 +607,7 @@ export function generateWood(
         const ring = Math.sin((nx * xScale + noise1 * 0.5) * freq * Math.PI * 2);
         v = (ring + 1) * 0.5;
       }
+      if (heightOut) heightOut[x + y * size] = v;
       const i = (x + y * size) * 4;
       if (v < threshold) {
         const t = v / threshold;
@@ -635,6 +639,7 @@ export function generateBark(
   depth: number,
   scale: number,
   seed: number,
+  heightOut?: Float32Array,
 ) {
   const ctx = canvas.getContext('2d')!;
   canvas.width = size;
@@ -666,6 +671,7 @@ export function generateBark(
 
       const combined = fissureNorm * 0.4 + coarseNoise * 0.25 + vertNoise * 0.15 + horizRidge * 0.2;
       const v = Math.max(0, Math.min(1, combined + fineNoise * 0.3));
+      if (heightOut) heightOut[x + y * size] = v;
 
       const shadow = 1.0 - depth * (1 - fissureNorm) * 0.6;
 
@@ -1034,8 +1040,9 @@ export function generateVoxelTexture(
   if (baseType === 'rings') {
     const cx = res / 2 + (voxelSeeded(3, 7, seed) - 0.5) * res * 0.06;
     const cy = res / 2 + (voxelSeeded(11, 13, seed) - 0.5) * res * 0.06;
-    // Fixed number of rings regardless of resolution — more res = sharper rings
-    const ringCount = 8;
+    // Scale ring count with resolution so each ring is at least 2px wide at
+    // low res (e.g. 16×16 → 3 rings). High-res caps at 8 for a dense look.
+    const ringCount = Math.max(2, Math.min(8, Math.floor(res * 0.45 / 2)));
     const ringSpacing = (res * 0.45) / ringCount;
 
     for (let y = 0; y < res; y++) {
@@ -1798,6 +1805,7 @@ export function generateCartoonOre(
   canvas: HTMLCanvasElement,
   size: number,
   opts: CartoonOreOptions,
+  heightOut?: Float32Array,
 ) {
   canvas.width = size;
   canvas.height = size;
@@ -1834,6 +1842,7 @@ export function generateCartoonOre(
       }
       ctx.putImageData(imgData, 0, 0);
     }
+    if (heightOut) heightOut.fill(0.4);
   } else {
     const imgData = ctx.createImageData(size, size);
     const d = imgData.data;
@@ -1850,10 +1859,13 @@ export function generateCartoonOre(
         d[i + 1] = Math.min(255, base.g * brightness);
         d[i + 2] = Math.min(255, base.b * brightness);
         d[i + 3] = 255;
+        if (heightOut) heightOut[y * size + x] = blend * 0.5 + 0.15;
       }
     }
     ctx.putImageData(imgData, 0, 0);
   }
+
+  const oreRecords: Array<{ cx: number; cy: number; r: number }> = [];
 
   for (const layer of opts.oreLayers) {
     const baseRgb = hexToRgb(layer.color);
@@ -1868,6 +1880,7 @@ export function generateCartoonOre(
       const margin = radius + (opts.outlineWidth || 0);
       const cx = margin + rng() * (size - margin * 2);
       const cy = margin + rng() * (size - margin * 2);
+      if (heightOut) oreRecords.push({ cx, cy, r: radius });
       let sides = sidesForShape(layer.shape, rng);
       const actualShape = layer.shape === 'mixed' ? mixedShapeType(sides) : layer.shape;
       if (actualShape === 'flower') sides = 4 + Math.floor(rng() * 4);
@@ -1928,6 +1941,28 @@ export function generateCartoonOre(
         ctx.fill();
 
         ctx.restore();
+      }
+    }
+  }
+
+  if (heightOut) {
+    for (const { cx, cy, r } of oreRecords) {
+      const r2 = r * r;
+      const x0 = Math.max(0, Math.floor(cx - r));
+      const x1 = Math.min(size - 1, Math.ceil(cx + r));
+      const y0 = Math.max(0, Math.floor(cy - r));
+      const y1 = Math.min(size - 1, Math.ceil(cy + r));
+      for (let py = y0; py <= y1; py++) {
+        for (let px = x0; px <= x1; px++) {
+          const dx = px - cx;
+          const dy = py - cy;
+          const d2 = (dx * dx + dy * dy) / r2;
+          if (d2 <= 1) {
+            const dome = 0.4 + (1 - d2) * 0.6;
+            const idx = py * size + px;
+            if (dome > heightOut[idx]) heightOut[idx] = dome;
+          }
+        }
       }
     }
   }
@@ -2098,6 +2133,7 @@ export function generateStoneWall(
   canvas: HTMLCanvasElement,
   size: number,
   opts: StoneWallOptions,
+  heightOut?: Float32Array,
 ) {
   canvas.width = size;
   canvas.height = size;
@@ -2184,6 +2220,7 @@ export function generateStoneWall(
 
       if (edgeDist < effectiveMw) {
         const t = edgeDist / effectiveMw;
+        if (heightOut) heightOut[py * size + px] = t * 0.25;
         const dark = 0.45 + t * 0.55;
         const mn = detailNoise.noise(px / 6, py / 6) * 15;
         data[idx] = Math.max(0, Math.min(255, mortarRgb.r * dark + mn));
@@ -2198,6 +2235,7 @@ export function generateStoneWall(
         // Bevel: stones look rounded — darken near mortar
         const bevelZone = nearest.radius * 0.45;
         const bevelT = Math.min(1, (edgeDist - mw) / bevelZone);
+        if (heightOut) heightOut[py * size + px] = 0.25 + bevelT * 0.75;
         const bevelShade = 0.65 + bevelT * 0.35;
 
         // Directional light: top-left bright, bottom-right shadow

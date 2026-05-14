@@ -35,13 +35,15 @@ A thin paint layer on top of the generated texture: basic brush, eraser, fill bu
 
 ## Tier 3 — Export targets
 
-### Minecraft resource pack export
+### ✅ Minecraft resource pack export
 Package one or more blocks with the correct folder structure and naming (`assets/minecraft/textures/block/<name>.png`) as a ZIP, ready to drop into a resource pack. Optionally include a `pack.mcmeta`. Block name editable before export.
+
+Outputs: per-face PNGs (`<name>_top/side/bottom.png`), a `block/<name>.json` cube model, and `pack.mcmeta` with configurable MC version format (1.17–1.21). Triggered via the **MC** button in the Export section.
 
 ### Texture atlas / tileset export
 Pack multiple selected blocks onto a single power-of-2 sheet (e.g. 8 blocks × 3 faces = 24 tiles on a 512×512 atlas). Output includes the atlas PNG and a JSON manifest mapping block names to UV rects. Standard requirement for most game engine setups.
 
-### Voxel Play 3 (VP3) export
+### ✅ Voxel Play 3 (VP3) export
 Export textures in the format expected by Unity's Voxel Play 3 engine:
 
 - **Texture output**: Top, Side, Bottom faces at the resolution configured in the VP3 `VoxelDefinition` (typically 64×64 or 128×128). Separate PNGs named `<blockId>_top`, `<blockId>_side`, `<blockId>_bottom`.
@@ -53,6 +55,8 @@ Export textures in the format expected by Unity's Voxel Play 3 engine:
   - Output files named `<blockId>_top_normal.png`, `<blockId>_side_normal.png`, `<blockId>_bottom_normal.png`. The `.voxeldef.json` sidecar includes a `normalStrength` field (0–1, default 0.8) so the Unity import wizard can set the normal intensity on the VP3 material.
 - **Emission maps**: Include workbench-generated emission maps alongside diffuse textures, named `<blockId>_top_emissive.png` etc. to match VP3's expected suffixes.
 - **Batch mode**: Export all open projects at once into a single ZIP structured as `<blockId>/` folders, one per block.
+
+Implemented: diffuse + smart/all/none normal baking (height-buffer path where available) + optional emission maps + `.voxeldef.json` sidecar. Triggered via the **VP3** button in the Export section. Batch mode (multi-project) is not yet implemented.
 
 ### Game engine material stubs (Unity / Godot)
 - **Unity**: `.mat` asset file referencing the exported textures via relative paths, preset to the URP Lit shader with Metallic/Smoothness/Normal slots pre-assigned.

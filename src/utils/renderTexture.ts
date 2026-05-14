@@ -263,6 +263,56 @@ export function renderFaceTexture(canvas: HTMLCanvasElement, config: FaceTexture
     }
     ctx.putImageData(imgData, 0, 0);
   }
+
+  // Post-processing: tint (solid, top-to-bottom gradient, or radial gradient)
+  const tintMode = p.tintMode as string | undefined;
+  const tintColor = p.tintColor as string | undefined;
+  if (tintMode && tintColor) {
+    const hexToRgb = (hex: string): [number, number, number] => {
+      const h = hex.replace('#', '');
+      return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+    };
+    const [tr, tg, tb] = hexToRgb(tintColor);
+    const tintColorB = p.tintColorB as string | undefined;
+    const [tr2, tg2, tb2] = tintColorB ? hexToRgb(tintColorB) : [tr, tg, tb];
+    const tintStrength = (p.tintStrength as number | undefined) ?? 1.0;
+    const tintSplit = (p.tintSplit as number | undefined) ?? 0.5;
+    const ctx = canvas.getContext('2d')!;
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imgData.data;
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const maxDist = Math.sqrt(cx * cx + cy * cy);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (d[i + 3] === 0) continue;
+        // t: 0 = tintColor, 1 = tintColorB; remapped through tintSplit so the
+        // transition midpoint lands at the fraction specified by tintSplit.
+        let t = 0;
+        if (tintMode === 'gradient_y') {
+          t = h > 1 ? y / (h - 1) : 0;
+        } else if (tintMode === 'gradient_radial') {
+          const dx = x - cx;
+          const dy = y - cy;
+          t = maxDist > 0 ? Math.sqrt(dx * dx + dy * dy) / maxDist : 0;
+          t = Math.min(1, t);
+        }
+        const ts = tintSplit > 0 && tintSplit < 1 ? tintSplit : 0.5;
+        const tBiased = t < ts ? (t / ts) * 0.5 : 0.5 + ((t - ts) / (1 - ts)) * 0.5;
+        const r = tr + (tr2 - tr) * tBiased;
+        const g = tg + (tg2 - tg) * tBiased;
+        const b = tb + (tb2 - tb) * tBiased;
+        const s = tintStrength;
+        d[i]     = Math.round(d[i]     * (1 - s + s * r / 255));
+        d[i + 1] = Math.round(d[i + 1] * (1 - s + s * g / 255));
+        d[i + 2] = Math.round(d[i + 2] * (1 - s + s * b / 255));
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
 }
 
 // ─── Block-level style filter ─────────────────────────────────────────────
@@ -566,6 +616,84 @@ export interface SnowOverlayOptions {
   // chunky coverage on top). Leave undefined for smooth noise on
   // texture-rendered blocks.
   voxelGrid?: number;
+}
+
+/**
+ * Renders the generator for `config` into an offscreen canvas while
+ * simultaneously capturing the raw float height values (0–1) that each
+ * generator computes internally.  Returns null for generator types that
+ * have no meaningful height signal (Checker, Brick, Gradient, etc.).
+ */
+export function computeHeightBuffer(config: FaceTextureConfig): Float32Array | null {
+  const { type, size, seed, params: p } = config;
+  const buf = new Float32Array(size * size);
+  const offscreen = document.createElement('canvas');
+  offscreen.width = size;
+  offscreen.height = size;
+
+  switch (type) {
+    case 'PerlinNoise':
+      generatePerlinNoise(offscreen, size,
+        p.color1 as string || '#e6d7c3', p.color2 as string || '#1a1714',
+        p.noiseType as 'PerlinNoise' | 'FractalNoise' | 'Turbulence' || 'PerlinNoise',
+        p.octaves as number || 6, p.persistence as number || 0.5,
+        p.scale as number || 50, seed, 1,
+        p.colorStops as { position: number; color: string }[] | undefined,
+        buf);
+      return buf;
+    case 'Clouds':
+      generatePerlinNoise(offscreen, size,
+        p.color1 as string || '#ffffff', p.color2 as string || '#2a4d82',
+        'PerlinNoise', 7, p.detail as number || 0.45,
+        (p.scale as number || 7) * 2, seed, p.percentage as number || 0.6,
+        undefined, buf);
+      return buf;
+    case 'Wood':
+      generateWood(offscreen, size,
+        p.color1 as string || '#c49a6c', p.color2 as string || '#8b5e3c',
+        p.color3 as string || '#a0744c', p.planks as number || 5,
+        p.xScale as number || 5, p.scale as number || 1,
+        p.persistence as number || 0.5, seed,
+        p.grainWidth as number || 1, p.gapWidth as number || 0.4,
+        p.rings as boolean || false, buf);
+      return buf;
+    case 'Bark':
+      generateBark(offscreen, size,
+        p.color1 as string || '#8b6b4a', p.color2 as string || '#5c3d28',
+        p.color3 as string || '#3a2515', p.fissures as number || 6,
+        p.roughness as number || 0.5, p.depth as number || 0.6,
+        p.barkScale as number || 1, seed, buf);
+      return buf;
+    case 'StoneWall':
+      generateStoneWall(offscreen, size, {
+        stoneColor1: p.color1 as string || '#a09888',
+        stoneColor2: p.color2 as string || '#887868',
+        mortarColor: p.mortarColor as string || '#484038',
+        columns: p.columns as number || 6,
+        rows: p.rows as number || 6,
+        mortarWidth: p.mortarWidth as number || 3,
+        jitter: p.jitter as number || 0.8,
+        shading: p.shading as number || 0.5,
+        textureNoise: p.textureNoise as number || 0.4,
+        seed,
+      }, buf);
+      return buf;
+    case 'CartoonOre':
+      generateCartoonOre(offscreen, size, {
+        baseColor1: p.color1 as string || '#7a8a8a',
+        baseColor2: p.color2 as string || '#6a7a7a',
+        baseColor3: p.color3 as string || '#5a6a6a',
+        bgNoise: p.bgNoise as number || 0.6,
+        bgPatchSize: p.bgPatch as number || 30,
+        bgGradient: p.bgGradient as boolean || false,
+        oreLayers: p.ores as [] || [],
+        seed, outlineWidth: p.outline as number || 1.5,
+        shadowStrength: p.shadow as number || 0.6,
+      }, buf);
+      return buf;
+    default:
+      return null;
+  }
 }
 
 export function applySnowOverlay(canvas: HTMLCanvasElement, opts: SnowOverlayOptions, face: 'top' | 'side' | 'bottom') {

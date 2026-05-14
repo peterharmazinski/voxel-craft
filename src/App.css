@@ -1441,7 +1441,10 @@ input[type='range'] {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
+  /* overflow:visible so absolutely-positioned children (e.g. export
+     popovers) can escape the section boundary without being clipped.
+     Rounded corners are preserved by giving the header its own radius. */
+  overflow: visible;
   /* Sections are flex items in a flex-column. Without this they'd shrink
      to share the column's height, squishing headers/content. Locking
      flex-shrink to 0 makes the column overflow naturally so the column's
@@ -1457,6 +1460,10 @@ input[type='range'] {
   padding: 10px 14px;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border);
+  /* Round the top corners to match the section card now that the section
+     itself uses overflow:visible instead of overflow:hidden. */
+  border-top-left-radius: var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
   /* Anchor a comfortable tap height so the row stays readable even
      when the column is tight on space. */
   min-height: 38px;
@@ -1952,13 +1959,15 @@ input[type='range'] {
 .wb-zip-popover {
   position: absolute;
   right: 0;
-  top: calc(100% + 4px);
+  bottom: calc(100% + 4px);
   z-index: 20;
   background: var(--bg-secondary);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   padding: 10px 12px;
   min-width: 200px;
+  max-height: min(80vh, 560px);
+  overflow-y: auto;
   font-size: 12.5px;
   box-shadow: var(--shadow-md);
   display: flex;
@@ -2054,6 +2063,105 @@ input[type='range'] {
   font-size: 11px;
   color: var(--text-secondary);
   font-style: italic;
+}
+
+/* ── Game engine export popovers (VP3 / Minecraft) ─────────────────── */
+
+/* Slightly wider than the ZIP popover to fit the block-name input. */
+.wb-game-export-popover {
+  min-width: 230px;
+}
+
+/* Label + control row inside game export popovers. */
+.wb-ge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12.5px;
+}
+
+.wb-ge-row > label:first-child {
+  min-width: 80px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.wb-ge-input {
+  flex: 1;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  min-width: 0;
+}
+
+.wb-ge-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── Per-map settings sub-panel (VP3 popover) ──────────────────────── */
+.wb-ge-map-settings {
+  margin: 2px 0 5px 18px;
+  padding: 5px 8px;
+  background: color-mix(in srgb, var(--bg-primary) 70%, transparent);
+  border-left: 2px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.wb-ge-ms-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 0;
+  font-size: 11.5px;
+}
+
+.wb-ge-ms-row > span:first-child {
+  min-width: 72px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.wb-ge-ms-row > input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  height: 14px;
+  accent-color: var(--accent);
+}
+
+.wb-ge-ms-row > select {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  padding: 1px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.wb-ge-ms-row > span:last-child {
+  min-width: 30px;
+  text-align: right;
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.wb-ge-ms-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  padding: 2px 0;
+  cursor: pointer;
 }
 
 /* ── Inspector (Right) ─────────────────────────────────────────────── */
